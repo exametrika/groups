@@ -1,0 +1,60 @@
+<project name="native-test-project" basedir=".">
+    <description>
+        Native test project build script
+    </description>
+
+    <property name="build.template.dir" location="build" />
+        
+    <target name="build">
+        
+        <property name="src.dir" location="${product.build}"/>
+        
+        <exec executable="make" dir="${src.dir}" failonerror="true"/>
+        
+        <copy todir="${product.build.dir}">
+            <fileset dir="${build.template.dir}" erroronmissingdir="false"/>
+        </copy>
+        
+        <copy file="${src.dir}/${project.name}" tofile="${product.build.dir}/bin/${project.name}"/>
+        <chmod file="${product.build.dir}/bin/${project.name}" perm="ugo+x" />
+        
+    </target>
+    
+    <target name="clean">
+        <exec executable="make" dir="Release" failonerror="false">
+            <arg value="clean"/>
+      	</exec>
+        <exec executable="make" dir="Test" failonerror="false">
+            <arg value="clean"/>
+      	</exec>
+        <exec executable="make" dir="Debug" failonerror="false">
+            <arg value="clean"/>
+      	</exec>
+        
+        <exec executable="make" dir="Release64" failonerror="false">
+            <arg value="clean"/>
+      	</exec>
+        <exec executable="make" dir="Test64" failonerror="false">
+            <arg value="clean"/>
+      	</exec>
+        <exec executable="make" dir="Debug64" failonerror="false">
+            <arg value="clean"/>
+        </exec>
+    </target>
+    
+    <target name="build-doc">
+    </target>
+    
+    <target name="run-tests">
+        <exec executable="bash" dir="${product.build.dir}/tests/${project.name}/bin" >
+            <arg value="tests.sh"/>
+        </exec>
+    </target>
+        
+    <target name="run-perftests">
+        <exec executable="bash" dir="${product.build.dir}/tests/${project.name}/bin">
+            <arg value="perftests.sh"/>
+        </exec>
+    </target>
+    
+</project>

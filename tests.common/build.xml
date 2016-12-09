@@ -1,0 +1,15 @@
+<project name="tests.common" default="dist" basedir=".">
+    <description>
+        Tests common build script
+    </description>
+
+    <import file="../build/src/java-test-project.xml"/>
+                        
+    <property name="project.version" value="1.0.0" />
+    <property name="project.name" value="tests.common" />
+
+    <path id="dependencies">
+        <pathelement path="${common}" />
+    </path>
+    
+</project>

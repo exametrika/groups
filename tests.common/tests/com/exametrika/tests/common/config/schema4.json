@@ -1,0 +1,11 @@
+{
+	name = "schema4"
+	
+	types:
+	{
+		root:
+		{
+			instanceOf = "any"
+		}
+	}
+}

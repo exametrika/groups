@@ -1,0 +1,272 @@
+{
+	name = "testSchema"
+	description = "test schema"
+	
+	types:
+	{
+		testObject3:
+		{
+			instanceOf = "object"
+			final = true
+			base = "testObject2"
+			
+			properties:
+			{
+				prop1:
+				{
+					type = "testBoolean"
+				}	
+				
+				prop12:
+				{
+					type = "testString2"
+				}
+				
+				prop13:
+				{
+					type = "testObject3"
+				},
+			}
+		}
+		
+		testAny:
+		{
+			instanceOf = "any"
+			description = "test any"
+			enumeration: ["hello", 10, true,]
+			validators: ["test"]
+			annotation:
+			{
+				key1 = "value1"
+				key2 = 123
+				key3 = true
+			}
+		}
+		
+		testAny2:
+		{
+			instanceOf = "any"
+		}	
+		
+		testArray:
+		{
+			instanceOf = "array"
+			description = "test array"
+			minCount = 1
+			maxCount = 2
+			allowDuplicates = false
+			allowNulls = false
+			elementType = "testAny2"
+		}
+		
+		testArray2:
+		{
+			instanceOf = "array"
+			elementType:
+			{
+				instanceOf = "boolean"
+			}	
+		}
+		
+		testBoolean:
+		{
+			instanceOf = "boolean"
+			description = "test boolean"
+		}
+		
+		testLong:
+		{
+			instanceOf = "long"
+			description = "test long"
+			min = 0
+			minExclusive = true;
+			max = 100
+			maxExclusive = true
+		}
+		
+		testLong2:
+		{
+			instanceOf = "long"
+		}
+		
+		testDouble:
+		{
+			instanceOf = "double"
+			description = "test double"
+			min = 1
+			minExclusive = true;
+			max = 100.1
+			maxExclusive = true
+		}
+		
+		testDouble2:
+		{
+			instanceOf = "double"
+		}
+		
+		testString:
+		{
+			instanceOf = "string"
+			description = "test string"
+			pattern = /[0-9, a-f]/
+			minCount = 1
+			maxCount = 100
+		}
+		
+		testString2:
+		{
+			instanceOf = "string"
+		}
+		
+		testMap:
+		{
+			instanceOf = "map"
+			description = "test map"
+			minCount = 1
+			maxCount = 2
+			allowNulls = true
+			keyType = "testString2"
+			valueType = "testAny2"	
+		}
+		
+		testMap2:
+		{
+			instanceOf = "map"
+			keyType:
+			{
+				instanceOf = "string"
+			}
+			valueType:
+			{
+				instanceOf = "boolean"
+			}	
+		}
+		
+		testMap3:
+		{
+			instanceOf = "map"
+			valueType:
+			{
+				instanceOf = "boolean"
+			}	
+		}
+		
+		testCompound:
+		{
+			instanceOf = "compound"
+			description = "test compound"
+			types: ["testString2", "testLong2", "testBoolean"]	
+		}
+		
+		testCompound2:
+		{
+			instanceOf = "compound"
+			types: 
+			[
+				{
+					instanceOf = "string"
+				}
+				
+				{
+					instanceOf = "long"
+				}
+				
+				{
+					instanceOf = "boolean"
+				}
+			]	
+		}
+		
+		testObject:
+		{
+			instanceOf = "object"
+			description = "test object"
+			open = true
+			abstract = true
+			final = false
+			
+			properties:
+			{
+				prop1:
+				{
+					description = "prop1 property"
+					type = "testLong2"
+				}
+				
+				prop2:
+				{
+					type :
+					{
+						instanceOf = "string"
+					}
+					required = false
+					default = "hello"
+				}
+				
+				prop3:
+				{
+					type :
+					{
+						instanceOf = "string"
+					}
+					required = false
+				}
+				
+				prop4:
+				{
+					type = "boolean"
+				}
+				
+				prop5:
+				{
+					type = "any"
+				}
+				
+				prop6:
+				{
+					type = "long"
+				}
+				
+				prop7:
+				{
+					type = "double"
+				}
+				
+				prop8:
+				{
+					type = "map"
+				}
+				
+				prop9:
+				{
+					type = "array"
+				}
+				
+				prop10:
+				{
+					type = "object"
+				}
+				
+				prop11:
+				{
+					type = "string"
+				}
+			}	
+		}
+		
+		testObject2:
+		{
+			instanceOf = "object"
+			
+			base = "testObject"
+			
+			properties:
+			{
+				prop14:
+				{
+					type = "testObject3"
+				}
+			}
+		}
+	}
+}

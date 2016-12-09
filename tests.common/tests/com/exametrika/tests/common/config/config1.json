@@ -1,0 +1,21 @@
+{
+	imports: ["config2.json", "classpath:com/exametrika/tests/common/config/config3.json"]
+	schemas: ["schema1"]
+	
+	type1:
+	{
+		prop1 = "${resource.path=}"
+			
+		prop0 = "[0-9]"
+		
+		prop2:
+		{
+			prop1 = "${property1}"
+				
+			prop3:
+			{
+				prop1 = "${property2}"
+			}
+		}
+	}
+}

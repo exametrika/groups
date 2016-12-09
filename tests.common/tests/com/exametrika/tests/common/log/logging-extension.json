@@ -1,0 +1,13 @@
+{
+	name = "test.logging"
+	
+	types:
+	{
+		TestAppender:
+		{
+			instanceOf = "object"
+			base = "TextAppender"
+			final = true
+		}
+	}
+}

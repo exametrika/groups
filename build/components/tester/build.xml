@@ -1,0 +1,23 @@
+<project name="product.tester" default="release" basedir=".">
+    <description>
+        Product Tester build script
+    </description>
+
+    <import file="../../src/product.xml"/>
+    
+    <property name="product.version" value="1.0.0" />
+    <property name="product.name" value="exametrika.tester" />
+    <property name="product.title" value="Exametrika tester product." />
+    <fileset id="product.libraries" dir="${product.lib.dir}" includes="sigar*.jar trove*.jar libsigar*.so sigar*.dll" excludes="asm-debug*.jar ant*.jar junit*.jar *-src.jar *-src.zip" />
+    <fileset id="product.test-libraries" dir="${product.lib.dir}" includes="junit*.jar" excludes="asm-debug*.jar ant*.jar *-src.jar *-src.zip" />
+    
+    <target name="product.modules">
+        <module dir="${root.dir}/common"/>
+        <module dir="${root.dir}/boot"/>
+        <module dir="${root.dir}/tester"/>
+    </target>
+
+    <target name="product.test-modules">
+    </target>
+    
+</project>

@@ -1,0 +1,216 @@
+{
+	name = "com.exametrika.logging-1.0"
+	description = "Logging schema."
+
+	types:
+	{
+		Level:
+		{
+			instanceOf = "string"
+			enumeration: ["all", "trace" "debug" "info" "warning" "error", "off"]
+		}
+		
+		FilterExpression:
+		{
+			description = "For java filter expression is an expression with context of logged event.\
+				For native code filter expression has the following format:\
+				glob_pattern | #reg_exp_pattern. Where:\
+				* glob_pattern in format:\
+				* ? - matches any one character\
+			    * * - matches any number of characters\
+			    * {a,b,c} matches any one of a, b or c\
+			    * [abc] matches any character in the set a, b or c\
+			    * [^abc] matches any character not in the set a, b or c\
+			    * [a-z] matches any character in the range a to z, inclusive\
+			    * some reg-exp constructs starting with \ (i.e. \d,...)\
+			    * \ escapes characters\
+				* reg_exp_pattern - regular expression pattern"
+			instanceOf = "string"
+		}
+			
+		Appender:
+		{
+			instanceOf = "object"
+			description = "Abstract logging appender."
+			abstract = true
+			properties:
+			{
+				level:
+				{
+					description = "Appender level."
+					required = false
+					type = "Level"
+				}
+				
+				filters:
+				{
+					description = "List of appender filters."
+					required = false
+					type:
+					{
+						instanceOf = "array"
+						elementType = "FilterExpression"
+					}
+				}
+			}
+		}
+		
+		TextAppender:
+		{
+			instanceOf = "object"
+			description = "Abstract logging text appender."
+			abstract = true
+			base = "Appender"
+			properties:
+			{
+				template:
+				{
+					description = "For java template expression with context of logged event.\
+						For native code appender layout pattern is in format of java.text.MessageFormat but with numeric placeholders replaced by\
+						named logger fields enclosed in %fieldName% where fieldName can be one of date thread level logger message or marker."
+					required = true
+					default = "<%@template(default)%>"
+					type = "string"
+				}
+			}
+		}
+		
+		ConsoleTarget:
+		{
+			instanceOf = "string"
+			enumeration: ["output" "error"]
+		}
+		
+		ConsoleAppender:
+		{
+			instanceOf = "object"
+			description = "Console appender."
+			final = true
+			base = "TextAppender"
+				
+			properties:
+			{
+				target:
+				{
+					description = "Console target (java only)."
+					type = "ConsoleTarget"
+					required = true
+					default = "output"
+				}
+			
+				colorize:
+				{
+					description = "If true colorizes console output (java only)."
+					type = "boolean"
+					required = true
+					default = true
+				}
+			}
+		}
+		
+		FileAppender:
+		{
+			instanceOf = "object"
+			description = "File appender."
+			final = true
+			base = "TextAppender"
+			properties:
+			{
+				path:
+				{
+					description = "Path to log file."
+					required = true
+					default = "${com.exametrika.home=/opt/exametrika}/logs/exametrika.log"
+					type = "string"
+				}
+			}
+		}
+		
+		Logger:
+		{
+			instanceOf = "object"
+			description = "Logger."
+			final = true
+			properties:
+			{
+				level:
+				{
+					description = "Logging level."
+					type = "Level"
+				}
+			
+				recordStackTrace:
+				{
+					description = "If true records stack trace of logging call (java only)."
+					type = "boolean"
+					required = true
+					default = false
+				}
+				
+				appenders:
+				{
+					description = "List of logger appenders."
+					required = false
+					type:
+					{
+						instanceOf = "array"
+						elementType:
+						{
+							instanceOf = "string"
+							validators: ["appenderReference"]
+						}
+					}
+				}
+					
+				filters:
+				{
+					description = "List of logger filters."
+					required = false
+					type:
+					{
+						instanceOf = "array"
+						elementType = "FilterExpression"
+					}
+				}
+			}
+		}
+		
+		Logging:
+		{
+			instanceOf = "object"
+			description = "Logging configuration."
+			final = true
+			properties:
+			{
+				appenders:
+				{
+					description = "List of available appenders."
+					required = false
+					type:
+					{
+						instanceOf = "map"
+						valueType = "Appender"
+					}
+				}
+				
+				root:
+				{
+					description = "Root logger."
+					required = false
+					type = "Logger"
+				}
+				
+				loggers:
+				{
+					description = "List of loggers."
+					required = false
+					type:
+					{
+						instanceOf = "map"
+						valueType = "Logger"
+					}
+				}
+			}
+		}
+	}
+}

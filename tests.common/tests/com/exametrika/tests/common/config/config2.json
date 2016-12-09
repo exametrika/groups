@@ -1,0 +1,30 @@
+{
+	imports: ["config1.json", "classpath:com/exametrika/tests/common/config/config3.json"]
+	
+	type2:
+	{
+		prop1 = "${resource.path=}"
+		
+		prop2:
+		{
+			instanceOf = "type3"
+			prop1 = "${property1}"
+				
+			prop3:
+			{
+				prop1 = "${property2}"
+			}
+		}
+		
+		prop3:
+		{
+			@reference = "prop2"
+			prop3 = "@remove"
+			prop1 = "${property2}"
+			prop2:
+			{
+				@reference = "../../type1.prop2"
+			}
+		}
+	}
+}

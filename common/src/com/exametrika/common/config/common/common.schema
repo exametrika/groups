@@ -1,0 +1,83 @@
+{
+	name = "com.exametrika.common-1.0"
+	description = "Common schema."
+	
+	types:
+	{
+	    NameFilterExpression:
+        {
+            instanceOf = "string"
+            description = "Name filter expression. Space name filter expression has the following format:\
+                *  #reg_exp_pattern | glob_pattern. Where:\
+                ** reg_exp_pattern - any valid regular expression pattern\
+                ** glob_pattern - any valid unix-like glob pattern"
+        }
+        
+        CompoundNameFilterExpression:
+        {
+            instanceOf = "compound"
+            types = ["NameFilterExpression", "NameFilter"]
+        }
+            
+        NameFilter:
+        {
+            instanceOf = "object"
+            description = "Name filter."
+            final = true
+            properties:
+            {
+                expression:
+                {
+                    description = "Name filter."
+                    required = false
+                    type = "NameFilterExpression"
+                }
+
+                include:
+                {
+                    description = "Filter to include names."
+                    required = false
+                    type:
+                    {
+                        instanceOf = "array"
+                        elementType = "CompoundNameFilterExpression"
+                    }
+                }
+            
+                exclude:
+                {
+                    description = "Filter to exclude names."
+                    required = false
+                    type:
+                    {
+                        instanceOf = "array"
+                        elementType = "CompoundNameFilterExpression"
+                    }
+                }
+            }
+        }
+
+		RuntimeMode:
+		{
+			instanceOf = "string"
+			enumeration: ["development" "production"]
+		}
+	
+		Common:
+		{
+			instanceOf = "object"
+			description = "Common configuration."
+			final = true
+			properties:
+			{
+				runtimeMode:
+				{
+					description = "Runtime mode."
+					required = true
+					default = "development"
+					type = "RuntimeMode"
+				}
+			}
+		}
+	}
+}

@@ -1,0 +1,14 @@
+{
+	name = "schema1"
+	
+	imports: ["schema1.json", "classpath:com/exametrika/tests/common/config/schema2.json"]
+	
+	types:
+	{
+		type3:
+		{
+			instanceOf = "object"
+			base = "type1"
+		}
+	}
+}

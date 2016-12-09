@@ -1,0 +1,319 @@
+<project name="product">
+    <description>
+        Product build script
+    </description>
+
+    <property name="root.dir" location="../../.." />
+    <property name="product.build.template.dir" location="build" />
+    <property name="product.lib.dir" location="../../../lib" />
+
+    <macrodef name="module">
+        <attribute name="dir"/>
+       	<sequential>
+       	    <echo/>
+       	 	<echo/>
+       	 	<echo message="================ Module @{dir}"/>
+    	    <ant dir="@{dir}" target="${target}" inheritAll="true"/>
+       	</sequential>
+    </macrodef>
+    
+    <macrodef name="run">
+       	<attribute name="dir"/>
+    	<attribute name="class"/>
+        <attribute name="args" default="" />
+        <attribute name="jvmargs" default="" />
+        <attribute name="port" default="8891"/>
+        <attribute name="suspend" default="n"/>
+       	<sequential>
+            <ant dir="@{dir}" target="run-standalone" inheritAll="true">
+                <property name="class" value="@{class}"/>
+                <property name="args" value="@{args}"/>
+                <property name="jvmargs" value="@{jvmargs}"/>
+                <property name="port" value="@{port}"/>
+                <property name="suspend" value="@{suspend}"/>
+            </ant>
+       	</sequential>
+    </macrodef>
+    
+    <target name="init-product">
+        
+        <copy todir="${product.build.dir}">
+            <fileset dir="${product.build.template.dir}" erroronmissingdir="false"/>
+        </copy>
+        
+        <chmod dir="${product.build.dir}" includes="**/*.sh **/*.so" perm="ugo+x" />
+
+        <copy todir="${product.build.dir}/lib" flatten="true">
+            <fileset refid="product.libraries" />
+        </copy>
+    </target>
+
+    <target name="init-test-product">
+            
+        <copy todir="${product.build.dir}/lib" flatten="true">
+            <fileset refid="product.test-libraries" />
+        </copy>
+    </target>
+
+    <target name="protect" if="product.dist">
+        <taskdef name="protect" classname="com.exametrika.build.tools.ProtectTask" >
+          	<classpath path="${product.lib.dir}/ant-1.7.jar"/>
+            <classpath path="${product.build.dir}/lib/com.exametrika.common.jar"/>
+            <classpath path="${root.dir}/build.tools/dist/com.exametrika.build.tools.jar"/>
+        </taskdef>
+        
+        <taskdef name="encrypt" classname="com.exametrika.build.tools.EncryptTask" >
+         	<classpath path="${product.lib.dir}/ant-1.7.jar"/>
+           	<classpath path="${product.build.dir}/lib/com.exametrika.common.jar"/>
+           	<classpath path="${root.dir}/build.tools/dist/com.exametrika.build.tools.jar"/>
+       	</taskdef>
+        
+        <taskdef name="combine" classname="com.exametrika.build.tools.CombineTask" >
+         	<classpath path="${product.lib.dir}/ant-1.7.jar"/>
+           	<classpath path="${product.build.dir}/lib/com.exametrika.common.jar"/>
+           	<classpath path="${root.dir}/build.tools/dist/com.exametrika.build.tools.jar"/>
+       	</taskdef>
+        
+        <copy todir="${product.build.dir}/lib" >
+            <fileset dir="../../tools/salt" />
+        </copy>
+        
+        <property name="protected.dir" location="${product.build.dir}/../protected" />
+        <mkdir dir="${protected.dir}"/>
+        
+        <protect source="${product.build.dir}" target="${protected.dir}" config="../../src/protect.conf" />
+        <delete dir="${product.build.dir}"/>
+        <move todir="${product.build.dir}" >
+            <fileset dir="${protected.dir}" />
+        </move>
+        
+        <copy tofile="${product.build.dir}/exametrika.boot.map" >
+            <fileset file="${root.dir}/build/src/exametrika.boot.map" />
+        </copy>
+        
+        <java jar="../../tools/proguard.jar" fork="true" failonerror="true">
+            <jvmarg value="-Droot.dir=${root.dir}"/>
+            <jvmarg value="-Dbuild.dir=${product.build.dir}"/>
+            <arg value="-include ${root.dir}/build/src/exametrika.boot.pro"/>
+            <arg value="-forceprocessing"/>
+        </java>
+        
+        <combine first="${product.build.dir}/exametrika.boot-out.map" second="${root.dir}/build/src/exametrika.map"  
+            target="${product.build.dir}/exametrika.map" />
+        
+        <java jar="../../tools/proguard.jar" fork="true" failonerror="true">
+            <jvmarg value="-Droot.dir=${root.dir}"/>
+            <jvmarg value="-Dbuild.dir=${product.build.dir}"/>
+            <arg value="-include ${root.dir}/build/src/exametrika.pro"/>
+            <arg value="-forceprocessing"/>
+        </java>
+        
+        <copy tofile="${root.dir}/build/src/exametrika.boot.map" >
+            <fileset file="${product.build.dir}/exametrika.boot-out.map" />
+        </copy>
+        <copy tofile="${root.dir}/build/src/exametrika.map" >
+            <fileset file="${product.build.dir}/exametrika-out.map" />
+        </copy>
+        
+        <combine first="${product.build.dir}/exametrika.boot-out.map" second="${product.build.dir}/exametrika-out.map" 
+            target="${product.build.dir}/exametrika.map" />
+        <delete file="${product.build.dir}/exametrika.boot.map"/>
+        <delete file="${product.build.dir}/exametrika.boot-out.map"/>
+        <delete file="${product.build.dir}/exametrika-out.map"/>
+            
+        <move tofile="${product.dist.dir}/exametrika-${product.version}.map" >
+            <fileset file="${product.build.dir}/exametrika.map" />
+        </move>
+        
+        <copy todir="${product.build.dir}/lib" >
+            <fileset dir="${protected.dir}" />
+        </copy>
+        <delete dir="${protected.dir}"/>
+        
+        <encrypt source="${product.build.dir}" target="${protected.dir}" config="../../src/protect.conf" />
+        <delete dir="${product.build.dir}"/>
+        <move todir="${product.build.dir}" >
+            <fileset dir="${protected.dir}" />
+        </move>
+        
+        <chmod dir="${product.build.dir}/bin" includes="**/*.sh **/*.so" perm="ugo+x" />
+    </target>
+        
+    <target name="release-dist" if="product.dist">
+        
+        <copy todir="${product.build.dir}/../agent" >
+           <fileset dir="${product.build.dir}" >
+               <include name="**/bin/calibrate.*" />
+               <include name="**/bin/host.*" />
+               <include name="**/bin/attach.*" />
+               <include name="**/conf/boot.conf" />
+               <include name="**/conf/exametrika.conf" />
+               <include name="**/conf/host.conf" />
+               <include name="**/conf/exametrika-host.conf" />
+               <include name="**/conf/instrument-client.conf" />
+               <include name="**/conf/keystore.jks" />
+               <include name="**/conf/logging.conf" />
+               <include name="**/conf/logging-host.conf" />
+               <include name="**/lib/asm*.jar"/>
+               <include name="**/lib/tools.jar"/>
+               <include name="**/lib/sigar*.jar"/>
+               <include name="**/lib/trove*.jar"/>
+               <include name="**/lib/*.so"/>
+               <include name="**/lib/*.dll" />
+               <include name="**/lib/com.exametrika.agent.jar"/>
+               <include name="**/lib/com.exametrika.boot.jar"/>
+               <include name="**/lib/com.exametrika.common.jar"/>
+               <include name="**/lib/com.exametrika.instrument.client.jar"/>
+               <include name="**/lib/exaa.jar"/>
+           </fileset>
+       	</copy>  
+        
+        <chmod dir="${product.build.dir}/../agent/bin" includes="**/*.sh **/*.so" perm="ugo+x" />
+        
+        <zip destfile="${product.dist.dir}/${product.name}-${product.version}.zip" basedir="${product.build.dir}" />
+        <zip destfile="${product.dist.dir}/exametrika-agent-${product.version}.zip" basedir="${product.build.dir}/../agent" />
+        <zip destfile="${product.dist.dir}/${product.name}-${product.version}-src.zip" basedir="${product.build-src.dir}" />
+        
+        <exec executable="tar" dir="${product.build.dir}" failifexecutionfails="false">
+            <arg value="-czf"/>
+            <arg value="${product.dist.dir}/${product.name}-${product.version}.tar.gz"/>
+            <arg value="./"/>
+      	</exec>
+        
+        <exec executable="tar" dir="${product.build.dir}/../agent" failifexecutionfails="false">
+            <arg value="-czf"/>
+            <arg value="${product.dist.dir}/exametrika-agent-${product.version}.tar.gz"/>
+            <arg value="./"/>
+      	</exec>
+
+    </target>
+    
+    <target name="release-base" description="Build release distribution dir">
+        
+        <mkdir dir="${product.build.dir}" />
+        <mkdir dir="${product.build.dir}/lib" />
+        
+        <antcall target="product.modules">
+            <param name="target" value="build"/>
+        </antcall>
+        
+        <antcall target="init-product"/>
+        
+        <antcall target="product.modules">
+            <param name="target" value="build-doc"/>
+        </antcall>
+        
+        <move tofile="${product.build.dir}/lib/exaa.jar" file="${product.build.dir}/lib/com.exametrika.boot.jar" failonerror="false"/>
+
+        <antcall target="protect" />
+        <delete file="${product.build.dir}/lib/com.exametrika.build.tools.jar"/>
+        <antcall target="release-dist" />
+    </target>
+
+    <target name="debug-test-base" description="Build test distribution dir">
+
+        <mkdir dir="${product.build.dir}" />
+        <mkdir dir="${product.build.dir}/lib" />
+        
+        <antcall target="product.modules">
+            <param name="target" value="build"/>
+        </antcall>
+                
+        <antcall target="product.test-modules">
+            <param name="target" value="build"/>
+        </antcall>
+
+        <antcall target="init-product"/>
+        <antcall target="init-test-product"/>
+        
+        <move tofile="${product.build.dir}/lib/exaa.jar" file="${product.build.dir}/lib/com.exametrika.boot.jar" failonerror="false"/>
+        <delete file="${product.build.dir}/lib/com.exametrika.build.tools.jar"/>
+        
+        <copy todir="${product.build.dir}/lib" flatten="true">
+            <fileset dir="${product.lib.dir}" includes="junit*.jar" excludes="*-src.jar" />
+        </copy>
+
+    </target>
+
+    <target name="release">
+        <property name="production" value="true" />
+        <property name="product.build" value="Release" />
+        <property name="product.dist.dir" location="release/dist" />
+        <property name="product.build.dir" location="release/out" />
+        <property name="product.build-src.dir" location="release/out-src" />
+
+        <delete dir="release" />
+        
+        <antcall target="release-base"/>
+    </target>
+        
+    <target name="test">
+        <property name="product.build" value="Test" />
+        <property name="product.build.dir" location="test/out" />
+        <property name="product.build-src.dir" location="test/out-src" />
+        <property name="product.tests.dir" location="test/out-tests" />
+        <delete dir="test" />
+        
+        <antcall target="debug-test-base"/>
+    </target>
+    
+    <target name="debug">
+        <property name="product.build" value="Debug" />
+        <property name="product.build.dir" location="debug/out" />
+        <property name="product.build-src.dir" location="debug/out-src" />
+        <property name="product.tests.dir" location="debug/out-tests" />
+        <delete dir="debug" />
+        
+        <antcall target="debug-test-base"/>
+    </target>
+    
+    <target name="run-tests" depends="test">
+
+        <mkdir dir="${product.tests.dir}/tests" />
+        
+        <antcall target="product.test-modules">
+            <param name="target" value="run-tests"/>
+        </antcall>
+        
+        <junitreport todir="${product.tests.dir}/tests">
+          	<fileset dir="${product.tests.dir}/tests">
+            	<include name="TEST-*.xml"/>
+          	</fileset>
+          	<report format="frames" todir="${product.tests.dir}/tests/html"/>
+        </junitreport>
+    </target>
+    
+    <target name="run-perftests" depends="test">
+
+        <mkdir dir="${product.tests.dir}/perftests" />
+        
+        <antcall target="product.test-modules">
+            <param name="target" value="run-perftests"/>
+        </antcall>
+        
+        <junitreport todir="${product.tests.dir}/perftests">
+          	<fileset dir="${product.tests.dir}/perftests">
+            	<include name="TEST-*.xml"/>
+          	</fileset>
+          	<report format="frames" todir="${product.tests.dir}/perftests/html"/>
+        </junitreport>
+    </target>
+
+    <target name="clean" description="Clean the distribution dir">
+        <delete dir="release" />
+        <delete dir="test" />
+        <delete dir="debug" />
+        <delete dir="release64" />
+        <delete dir="test64" />
+        <delete dir="debug64" />
+
+        <antcall target="product.modules">
+            <param name="target" value="clean"/>
+        </antcall>
+        
+        <antcall target="product.test-modules">
+            <param name="target" value="clean"/>
+        </antcall>
+    </target>
+
+</project>

@@ -1,0 +1,18 @@
+<project name="groups" default="dist" basedir=".">
+    <description>
+        Groups build script
+    </description>
+
+    <import file="../build/src/java-project.xml"/>
+            
+    <property name="project.version" value="1.0.0" />
+    <property name="project.name" value="groups" />
+    <property name="project.title" value="Groups" />
+    <property name="project.docs.packages" value="com.exametrika.api.groups.*,com.exametrika.spi.groups.*" />
+    <property name="project.docs.api.link1" location="${common.docs}" />
+
+    <path id="dependencies">
+        <pathelement path="${common}" />
+    </path>
+        
+</project>

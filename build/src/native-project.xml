@@ -1,0 +1,173 @@
+<project name="native-project" basedir=".">
+    <description>
+        Native project build script
+    </description>
+
+    <property name="build.template.dir" location="build" />
+        
+    <condition property="build.windows">
+        <os family="windows"/>
+    </condition>
+    
+    <condition property="build.unix">
+        <os family="unix"/>
+    </condition>
+    
+    <target name="build-unix" if="build.unix" >
+        
+        <exec executable="make" dir="${product.build}" failonerror="true"/>
+                
+        <copy todir="${product.build.dir}/lib">
+            <fileset dir="${product.build}" includes="*.so"/>
+        </copy>
+        
+        <exec executable="make" dir="${product.build}64" failonerror="true"/>
+                        
+        <copy todir="${product.build.dir}/lib">
+            <fileset dir="${product.build}64" includes="*.so"/>
+        </copy>
+    </target>
+    
+    <target name="clean-unix" if="build.unix">
+        <exec executable="make" dir="Release" failonerror="false">
+            <arg value="clean"/>
+      	</exec>
+        <exec executable="make" dir="Test" failonerror="false">
+            <arg value="clean"/>
+      	</exec>
+        <exec executable="make" dir="Debug" failonerror="false">
+            <arg value="clean"/>
+      	</exec>
+        
+        <exec executable="make" dir="Release64" failonerror="false">
+            <arg value="clean"/>
+      	</exec>
+        <exec executable="make" dir="Test64" failonerror="false">
+            <arg value="clean"/>
+      	</exec>
+        <exec executable="make" dir="Debug64" failonerror="false">
+            <arg value="clean"/>
+        </exec>
+    </target>
+    
+    <target name="build-windows" if="build.windows" >
+        <antcall target="build-windows32"/>
+        <antcall target="build-windows64"/>
+    </target>
+    
+    <target name="build-windows32">
+        <property name="conf" value="${product.build}" />
+        <antcall target="build-windows-conf"/>
+    </target>
+    
+    <target name="build-windows64">
+        <property name="conf" value="${product.build}64" />
+        <antcall target="build-windows-conf"/>
+    </target>
+    
+    <target name="build-windows-conf">
+            
+        <condition property="configuration" value="Release">
+            <or>
+                <equals arg1="${conf}" arg2="Release"/>
+                <equals arg1="${conf}" arg2="Release64"/>
+                <equals arg1="${conf}" arg2="Test"/>
+                <equals arg1="${conf}" arg2="Test64"/>
+            </or>
+        </condition>
+        
+        <condition property="configuration" value="Debug">
+            <or>
+                <equals arg1="${conf}" arg2="Debug"/>
+                <equals arg1="${conf}" arg2="Debug64"/>
+            </or>
+        </condition>
+        
+        <condition property="platform" value="Win32">
+            <or>
+                <equals arg1="${conf}" arg2="Release"/>
+                <equals arg1="${conf}" arg2="Test"/>
+                <equals arg1="${conf}" arg2="Debug"/>
+            </or>
+        </condition>
+        
+        <condition property="platform" value="x64">
+            <or>
+                <equals arg1="${conf}" arg2="Release64"/>
+                <equals arg1="${conf}" arg2="Test64"/>
+                <equals arg1="${conf}" arg2="Debug64"/>
+            </or>
+        </condition>
+        
+        <condition property="path" value="Release">
+            <or>
+            	<equals arg1="${conf}" arg2="Release"/>
+                <equals arg1="${conf}" arg2="Test"/>
+            </or>
+        </condition>
+        
+        <condition property="path" value="Release64">
+            <or>
+            	<equals arg1="${conf}" arg2="Release64"/>
+                <equals arg1="${conf}" arg2="Test64"/>
+            </or>
+        </condition>
+        
+        <condition property="path" value="Debug">
+        	<equals arg1="${conf}" arg2="Debug"/>
+        </condition>
+        
+        <condition property="path" value="Debug64">
+        	<equals arg1="${conf}" arg2="Debug64"/>
+        </condition>
+                        
+        <exec executable="msbuild" dir="../windows" failonerror="true">
+            <arg value="/p:Configuration=${configuration}"/>
+            <arg value="/p:Platform=${platform}"/>
+        </exec>
+        
+        <copy todir="${product.build.dir}/lib">
+            <fileset dir="../windows/${path}" includes="*.dll"/>
+        </copy>
+        
+    </target>
+        
+    <target name="clean-windows" if="build.windows">
+        <exec executable="msbuild" dir="../windows" failonerror="false">
+            <arg value="/t:clean"/>
+            <arg value="/p:Configuration=Release"/>
+            <arg value="/p:Platform=Win32"/>
+      	</exec>
+        
+        <exec executable="msbuild" dir="../windows" failonerror="false">
+            <arg value="/t:clean"/>
+            <arg value="/p:Configuration=Release"/>
+            <arg value="/p:Platform=x64"/>
+      	</exec>
+        
+        <exec executable="msbuild" dir="../windows" failonerror="false">
+            <arg value="/t:clean"/>
+            <arg value="/p:Configuration=Debug"/>
+            <arg value="/p:Platform=Win32"/>
+      	</exec>
+        
+        <exec executable="msbuild" dir="../windows" failonerror="false">
+            <arg value="/t:clean"/>
+            <arg value="/p:Configuration=Debug"/>
+            <arg value="/p:Platform=x64"/>
+      	</exec>
+    </target>
+    
+    <target name="build" depends="build-unix,build-windows"/>
+    <target name="clean" depends="clean-unix,clean-windows"/>    
+
+    <target name="build-doc">
+    </target>
+    
+    <target name="run-tests">
+    </target>
+        
+    <target name="run-perftests">
+    </target>
+    
+</project>

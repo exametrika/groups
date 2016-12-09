@@ -1,0 +1,32 @@
+{
+	name = "schema1"
+	
+	imports: ["schema1.json", "classpath:com/exametrika/tests/common/config/schema3.json"]
+	
+	types:
+	{
+		type2:
+		{
+			instanceOf = "object"
+			properties:
+			{
+				prop1:
+				{
+					type = "string"
+				}
+			
+				prop2:
+				{
+					required = false
+					type = "type1"
+				}
+					
+				prop3:
+				{
+					required = false
+					type = "type3"
+				}
+			}
+		}
+	}
+}

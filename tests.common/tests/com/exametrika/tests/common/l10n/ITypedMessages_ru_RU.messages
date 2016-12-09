@@ -1,0 +1,5 @@
+# ru_RU locale messages
+message1=ru_RU Локализованное сообщение1.
+message2=ru_RU Локализованное сообщение2 с ''{0}'' и ''{1}''.
+message4(param1,param2)=ru_RU Локализованное сообщение4 с ''{0}'' и ''{1}''.
+message5(param1,param2)=ru_RU Локализованное сообщение5 с ''{0}'' и ''{1}''.

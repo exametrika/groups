@@ -1,0 +1,52 @@
+{
+	name = "testSchema2"
+	description = "test schema2"
+	
+	types:
+	{
+		testObject:
+		{
+			instanceOf = "object"
+			final = true
+			
+			properties:
+			{
+				prop1:
+				{
+					type:
+					{
+						instanceOf = "boolean"
+						converter = "booleans"
+					}
+				}	
+				
+				prop2:
+				{
+					type:
+					{
+						instanceOf = "long"
+						converter = "bytes"
+					}
+				}
+				
+				prop3:
+				{
+					type:
+					{
+						instanceOf = "long"
+						converter = "periods"
+					}
+				}
+				
+				prop4:
+				{
+					type:
+					{
+						instanceOf = "double"
+						converter = "percents"
+					}
+				}
+			}
+		}
+	}
+}

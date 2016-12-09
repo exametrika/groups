@@ -1,0 +1,71 @@
+<project name="java-test-project" basedir=".">
+    <description>
+        Java test project build script
+    </description>
+
+    <property file="../build/src/modules.properties" />
+    <property name="java-project" location="../build/src/java-project-impl.xml" />
+    <property name="tests.dir" location="tests" />
+    <property name="perftests.dir" location="perftests" />
+    <property name="standalone.dir" location="standalone" />
+    <property name="nodoc" value="true" />
+
+    <fileset id="project.sources.set1" dir="${tests.dir}"/>
+    <fileset id="project.sources.set2" dir="${perftests.dir}"/>
+    <fileset id="project.sources.set3" dir="${standalone.dir}"/>
+
+    <path id="project.sources">
+        <path location="${tests.dir}"/>
+        <path location="${perftests.dir}"/>
+        <path location="${standalone.dir}"/>
+    </path>
+    
+    <path id="project.files">
+        <fileset dir="${tests.dir}" excludes="**/*.java" />
+        <fileset dir="${perftests.dir}" excludes="**/*.java" erroronmissingdir="false"/>
+        <fileset dir="${standalone.dir}" excludes="**/*.java" erroronmissingdir="false"/>
+    </path>
+    
+    <path id="project.schemas">
+        <fileset dir="${tests.dir}" includes="**/*.schema" />
+        <fileset dir="${perftests.dir}" includes="**/*.schema" erroronmissingdir="false"/>
+        <fileset dir="${standalone.dir}" includes="**/*.schema" erroronmissingdir="false"/>
+    </path>
+    
+    <path id="project.dbschemas">
+        <fileset dir="${tests.dir}" includes="**/*.dbschema" />
+        <fileset dir="${perftests.dir}" includes="**/*.dbschema" erroronmissingdir="false"/>
+        <fileset dir="${standalone.dir}" includes="**/*.dbschema" erroronmissingdir="false"/>
+    </path>
+    
+    <path id="project.dbmodules">
+        <fileset dir="${tests.dir}" includes="**/*.dbmodule" />
+        <fileset dir="${perftests.dir}" includes="**/*.dbmodule" erroronmissingdir="false"/>
+        <fileset dir="${standalone.dir}" includes="**/*.dbmodule" erroronmissingdir="false"/>
+    </path>
+    
+    <target name="dist">
+        <ant antfile="${java-project}" target="dist" inheritAll="true" inheritRefs="true"/>
+    </target>
+        
+    <target name="build">
+        <ant antfile="${java-project}" target="build" inheritAll="true" inheritRefs="true"/>
+    </target>
+    
+    <target name="clean">
+        <ant antfile="${java-project}" target="clean" inheritAll="true" inheritRefs="true"/>
+    </target>
+    
+    <target name="run-tests">
+        <ant antfile="${java-project}" target="run-tests" inheritAll="true" inheritRefs="true"/>
+    </target>
+    
+    <target name="run-perftests">
+        <ant antfile="${java-project}" target="run-perftests" inheritAll="true" inheritRefs="true"/>
+    </target>
+    
+    <target name="run-standalone">
+        <ant antfile="${java-project}" target="run-standalone" inheritAll="true" inheritRefs="true"/>
+    </target>
+    
+</project>

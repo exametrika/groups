@@ -1,0 +1,17 @@
+<project name="tests.groups" default="dist" basedir=".">
+    <description>
+        Tests groups component build script
+    </description>
+
+    <import file="../build/src/java-test-project.xml"/>
+                      
+    <property name="project.version" value="1.0.0" />
+    <property name="project.name" value="tests.groups" />
+
+    <path id="dependencies">
+        <pathelement path="${common}" />
+        <pathelement path="${groups}" />
+        <pathelement path="${test.common}" />
+    </path>
+    
+</project>

@@ -1,0 +1,60 @@
+<project name="java-project" basedir=".">
+    <description>
+        Java project build script
+    </description>
+
+    <property file="../build/src/modules.properties" />
+    <property name="src.dir" location="src" />
+    <property name="java-project" location="../build/src/java-project-impl.xml" />
+    <property name="nodoc" value="true" />
+
+    <path id="project.sources" location="${src.dir}" />
+    
+    <fileset id="project.sources.set1" dir="${src.dir}" />
+    <fileset id="project.sources.set2" dir="2" erroronmissingdir="false"/>
+    <fileset id="project.sources.set3" dir="3" erroronmissingdir="false"/>
+    
+    <path id="project.files">
+        <fileset dir="${src.dir}" excludes="**/*.java" />
+    </path>
+    
+    <path id="project.schemas">
+        <fileset dir="${src.dir}" includes="**/*.schema" />
+    </path>
+    
+    <path id="project.dbschemas">
+        <fileset dir="${src.dir}" includes="**/*.dbschema" />
+    </path>
+    
+    <path id="project.dbmodules">
+        <fileset dir="${src.dir}" includes="**/*.dbmodule" />
+    </path>
+    
+    <target name="dist">
+        <ant antfile="${java-project}" target="dist-war-api" inheritAll="true" inheritRefs="true"/>
+    </target>
+        
+    <target name="build">
+        <ant antfile="${java-project}" target="build-war-api" inheritAll="true" inheritRefs="true"/>
+    </target>
+    
+    <target name="clean">
+        <ant antfile="${java-project}" target="clean" inheritAll="true" inheritRefs="true"/>
+    </target>
+
+    <target name="doc">
+    </target>
+    
+    <target name="build-doc">
+    </target>
+
+    <target name="run-tests">
+    </target>
+    
+    <target name="run-perftests">
+    </target>
+    
+    <target name="run-standalone">
+    </target>
+    
+</project>

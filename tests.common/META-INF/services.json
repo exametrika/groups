@@ -1,0 +1,78 @@
+{
+	com.exametrika.common.config.IConfigurationLoaderExtension:
+	{
+		providers:
+		{
+			provider1:
+			{
+				class = "com.exametrika.tests.common.log.LoggingConfigurationLoaderTests$TestLoggingConfigurationExtension"
+			}
+				
+			provider2:
+			{
+				class = "com.exametrika.common.log.impl.config.LoggingConfigurationExtention"
+			}
+		}
+	}
+
+	com.exametrika.common.services.IServiceProvider:
+	{
+		providers:
+		{
+			provider1:
+			{
+				class = "com.exametrika.tests.common.services.ServiceContainerTests$TestService"
+			}
+	
+			provider2:
+			{
+				class = "com.exametrika.tests.common.services.ServiceContainerTests$TestService2"
+				runModeRequired = true
+				runModes = ["mode1"]
+				qualifiers = ["q1", "q2"]
+			}
+		}
+	}
+
+	com.exametrika.tests.common.services.ServicesTests$ITestService:
+	{
+		providers:
+		{
+			provider1:
+			{
+		 		class = "com.exametrika.tests.common.services.ServicesTests$TestService1"
+		 		runModes = ["mode1", "mode2"]
+		 		qualifiers = ["q1", "q2"]
+		 		param1 = "Param1"
+		 		param2 = [1, 2, 3]	
+			}
+			
+			provider2:
+			{
+				class = "com.exametrika.tests.common.services.ServicesTests$TestService2"
+				runModes = ["mode1&mode2"]
+				qualifiers = ["q1"]
+				param1:
+				{
+					arg1 = 1
+					arg2 = true
+					arg3 = "arg"
+				}
+			}
+		 		
+	 		provider3:
+			{
+				class = "com.exametrika.tests.common.services.ServicesTests$TestService3"
+			}
+				
+			provider4:
+			{
+				class = "com.exametrika.tests.common.services.ServicesTests$TestService3"
+				runModeRequired = true
+				runModes = ["mode5"]
+				qualifiersRequired = true
+				qualifiers = ["q5"]
+			}
+		}
+	}
+}

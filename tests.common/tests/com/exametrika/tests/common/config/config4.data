@@ -1,0 +1,358 @@
+{
+    "root": 
+    {
+        "map1": 
+        {
+            "key1": "value11 - 100 - {\n    \"field1\": \"test16\",\n    \"field2\": \"test17\"\n}",
+            "key2": 
+            {
+                "field1": "test1",
+                "field2": "test2"
+            },
+            "key3": 
+            {
+                "field1": "a",
+                "field2": "b"
+            },
+            "key4": 
+            {
+                "field1": "10 + abc",
+                "field2": null,
+                "field3": null
+            },
+            "key5": 
+            {
+                "field1": "100 + def",
+                "field2": 
+                {
+                    "a": true,
+                    "b": 987
+                }
+            }
+        },
+        "object2": 
+        {
+            "field0": 
+            {
+                "field0": 
+                {
+                    "field1": "100 + def",
+                    "field2": 
+                    {
+                        "a": true,
+                        "b": 987
+                    },
+                    "field3": 
+                    {
+                        "a": true,
+                        "b": 987
+                    }
+                },
+                "field1": "value21 + value21 + 100",
+                "field2": 
+                {
+                    "field1": "100 + def",
+                    "field2": 
+                    {
+                        "a": true,
+                        "b": 987
+                    },
+                    "field3": 
+                    {
+                        "a": true,
+                        "b": 987
+                    }
+                }
+            },
+            "field1": "value21 - 100 - {\n    \"field1\": \"test1\",\n    \"field2\": \"test2\"\n}",
+            "field2": 
+            {
+                "field1": "test1",
+                "field2": "test2"
+            },
+            "field3": 
+            {
+                "field1": "a",
+                "field2": "b"
+            },
+            "field4": 
+            {
+                "field1": "10 + abc",
+                "field2": null,
+                "field3": null
+            },
+            "field5": 
+            {
+                "field1": "100 + def",
+                "field2": 
+                {
+                    "a": true,
+                    "b": 987
+                },
+                "field3": 
+                {
+                    "a": true,
+                    "b": 987
+                }
+            }
+        },
+        "object3": 
+        {
+            "field0": 
+            {
+                "field0": 
+                {
+                    "field1": "100 + def",
+                    "field2": 
+                    {
+                        "a": true,
+                        "b": 987
+                    },
+                    "field3": 
+                    {
+                        "a": true,
+                        "b": 987
+                    }
+                },
+                "field1": "value21 + value21 + 100",
+                "field2": 
+                {
+                    "field1": "100 + def",
+                    "field2": 
+                    {
+                        "a": true,
+                        "b": 987
+                    },
+                    "field3": 
+                    {
+                        "a": true,
+                        "b": 987
+                    }
+                }
+            },
+            "field1": "value21 - 100 - {\n    \"field1\": \"test1\",\n    \"field2\": \"test2\"\n}",
+            "field2": "Hello world!",
+            "field4": 
+            {
+                "field1": "10 + abc",
+                "field2": null,
+                "field3": null
+            },
+            "field5": 
+            {
+                "field1": "100 + def",
+                "field2": 
+                {
+                    "a": true,
+                    "b": 987
+                },
+                "field3": 
+                {
+                    "a": true,
+                    "b": 987
+                }
+            }
+        },
+        "object4": 
+        {
+            "key1": 
+            {
+                "field0": 
+                {
+                    "field1": "100 + def",
+                    "field2": 
+                    {
+                        "a": true,
+                        "b": 987
+                    },
+                    "field3": 
+                    {
+                        "a": true,
+                        "b": 987
+                    }
+                },
+                "field1": "Hello world!"
+            },
+            "key2": 
+            {
+                "field0": 
+                {
+                    "field0": 
+                    {
+                        "field1": "100 + def",
+                        "field2": 
+                        {
+                            "a": true,
+                            "b": 987
+                        },
+                        "field3": 
+                        {
+                            "a": true,
+                            "b": 987
+                        }
+                    },
+                    "field1": "value21 + value21 + 100",
+                    "field2": 
+                    {
+                        "field1": "100 + def",
+                        "field2": 
+                        {
+                            "a": true,
+                            "b": 987
+                        },
+                        "field3": 
+                        {
+                            "a": true,
+                            "b": 987
+                        }
+                    }
+                },
+                "field1": "value21 - 100 - {\n    \"field1\": \"test1\",\n    \"field2\": \"test2\"\n}",
+                "field2": "Hello world!",
+                "field4": 
+                {
+                    "field1": "10 + abc",
+                    "field2": null,
+                    "field3": null
+                },
+                "field5": 
+                {
+                    "field1": "100 + def",
+                    "field2": 
+                    {
+                        "a": true,
+                        "b": 987
+                    },
+                    "field3": 
+                    {
+                        "a": true,
+                        "b": 987
+                    }
+                }
+            }
+        },
+        "array3": 
+        ["value1 - 100",
+            {
+                "field0": null,
+                "field1": "value1 + 10 + ",
+                "field2": 
+                {
+                    "field1": "100 + def",
+                    "field2": 
+                    {
+                        "a": true,
+                        "b": 987
+                    },
+                    "field3": 
+                    {
+                        "a": true,
+                        "b": 987
+                    }
+                }
+            },
+            {
+                "field1": "test1",
+                "field2": "test2"
+            },
+            {
+                "field1": "a",
+                "field2": "b"
+            },
+            {
+                "field1": "10 + abc",
+                "field2": null,
+                "field3": null
+            },
+            {
+                "field1": "100 + def",
+                "field2": 
+                {
+                    "a": true,
+                    "b": 987
+                },
+                "field3": 
+                {
+                    "a": true,
+                    "b": 987
+                }
+            }, "Buildin1 generated",
+            {
+                "field0": 
+                {
+                    "arg1": "abc",
+                    "arg2": "cde"
+                },
+                "field3": "fgh"
+            }
+        ],
+        "value1": 30,
+        "value2": "Hello1",
+        "value3": "Hello2",
+        "value4": "Hello3",
+        "value6": "Hello5",
+        "value7": 
+        [
+            {
+                "field1": "arg1",
+                "field2": "arg2-1"
+            },
+            {
+                "field1": "arg1",
+                "field2": "arg2-2"
+            },
+            {
+                "field1": "arg1",
+                "field2": "arg2-3"
+            }
+        ],
+        "value8": 
+        {
+            "a": 
+            {
+                "field1": "arg1",
+                "field2": "arg2-1"
+            },
+            "b": 
+            {
+                "field1": "arg1",
+                "field2": "arg2-2"
+            },
+            "c": 
+            {
+                "field1": "arg1",
+                "field2": "arg2-3"
+            }
+        },
+        "value10": 
+        [
+            {
+                "field1": "arg1",
+                "field2": "arg2-1"
+            },
+            {
+                "field1": "arg1",
+                "field2": "arg2-2"
+            },
+            {
+                "field1": "arg1",
+                "field2": "arg2-3"
+            }
+        ],
+        "a": 
+        {
+            "field1": "arg1",
+            "field2": "arg2-1"
+        },
+        "b": 
+        {
+            "field1": "arg1",
+            "field2": "arg2-2"
+        },
+        "c": 
+        {
+            "field1": "arg1",
+            "field2": "arg2-3"
+        }
+    }
+}

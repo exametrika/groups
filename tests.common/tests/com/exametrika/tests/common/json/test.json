@@ -1,0 +1,55 @@
+{
+	// Ordinary JSON
+    "key1": 100.123,
+    "key2": true,
+    "key3": 100,
+    "key4": "\"Hello world!!!\"\t\\\u8080",
+    "key5": null,
+    "key6": 
+    [100, 200,
+        {
+            "key1": 100.123,
+            "key2": true
+        },
+        {
+            "key1": -1.001E-13,
+            "key2": true
+        }
+    ],
+    key7 : ["aa", "bb", "cc"],
+    
+    /* Extensions 
+       Single line and multiline comments*/
+    
+    // Keys without quotes and separated by equal sign, values in single quotes and without commas or semicolons inplace of commas
+    key8 = 'value8'
+    
+    'key9':	
+    {
+    	// Single qoutes in keys and regexp strings in values	
+		'key10' = /value9/
+    }
+
+	key11: [ 1000 1000 123 ]
+	key12: [ "a"; 'b'; /c/ ] ;
+	key13: { a = '1' b : "2" c = null}
+	
+	// Non-escaped multiline strings
+ 	key14 = / Hello world с:\test\test.json
+			привет мир./
+	
+	// Multiline strings
+	key15 = "Hello world.
+			привет мир!!!"
+
+	// Multiline strings with backslash
+	key16 = "Hello world.\
+				привет мир!!!"
+		
+	// Hex number	
+	key17 = 0xABCDEF123456789
+	
+	key18 : {}
+ 	key19 : []
+	key20 : ""
+}

@@ -1,0 +1,648 @@
+{
+	name = "metaschema"
+	description = "JSON meta schema."
+		
+	types:
+	{
+		type:
+		{
+			instanceOf = "object"
+			description = "Base JSON schema type."
+			abstract = true
+			validators : ["type"]
+			properties:
+			{
+				description: 
+				{
+					description = "Type description."
+					required = false
+					type:
+					{
+						instanceOf = "string"
+					}
+				}
+				
+				enumeration: 
+				{
+					description = "Enumeration of type instances."
+					required = false
+					type: 
+					{
+						instanceOf = "array"
+						elementType:
+						{
+							instanceOf = "any"
+						}
+					}
+				}
+				
+				annotation: 
+				{
+					description = "Type annotation."
+					required = false
+					type: 
+					{
+						instanceOf = "map"
+						valueType:
+						{
+							instanceOf = "any"
+						}
+					}
+				}
+				
+				validators: 
+				{
+					description = "Array of custom validators of type."
+					required = false
+					type: 
+					{
+						instanceOf = "array"
+						elementType:
+						{
+							instanceOf = "string"
+						}
+					}
+				}
+				
+				converter: 
+				{
+					description = "Converter of string value to value of this type."
+					required = false
+					type: 
+					{
+						instanceOf = "string"
+					}
+				}
+			}
+		}
+	
+		any:
+		{
+			instanceOf = "object"
+			description = "Any type."
+			final = true
+			base = "type"
+		}
+		
+		boolean:
+		{
+			instanceOf = "object"
+			description = "Boolean type."
+			final = true
+			base = "type"
+				
+			properties:
+			{
+				enumeration: 
+				{
+					allowed = false
+					required = false
+					type:
+					{
+						instanceOf = "any"
+					}
+				}
+				
+				annotation: 
+				{
+					allowed = false
+					required = false
+					type:
+					{
+						instanceOf = "any"
+					}
+				}
+				
+				validators: 
+				{
+					allowed = false
+					required = false
+					type:
+					{
+						instanceOf = "any"
+					}
+				}
+			}
+		}
+		
+		long:
+		{
+			instanceOf = "object"
+			description = "Long type."
+			final = true
+			base = "type"
+			properties:
+			{
+				min: 
+				{
+					description = "Minimal value."
+					required = true
+					default = -0x8000000000000000
+					type:
+					{
+						instanceOf = "long"
+					}
+				}
+				
+				minExclusive: 
+				{
+					description = "Is minimal value excluded from type domain?"
+					required = true
+					default = false
+					type:
+					{
+						instanceOf = "boolean"
+					}
+				}
+				
+				max: 
+				{
+					description = "Maximal value."
+					required = true
+					default = 0x7fffffffffffffff
+					type:
+					{
+						instanceOf = "long"
+					}
+				}
+				
+				maxExclusive: 
+				{
+					description = "Is maximal value excluded from type domain?"
+					required = true
+					default = false
+					type:
+					{
+						instanceOf = "boolean"
+					}
+				}
+			}
+		}
+		
+		double:
+		{
+			instanceOf = "object"
+			description = "Double type."
+			final = true
+			base = "type"
+			properties:
+			{
+				min: 
+				{
+					description = "Minimal value."
+					required = true
+					default = -1.7976931348623157e+308
+					type:
+					{
+						instanceOf = "double"
+					}
+				}
+				
+				minExclusive: 
+				{
+					description = "Is minimal value excluded from type domain?"
+					required = true
+					default = false
+					type:
+					{
+						instanceOf = "boolean"
+					}
+				}
+				
+				max: 
+				{
+					description = "Maximal value."
+					required = true
+					default = 1.7976931348623157e+308
+					type:
+					{
+						instanceOf = "double"
+					}
+				}
+				
+				maxExclusive: 
+				{
+					description = "Is maximal value excluded from type domain?"
+					required = true
+					default = false
+					type:
+					{
+						instanceOf = "boolean"
+					}
+				}
+			}
+		}
+		
+		maxCount:
+		{
+			instanceOf = "compound"
+			types:
+			[
+			 	{
+					instanceOf = "long"
+					min = 0
+				}
+			 	
+			 	{
+			 		instanceOf = "string"
+			 		enumeration = ["unbounded"]
+			 	}
+			]
+		}
+		
+		minCount:
+		{
+			instanceOf = "long"
+			min = 0
+		}
+		
+		typeReference:
+		{
+			instanceOf = "compound"
+			types:
+			[
+			 	"type", 
+			 	{
+			 		instanceOf = "string"
+		 			validators : ["typeReference"]
+			 	}
+			]
+		}
+			
+		string:
+		{
+			instanceOf = "object"
+			description = "String type."
+			final = true
+			base = "type"
+			validators : ["minMaxCount"]
+			properties:
+			{
+				minCount: 
+				{
+					description = "Minimal count of string characters."
+					required = true
+					default = 0
+					type = "minCount"
+				}
+				
+				maxCount: 
+				{
+					description = "Maximal count of string characters."
+					required = true
+					default = "unbounded"
+					type = "maxCount"
+				}
+				
+				pattern: 
+				{
+					description = "String pattern."
+					required = false
+					type:
+					{
+						instanceOf = "string"
+						validators : ["regExp"]
+					}
+				}
+			}
+		}
+		
+		stringTypeReference:
+		{
+			instanceOf = "compound"
+			
+			types:
+			[
+			 	"string", 
+			 	{
+			 		instanceOf = "string"
+		 			validators : ["stringTypeReference"]
+			 	}
+			]
+		}
+		
+		compound:
+		{
+			instanceOf = "object"
+			description = "Compound type."
+			final = true
+			base = "type"
+			properties:
+			{
+				types:
+				{
+					description = "Compound types."
+					type:
+					{
+						instanceOf = "array"
+						minCount = 1
+						elementType = "typeReference"
+					}
+				}
+			}
+		}
+		
+		array:
+		{
+			instanceOf = "object"
+			description = "Array type."
+			final = true
+			base = "type"
+			validators : ["minMaxCount"]
+			properties:
+			{
+				minCount: 
+				{
+					description = "Minimal count of array elements."
+					required = true
+					default = 0
+					type = "minCount"
+				}
+				
+				maxCount: 
+				{
+					description = "Maximal count of array elements."
+					required = true
+					default = "unbounded"
+					type = "maxCount"
+				}
+				
+				allowDuplicates: 
+				{
+					description = "Does array allow duplicate values?"
+					required = true
+					default = false
+					type:
+					{
+						instanceOf = "boolean"
+					}
+				}
+				
+				allowNulls: 
+				{
+					description = "Does array allow null values?"
+					required = true
+					default = false
+					type:
+					{
+						instanceOf = "boolean"
+					}
+				}
+				
+				elementType:
+				{
+					description = "Array element type."
+					type = "typeReference"
+				}
+			}
+		}
+		
+		map:
+		{
+			instanceOf = "object"
+			description = "Map type."
+			final = true
+			base = "type"
+			validators : ["minMaxCount"]
+			properties:
+			{
+				minCount: 
+				{
+					description = "Minimal count of map elements."
+					required = true
+					default = 0
+					type = "minCount"
+				}
+				
+				maxCount: 
+				{
+					description = "Maximal count of map elements."
+					required = true
+					default = "unbounded"
+					type = "maxCount"
+				}
+				
+				allowNulls: 
+				{
+					description = "Does map allow null values?"
+					required = true
+					default = false
+					type:
+					{
+						instanceOf = "boolean"
+					}
+				}
+				
+				keyType:
+				{
+					description = "Map element key type."
+					required = true
+					default:
+					{
+						instanceOf = "string"
+					}
+					type = "stringTypeReference"
+				}
+					
+				valueType:
+				{
+					description = "Map element value type."
+					required = true
+					type = "typeReference"
+				}
+			}
+		}
+		
+		property:
+		{
+			instanceOf = "object"
+			description = "Property."
+			final = true
+			validators : ["property"]
+			properties:
+			{
+				description: 
+				{
+					description = "Property description."
+					required = false
+					type:
+					{
+						instanceOf = "string"
+					}
+				}
+				
+				required: 
+				{
+					description = "Is property required? Required property does not allow null values."
+					required = true
+					default = true
+					type:
+					{
+						instanceOf = "boolean"
+					}
+				}
+				
+				allowed: 
+				{
+					description = "Is property allowed? If property is not allowed it can not be explicitly used in object instances."
+					required = true
+					default = true
+					type:
+					{
+						instanceOf = "boolean"
+					}
+				}
+				
+				type: 
+				{
+					description = "Property type."
+					type = "typeReference"
+				}
+				
+				default: 
+				{
+					description = "Property default value."
+					required = false
+					type:
+					{
+						instanceOf = "any"
+					}
+				}
+			}
+		}
+		
+		object:
+		{
+			instanceOf = "object"
+			description = "Object type."
+			final = true
+			base = "type"
+			validators : ["object"]
+			properties:
+			{
+				instanceOf: 
+				{
+					description = "Defines exact type of object instance in case of polymorphic type references."
+					required = false
+					type:
+					{
+						instanceOf = "string"
+						enumeration: ["any", "boolean", "long", "double", "string", "compound", "array", "map", "object"]
+					}
+				}
+			
+				abstract: 
+				{
+					description = "Does object type allow creation of instances of this type?"
+					required = true
+					default = false
+					type:
+					{
+						instanceOf = "boolean"
+					}
+				}
+				
+				final: 
+				{
+					description = "Can object type be base for another object type?"
+					required = true
+					default = false
+					type:
+					{
+						instanceOf = "boolean"
+					}
+				}
+				
+				open: 
+				{
+					description = "Can object type allow addition of undefined properties?"
+					required = true
+					default = false
+					type:
+					{
+						instanceOf = "boolean"
+					}
+				}
+				
+				base: 
+				{
+					description = "Base object type for this object type."
+					required = false
+					type:
+					{
+						instanceOf = "string"
+						validators : ["objectTypeReference"]
+					}
+				}
+				
+				properties: 
+				{
+					description = "Object type properties."
+					required = false
+					type:
+					{
+						instanceOf = "map"
+						valueType = "property"
+					}
+				}
+			}
+		}
+		
+		schema:
+		{
+			instanceOf = "object"
+			description = "Schema type."
+			final = true
+			validators : ["schema"]
+			properties:
+			{
+				name: 
+				{
+					description = "Schema name."
+					required = false
+					type:
+					{
+						instanceOf = "string"
+					}
+				}
+				
+				description: 
+				{
+					description = "Schema description."
+					required = false
+					type:
+					{
+						instanceOf = "string"
+					}
+				}
+				
+				imports:
+				{
+					description = "JSON schema imports."
+					required = false
+					type:
+					{
+						instanceOf = "array"
+						allowDuplicates = false
+						elementType:
+						{
+							instanceOf = "string"
+						}
+					}
+				}
+				
+				types:
+				{
+					description = "JSON schema types."
+					required = true
+					type:
+					{
+						instanceOf = "map"
+						minCount = 1
+						valueType = "type"
+					}
+				}
+			}
+		}
+	}
+}

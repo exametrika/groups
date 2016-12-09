@@ -1,0 +1,114 @@
+{
+	name = "com.exametrika.services-1.0"
+	description = "Services schema."
+	
+	types:
+	{
+		Service:
+		{
+			instanceOf = "object"
+			description = "Service."
+			final = true
+			properties:
+			{
+				description:
+				{
+					description = "Service description."
+					required = false
+					type = "string"
+				}
+				
+				providers:
+				{
+					description = "Map of service providers in current module."
+					type:
+					{
+						instanceOf = "map"
+						valueType = "Provider"
+					}
+				}
+			}
+		}
+		
+		Provider:
+		{
+			instanceOf = "object"
+			description = "Service provider."
+			final = true
+			open = true
+			properties:
+			{
+				description:
+				{
+					description = "Service provider description."
+					required = false
+					type = "string"
+				}
+				
+				class:
+				{
+					description = "Java class of service provider. Special 'configuration' class is used when provider\
+						represents a configuration only service provider which can not be instantiated at runtime."
+					required = true
+					type = "string"
+				}
+					
+				runModes:
+				{
+					description = "Array of run modes supported by the service provider. If not set, \
+						service provider supports any run mode. Service is created if at least one run mode from this list matches\
+						one of run modes of service container. Each element of the list can combine several required run modes by\
+						separating them with & separator."
+					required = false
+					type:
+					{
+						instanceOf = "array"
+						elementType = "string"
+					}
+				}
+				
+				runModeRequired:
+				{
+					description = "If true service is not loaded if runMode is not set by service container."
+					required = true
+					default = false
+					type = "boolean"
+				}
+				
+				qualifiers:
+				{
+					description = "Array of qualifiers supported by the service provider. If not set, \
+						service provider supports any qualifier. Service is created if at least one qualifier from this list matches\
+						one of qualifiers of service container. Each element of the list can combine several required qualifiers by\
+						separating them with & separator."
+					required = false
+					type:
+					{
+						instanceOf = "array"
+						elementType = "string"
+					}
+				}
+					
+				qualifiersRequired:
+				{
+					description = "If true service is not loaded if qualifiers are not set by service container."
+					required = true
+					default = false
+					type = "boolean"
+				}
+			}
+		}
+		
+		Services:
+		{
+			instanceOf = "map"
+			description = "Map of services."
+			keyType:
+			{
+				instanceOf = "string"
+				description = "Java class of service"
+			}
+			valueType = "Service"
+		}
+	}
+}

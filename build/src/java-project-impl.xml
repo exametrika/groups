@@ -1,0 +1,263 @@
+<project name="java-project-impl">
+    <description>
+        Java project implementation build script
+    </description>
+
+    <property name="lib.dir" location="../lib" />
+    <property name="dist.dir" location="dist" />
+    <property name="dist.docs.dir" location="dist/docs" />
+    <property name="dist.docs.schemas.dir" location="dist/docs/schemas" />
+    <property name="dist.docs.dbschemas.dir" location="dist/docs/dbschemas" />
+    <property name="dist.docs.dbmodules.dir" location="dist/docs/dbmodules" />
+    <property name="dist.docs.api.dir" location="dist/docs/api/${project.name}" />
+    <property name="build.template.dir" location="build" />
+    <property name="bin.dir" location="out" />
+    <property name="target.jar" value="com.exametrika.${project.name}.jar" />
+    <property name="target-src.jar" value="com.exametrika.${project.name}-${project.version}-src.jar" />
+    <property name="docs.api.windowtitle" value="${project.title} API" />
+    <property name="docs.api.doctitle" value="&lt;h1&gt;${project.title} API v${project.version}.&lt;/h1&gt;" />
+    <property name="docs.api.jdk-link" value="http://docs.oracle.com/javase/7/docs/api/" />
+    <property name="online.doc.root" value="http://docs.exametrika.com/api" />
+    
+    <condition property="build.windows">
+        <os family="windows"/>
+    </condition>
+    
+    <condition property="build.unix">
+        <os family="unix"/>
+    </condition>
+    
+    <path id="libs">
+        <fileset dir="${lib.dir}">
+            <include name="**/*.jar" />
+        </fileset>
+    </path>
+
+    <target name="init-windows" if="build.windows">
+        <property name="webpack" value="webpack.cmd"/>
+    </target>
+    
+    <target name="init-unix" if="build.unix">
+        <property name="webpack" value="webpack"/>
+    </target>
+    
+    <target name="init" depends="init-windows,init-unix">
+        <tstamp />
+        <mkdir dir="${dist.dir}" />
+        <mkdir dir="${dist.docs.dir}" />
+        <mkdir dir="${dist.docs.schemas.dir}" />
+        <mkdir dir="${dist.docs.dbschemas.dir}" />
+        <mkdir dir="${dist.docs.dbmodules.dir}" />
+    </target>
+
+    <target name="compile" depends="init" description="Compile the source">
+        <mkdir dir="${bin.dir}" />
+
+        <pathconvert pathsep="${line.separator}|   |-- " property="echo.path.compile" refid="dependencies">
+        </pathconvert>
+        <echo message="|-- compile classpath"/>
+        <echo message="|   |"/>
+        <echo message="|   |-- ${echo.path.compile}"/>
+        
+        <javac destdir="${bin.dir}" source="1.7" target="1.7" debug="true" encoding="utf8" debuglevel="vars,lines,source" includeantruntime="false">
+            <compilerarg value="-XDignore.symbol.file"/>
+            <compilerarg value="-Xlint:-options"/>
+            <src refid="project.sources" />
+            <classpath refid="libs" />
+            <classpath refid="dependencies" />
+        </javac>
+
+        <copy todir="${bin.dir}">
+            <path refid="project.files" />
+            <fileset dir="." includes="META-INF/**" excludes="META-INF/MANIFEST.MF"/>
+        </copy>
+
+        <copy todir="${dist.docs.schemas.dir}" flatten="true">
+            <path refid="project.schemas" />
+        </copy>
+        
+        <copy todir="${dist.docs.dbschemas.dir}" flatten="true">
+            <path refid="project.dbschemas" />
+        </copy>
+        
+        <copy todir="${dist.docs.dbmodules.dir}" flatten="true">
+            <path refid="project.dbmodules" />
+        </copy>
+    </target>
+
+    <target name="dist" depends="compile" description="Build the distribution dir">
+        <mkdir dir="${dist.dir}" />
+        <delete dir="${bin.dir}/java" />
+        <jar jarfile="${dist.dir}/${target.jar}" basedir="${bin.dir}" manifest="META-INF/MANIFEST.MF" />
+    </target>
+
+    <target name="build" depends="dist,build-sources">
+        <copy file="${dist.dir}/${target.jar}" tofile="${product.build.dir}/lib/${target.jar}" />
+        <copy todir="${product.build.dir}" overwrite="true">
+            <fileset dir="${build.template.dir}" erroronmissingdir="false"/>
+        </copy>
+        <copy todir="${product.build.dir}/docs">
+            <fileset dir="${dist.docs.dir}" />
+        </copy>
+    </target>
+    
+    <target name="build-webui-prod" description="Build production version of web-ui" if="production">
+        <exec executable="${webpack}" dir="./webui" failonerror="true">
+            <arg line="--config webpack.prod.config.js"/>
+      	</exec>
+        
+        <mkdir dir="${dist.dir}" />
+        <delete dir="${bin.dir}/java" />
+        
+        <jar jarfile="${dist.dir}/${target.jar}">
+            <fileset dir="${bin.dir}" excludes="META-INF/**,js/**,test/**"/>
+        </jar>
+        <war destfile="${dist.dir}/web.ui.war" webxml="WEB-INF/web.xml" manifest="META-INF/MANIFEST.MF" >
+        	<fileset dir="content" excludes="*.map"/>
+            <lib file="${dist.dir}/${target.jar}"/>
+    	</war>
+    </target>
+    
+    <target name="build-webui-dev" description="Build development version of web-ui" unless="production">
+        <exec executable="${webpack}" dir="./webui" failonerror="true">
+            <arg line="--config webpack.dev.config.js"/>
+      	</exec>
+        
+        <mkdir dir="${dist.dir}" />
+        <delete dir="${bin.dir}/java" />
+        <jar jarfile="${dist.dir}/${target.jar}">
+            <fileset dir="${bin.dir}" excludes="META-INF/**,js/**,test/**"/>
+        </jar>
+        <war destfile="${dist.dir}/web.ui.war" webxml="WEB-INF/web.xml" manifest="META-INF/MANIFEST.MF" >
+        	<fileset dir="content"/>
+            <lib file="${dist.dir}/${target.jar}"/>
+    	</war>
+    </target>
+        
+    <target name="build-war-ui" depends="compile,build-webui-prod,build-webui-dev,build-sources">
+        <copy file="${dist.dir}/web.ui.war" tofile="${product.build.dir}/lib/web.ui.war" />
+    </target>
+    
+    <target name="build-war-api" depends="compile,build-sources">
+        <mkdir dir="${dist.dir}" />
+        <delete dir="${bin.dir}/java" />
+        <jar jarfile="${dist.dir}/${target.jar}">
+            <fileset dir="${bin.dir}" excludes="META-INF/**,test/**"/>
+        </jar>
+        <war destfile="${dist.dir}/web.api.war" webxml="WEB-INF/web.xml" manifest="META-INF/MANIFEST.MF" >
+            <lib file="${dist.dir}/${target.jar}"/>
+    	</war>
+        <copy file="${dist.dir}/web.api.war" tofile="${product.build.dir}/lib/web.api.war" />
+    </target>
+    
+    <target name="build-sources">
+        <mkdir dir="${dist.dir}" />
+        <jar jarfile="${dist.dir}/${target-src.jar}">
+            <fileset refid="project.sources.set1"/>
+            <fileset refid="project.sources.set2"/>
+        	<fileset refid="project.sources.set3"/>
+        </jar>
+        <copy file="${dist.dir}/${target-src.jar}" tofile="${product.build-src.dir}/${target-src.jar}" />
+    </target>
+        
+    <target name="clean" description="Clean up all output dirs">
+        <delete dir="${dist.dir}" />
+        <delete dir="${bin.dir}" />
+    </target>
+            
+    <target name="doc" depends="init" description="Generate javadocs" unless="nodoc">
+        <mkdir dir="${dist.docs.api.dir}" />
+        
+        <javadoc packagenames="${project.docs.packages}"
+        	sourcepath="${src.dir}"
+    	    defaultexcludes="yes"
+            destdir="${dist.docs.api.dir}"
+            author="true"
+        	version="true"
+            use="true"
+            windowtitle="${docs.api.windowtitle}"
+            doctitle="${docs.api.doctitle}">
+            
+            <bottom><![CDATA[<i>Copyright &#169; 2013 Medvedev A.P. All Rights Reserved.</i>]]></bottom>
+            <tag name="threadsafety" scope="all" description="Thread safety:"/>
+            <arg value="-XDignore.symbol.file"/>
+            <arg value="-quiet"/>
+            <arg value="-Xdoclint:none"/>
+            <classpath refid="libs" />
+            <classpath refid="dependencies" />
+            <link href="${docs.api.jdk-link}"/>
+            <link href="${online.doc.root}" offline="true" packagelistloc="${project.docs.api.link1}"/>
+            <link href="${online.doc.root}" offline="true" packagelistloc="${project.docs.api.link2}"/>
+            <link href="${online.doc.root}" offline="true" packagelistloc="${project.docs.api.link3}"/>
+            <link href="${online.doc.root}" offline="true" packagelistloc="${project.docs.api.link4}"/>
+            <link href="${online.doc.root}" offline="true" packagelistloc="${project.docs.api.link5}"/>
+      	</javadoc>
+        
+    </target>
+    
+    <target name="build-doc" depends="doc">
+        <copy todir="${product.build.dir}/docs">
+            <fileset dir="${dist.docs.dir}" />
+        </copy>
+    </target>
+    
+    <target name="run-tests">
+
+        <path id="tests-libs">
+            <fileset dir="${lib.dir}">
+                <include name="**/*.jar" />
+                <exclude name="**/ant*.jar" />
+            </fileset>
+        </path>
+        
+        <junit printsummary="true">
+            <classpath refid="tests-libs" />
+            <classpath refid="dependencies" />
+            <classpath location="${dist.dir}/${target.jar}"/>
+            <sysproperty key="com.exametrika.home" value="${product.build.dir}"/>
+            <sysproperty key="java.library.path" value="${product.build.dir}/lib"/>
+            <batchtest fork="yes" todir="${product.tests.dir}/tests" haltonerror="false">
+                <zipfileset src="${dist.dir}/${target.jar}" includes="**/*Tests.class" excludes="**/*PerfTests.class **/*Abstract*Tests.class" />
+                <formatter type="xml" usefile="true" />
+            </batchtest>
+        </junit>
+    </target>
+    
+    <target name="run-perftests">
+
+        <path id="tests-libs">
+            <fileset dir="${lib.dir}">
+                <include name="**/*.jar" />
+                <exclude name="**/ant*.jar" />
+            </fileset>
+        </path>
+        
+        <junit>
+            <classpath refid="tests-libs" />
+            <classpath refid="dependencies" />
+            <classpath location="${dist.dir}/${target.jar}"/>
+            <sysproperty key="com.exametrika.home" value="${product.build.dir}"/>
+            <sysproperty key="java.library.path" value="${product.build.dir}/lib"/>
+            <batchtest fork="yes" todir="${product.tests.dir}/perftests" haltonerror="false">
+                <zipfileset src="${dist.dir}/${target.jar}" includes="**/*PerfTests.class" excludes="**/*Tests.class **/*Abstract*Tests.class" />
+                <formatter type="plain" usefile="true" />
+            </batchtest>
+        </junit>
+    </target>
+    
+    <target name="run-standalone">
+		<java classname="${class}" fork="true" failonerror="true">
+		    <classpath refid="libs" />
+	        <classpath refid="dependencies" />
+		    <classpath location="${lib.dir}"/>
+	        <classpath location="${dist.dir}/${target.jar}"/>
+		    <sysproperty key="com.exametrika.home" value="${product.build.dir}"/>
+		    <sysproperty key="java.library.path" value="${product.build.dir}/lib"/>
+		    <arg line="${args}"/>
+		    <jvmarg line="${jvmargs}" />
+		    <jvmarg value="-Xdebug" />
+		    <jvmarg value="-Xrunjdwp:transport=dt_socket,address=${port},server=y,suspend=${suspend}" />
+	    </java>
+    </target>
+
+</project>

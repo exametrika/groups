@@ -1,0 +1,15 @@
+<project name="common" default="dist" basedir=".">
+    <description>
+        Common build script
+    </description>
+
+    <import file="../build/src/java-project.xml"/>
+        
+    <property name="project.version" value="1.0.0" />
+    <property name="project.name" value="common" />
+    <property name="project.title" value="Common" />
+    <property name="project.docs.packages" value="com.exametrika.common.*" />
+    
+    <path id="dependencies"/>
+        
+</project>

@@ -1,0 +1,58 @@
+<project name="product.all.cross" default="release" basedir=".">
+    <description>
+        Product Exametrika cross-platform build script
+    </description>
+
+    <import file="../../src/product.xml"/>
+    
+    <property name="product.version" value="1.0.0" />
+    <property name="product.name" value="exametrika" />
+    <property name="product.title" value="Exametrika product." />
+    <property name="product.dist" value="true" />
+    <fileset id="product.libraries" dir="${product.lib.dir}" includes="*.jar *.so *.dll" excludes="asm-debug*.jar ant*.jar junit*.jar *-src.jar *-src.zip" />
+    <fileset id="product.test-libraries" dir="${product.lib.dir}" includes="junit*.jar" excludes="asm-debug*.jar ant*.jar *-src.jar *-src.zip" />
+    
+    <target name="product.modules">
+        <module dir="${root.dir}/common"/>
+        <module dir="${root.dir}/boot"/>
+        <module dir="${root.dir}/instrument.boot"/>
+        <module dir="${root.dir}/instrument"/>
+        <module dir="${root.dir}/instrument.client"/>
+        <module dir="${root.dir}/aggregator.common"/>
+        <module dir="${root.dir}/profiler.boot"/>
+        <module dir="${root.dir}/profiler"/>
+        <module dir="${root.dir}/metrics.host"/>
+        <module dir="${root.dir}/metrics.jvm.boot"/>
+		<module dir="${root.dir}/metrics.jvm"/>
+        <module dir="${root.dir}/metrics.jvm.bridge"/>
+        <module dir="${root.dir}/profiler.native"/>
+        <module dir="${root.dir}/profiler.native.agent"/>
+        <module dir="${root.dir}/exadb"/>
+        <module dir="${root.dir}/aggregator"/>
+        <module dir="${root.dir}/component"/>
+        <module dir="${root.dir}/metrics.exa"/>
+        <module dir="${root.dir}/agent"/>
+        <module dir="${root.dir}/server"/>
+        <module dir="${root.dir}/server.web"/>
+        <module dir="${root.dir}/web.ui"/>
+        <module dir="${root.dir}/web.api"/>
+        <module dir="${root.dir}/metrics.host.server"/>
+        <module dir="${root.dir}/metrics.jvm.server"/>
+        <module dir="${root.dir}/metrics.exa.server"/>
+        <module dir="${root.dir}/tester"/>
+        <module dir="${root.dir}/build.cross"/>
+        <module dir="${root.dir}/build.tools"/>
+    </target>
+
+    <target name="product.test-modules">
+        <module dir="${root.dir}/tests.instrument"/>
+        <module dir="${root.dir}/tests.common"/>
+        <module dir="${root.dir}/tests.profiler"/>
+        <module dir="${root.dir}/tests.exadb"/>
+        <module dir="${root.dir}/tests.aggregator"/>
+        <module dir="${root.dir}/tests.component"/>
+        <module dir="${root.dir}/tests.server"/>
+        <module dir="${root.dir}/tests.probes"/>
+    </target>
+    
+</project>

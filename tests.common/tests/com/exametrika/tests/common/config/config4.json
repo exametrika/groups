@@ -1,0 +1,225 @@
+{
+	schemas: ["schema4"]
+	@macro1 = "value1"
+	@macro2 = 100
+	@macro3:
+	{
+		field1 = "test1"
+		field2 = "test2"
+	}
+	@macro4:
+	{
+		args = ["arg1", "arg2"]
+		body:
+		{
+			field1 = "@{{arg1}}"
+			field2 = "@{{arg2}}"
+		}
+	}
+	@macro5:
+	{
+		args:
+		{
+			arg3 = {required = false default = 10}
+			arg4 = {required = true}
+			arg5 = {required = false}
+		}
+		body:
+		{
+			field1 = "@{{arg3}} + @{{arg4}}"
+			field2 = "@{{arg5}}"
+			field3 = "@{{arg5}}"
+		}
+	}
+	@macro6:
+	{
+		args:
+		{
+			arg3 = {required = false default = 10}
+			arg4 = {required = false}
+			arg5 = {required = false}
+		}
+		body:
+		{
+			field0 = "@{{arg5}}"
+			field1 = "@{{macro1}} + @{{arg3}} + @{{arg4}}"
+			field2:
+			{
+				@reference = "@macro5"
+				@args = { arg3 = 100 arg4 = "def" arg5 = { a = true b = 987 }} 
+			}
+		}
+	}
+		
+	root:
+	{
+		map1:
+		{
+			@macro1 = "value11"
+			@macro6:
+			{
+				field1 = "test16"
+				field2 = "test17"
+			}
+			
+			key1 = "@{{macro1}} - @{{macro2}} - @{{macro6}}"
+			key2 = "@{{macro3}}"
+			key3:
+			{
+				@reference = "@macro4"
+				@args = { arg1 = "a" arg2 = "b"} 
+			}
+			key4:
+			{
+				@reference = "@macro5"
+				@args = { arg4 = "abc"} 
+			}
+			key5:
+			{
+				@reference = "@macro5"
+				@args = { arg3 = 100 arg4 = "def" arg5 = { a = true b = 987 }} 
+				field3 = "@remove"
+			}
+		}
+		
+		object2:
+		{
+			@macro1 = "value21"
+			field0:
+			{
+				@reference = "@macro6"
+				@args = 
+				{ 
+					arg3 = "@{{macro1}}" arg4 = "@{{macro2}}" arg5 = 
+					{
+						@reference = "@macro5"
+						@args = { arg3 = 100 arg4 = "def" arg5 = { a = true b = 987 }}
+					} 
+				}
+			} 
+			field1 = "@{{macro1}} - @{{macro2}} - @{{macro3}}"
+			field2 = "@{{macro3}}"
+			field3:
+			{
+				@reference = "@macro4"
+				@args = { arg1 = "a" arg2 = "b"} 
+			}
+			field4:
+			{
+				@reference = "@macro5"
+				@args = { arg4 = "abc"} 
+			}
+			field5:
+			{
+				@reference = "@macro5"
+				@args = { arg3 = 100 arg4 = "def" arg5 = { a = true b = 987 }} 
+			}
+		}
+		
+		object3:
+		{
+			@reference = "object2"
+			field2 = "Hello world!"
+			field3 = "@remove"
+		}
+		object4:
+		{
+			key1:
+			{
+				@reference = "../[object2][field0]"
+				field1 = "Hello world!"
+				field2 = "@remove"
+			}
+			key2:
+			{
+				@reference = "/[root][object2]"
+				field2 = "Hello world!"
+				field3 = "@remove"
+			}
+		}
+		array3:
+		[
+			"@{{macro1}} - @{{macro2}}",
+			"@{{macro6}}",
+			"@{{macro3}}",
+			{
+				@reference = "@macro4"
+				@args = { arg1 = "a" arg2 = "b"} 
+			},
+			{
+				@reference = "@macro5"
+				@args = { arg4 = "abc"} 
+			},
+			{
+				@reference = "@macro5"
+				@args = { arg3 = 100 arg4 = "def" arg5 = { a = true b = 987 }} 
+			},
+			"@{{buildin1}}",
+			{
+				@reference = "@buildin2"
+				@args = { arg1 = "abc" arg2 = "cde"} 
+				field2 = "@remove"
+				field3 = "fgh"
+			}
+		]
+		value1:
+		{
+			@reference = "@evaluate"
+			@args = {expression = "10 + 20"}
+		}
+		value2:
+		{
+			@reference = "@if"
+			@args = {condition = true, then = "Hello1"}
+		}
+		@macro10 = true
+		value3:
+		{
+			@reference = "@if"
+			@args = {condition = "@{{macro10}}", then = "Hello2"}
+		}
+		value4:
+		{
+			@reference = "@if"
+			@args = {condition = false, else = "Hello3"}
+		}
+		value5:
+		{
+			@reference = "@if"
+			@args = {condition = false, then = "Hello4"}
+		}
+		value6:
+		{
+			@reference = "@if"
+			@args = {condition = {@reference = "@evaluate" @args = {expression = "100 > 10"}}, then="Hello5"}
+		}
+		value7:
+		{
+			@reference = "@macro4"
+			@args = {arg1 = "arg1"}
+			@generate = [ {arg2="arg2-1"}, {arg2="arg2-2"}, {arg2="arg2-3"}]
+		}
+		value8:
+		{
+			@reference = "@macro4"
+			@args = {arg1 = "arg1"}
+			@generate = { a:{arg2="arg2-1"}, b:{arg2="arg2-2"}, c:{arg2="arg2-3"}}
+		}
+		value9:
+		{
+			@reference = "@macro4"
+			@args = {arg1 = "arg1", arg2 = "arg2"}
+			@generate = { a:{arg2="arg2-1"}, b:{arg2="arg2-2"}, c:{arg2="arg2-3"}}
+			@inline = true
+		}
+		value10:
+		[
+			{
+				@reference = "@macro4"
+				@args = {arg1 = "arg1", arg2 = "arg2"}
+				@generate = [ {arg2="arg2-1"}, {arg2="arg2-2"}, {arg2="arg2-3"}]
+				@inline = true
+			}
+		]
+	}
+}

@@ -1,0 +1,12 @@
+{
+	com.exametrika.common.config.IConfigurationLoaderExtension:
+	{
+		providers:
+		{
+			provider1:
+			{
+				class = "com.exametrika.common.log.impl.config.LoggingConfigurationExtention"
+			}
+		}
+	}
+}
