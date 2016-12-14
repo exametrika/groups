@@ -1,0 +1,608 @@
+h1. Installed plugins
+
+See vimawesome.com for links.
+
+* pathogen (plugin manager)
+* ctrlp
+* delimitMate
+* eclim
+* indentLine
+* nerdcommenter
+* nerdtree
+* ultisnips
+* tagbar
+* vim-airline
+* vim-airline-themes
+* vim-colors-solarized
+* vim-dispatch
+* vim-fugitive
+* vim-gitgutter
+* vim-nerdtree-tabs
+* vim-sensible
+* vim-snippets
+* youcompleteme 
+* cmdalias_vim (https://github.com/coot/cmdalias_vim)
+* CRDispatcher (https://github.com/coot/CRDispatcher)
+
+* Требуется vim с поддержкой python, clipboard и др. (vim-gnome, vim-nox, vim-nox-py2)
+* После установки pathogen, все плагины кроме eclim устанавливаются в ~/.vim/bundle директорию простых git clone <repository>.
+* eclim - устанавливается отдельно (см. его установку) и требует установки eclipse (headless)
+* tagbar требует установки ctags
+* vom-colors-solarized требует xterm-color-256 (поддержка 256 цветов), а также настройку палитры терминала
+* vim-fugitive/vim-gitgutter требуют git
+* youcompleteme требует установку нативного компонента (см. его установку)
+* в vim-snippets нужно исправить форматирование сниппетов для java (форматирование фигурных скобок)
+
+Настройка цветов:
+* Для Windows используем cygwin + заданный minttyrc файл.
+* Для ubuntu создаем отдельный профиль терминала и устанавливаем тему его цветов как Solarized. Используем профиль для vim (плохо сочетается c mc)
+* если цвета терминала не настраиваются, раскомментарить let g:solarized_termcolors=256 в $VIMRC
+
+Репозиторий:
+* https://github.com/exametrika/groups.git  
+
+h1. Text navigation
+
+<Leader> = \
+
+Repeat:
+* N<command> - повторить N раз
+* . - повторить последнюю
+* <tab> - во многих окнах работает tab-completion
+
+Common navigation:
+* hjkl - <v^> - курсор
+* w/b/e/g - next/back/next end/prev end of word
+* W/B/E/gE - next/back/next end/prev end of blank separated word
+* 0/$/^ - start/start non blank/end line
+* fx/Fx - search/back search char <x> on current line (places cursor after char)
+* tx/Tx - search/back search char <x> on current line (places cursor before char)
+* +/-/_ - down/up/current first non-blank
+
+Move to line:
+* gg/G/<N>G - move to text start/text end/<N> line
+* <N>% - move to % line
+* ; - repeat f/t/F/T motion
+
+Search:
+* /pattern[/offset]<cr> - прямой поиск (со смещением по линиям) 
+* ?pattern[/offset]<cr> - обратный поиск (со смещением по линиям)
+* n/N/</><cr>/?<cr>  - повторить прямой поиск/обратный поиск
+* */# - прямой/обратный поиск по идентификатору под курсором
+* :noh - убрать подсветку предыдущего поиска
+* :[l]vim[grep][add][!] /{pattern}/[g][j] {file} - поиск в файлах (l - локальное окно, g - все вхождения, j - не переход при показе окна поиска, add - добавление в имеющийся список)
+  - *.<ext> - поиск в текущей директории
+  - ./**/*.<ext> - рекурсивный поиск от текущей
+
+Marks:
+* m{a-zA-Z} - установить марк
+* `{a-z} - перейти на марк в текущем файле
+* `{A-Z} - перейти на марк в произвольном файле
+* `{0-9} - перейти на марк последних позиций
+* `` - перейти на предыдущую позицию
+* `"/`. - перейти на позицию последнего редактирования файла
+* :marks - список активных марок
+* :ju[mps] - список переходов
+* <c-O>/<c-I> - переход на более старую/более новую позицию в списке переходов
+
+Tags:
+* :ta[g][!] {tag} - переход на тег
+* <c-]> - переход на тег под курсором
+* :[p]ts[elect][!] [tag] - список тегов (p - в preview)
+* :[p]tj[ump][!] [tag] - переход на тег или выбор из списка (p - в preview)
+* :tags - список тегов
+* <c-T> - переход обратно из тега
+* :pt[ag] {tag} - открыть preview для тега
+* :pc[lose] / <c-W>z - закрыть preview
+* <c-W> } - открыть тег под курсором в preview
+
+Quickfixes:
+* cc/cn/cp - показать текущий/следующий/предыдущий фикс
+* cl - список фиксов
+
+Foldings: 
+* zo/zO - открыть один/все фолдинги под курсором
+* zс/zС - закрыть один/все фолдинги под курсором
+* zm/zM - увеличить уровень фолдингов на один/открыть все
+* zr/zR - уменьшить уровень фолдингов на один/закрыть все
+* zi - переключить режим фолдинга
+
+h1. Text editing
+
+Common:
+* i/I/a/A/o/O - insert before cursor/insert before first non-blank/append after cursor/append after last/open new line after current line/open new line before current line
+* R/v/V/<c-V> - replace/visual/linewise visual/block visual mode
+* x/<del> - удаление символа под и после курсора
+* X - удаление символа перед курсором (как <bs>)
+* d{motion}/{visual}d - удаление выборки/удаление выделенного текста
+* D - удаление до конца строки
+* dd - удаление линии
+* u/<c-R> - undo/redo
+
+Clipboard:
+* "{char} - выбор регистра(клипбоарда) для дальнейшей вставки/удаления (+/* - системные)
+* :reg/reg {arg} - показ содержимого всех/заданных регистров
+* y{motion}/{visual}y - копирование выборки/копирование выделенного текста в текущий регистр
+* yy/Y - копирование текущей линии
+* p/P - вставить после/до позиции курсора
+
+Shifts:
+* используем <s-V> - line visual mode
+* <{motion} / << / >{motion} / >> - сдвиг влево/вправо
+* . - повторить сдвиг
+
+Replace:
+* :[range]s[ubstitute]/from/to/[flags] - замена (без range замена только в текущей)
+ - %s /from/to/g - замена во всем файле (g - все вхождения)
+ - флаги - g(все вхождения), с(подтверждение замены)
+* sed -i 's/pattern/replacement/' <files> - replace in multiple files
+
+Code completion (работает только в Insert режиме):
+* <c-X><c-N> - вставка слова из текущего файла
+* <c-X><c-F> - вставка слова из списка файлов
+* <c-X><c-]> - вставка слова из списка тегов
+* <c-X><c-O>/<c-X><c-U> - omni code completion (внешней функцией) (второй вариант - user defined)
+  - <c-N>/<c-P> - next/prev completion entry - навигация по списку
+* <c-N>/<c-P> - completion слов из текущего файла
+
+h1. Работа с файлами
+
+* :[p]e[dit][!] {file} / :fin[d][!] {file} - редактировать файл (p - preview readonly mode)
+* :ene[w][!] - создать новый
+* pwd / cd {path} / cd - - текущая дир/перейти на заданную/перейти на последнюю текущую
+* :f[ile] {name} - установить имя файла
+* :saveas {name} - установить имя файла и записать его
+* :files - список файлов
+* :w[!]/wa[!] - записать/записать все
+* :wq[!] - записать и выйти
+
+h1. Windows management
+
+* <c-W> n/:new - новое окно
+* <c-W> q - закрыть окно
+* <c-W> c/:cl[ose] - закрыть окно (сделать буфер скрытым)
+* <c-W> o/:on[ly] - закрыть все остальные окна
+* <c-W> hjkl - переход на <v^> окно
+* <c-W> p - переход на предыдущее окно 
+* <c-W>/:split/:split {file} - разделить окно горизонтально (c опциональным открытием файла)
+* :vsplit - разделить окно вертикально
+* <c-L> - перерисовать все окна
+* :q[!] - закрыть окно
+* :qa[!] - закрыть все
+
+h1. Tab management
+
+* :tabe[dit] {file} - открыть файл в табе
+* :tabnew - новый таб
+* :tab {cmd} - открыть в табе (любая команда окна)
+* :tab split - открыть текущий буфер в отдельном табе
+* :tabc[lose][!]  Close current tab page
+* :tabo[nly][!]   Close all other tab pages.
+* <c-PageDown>/gt/:tabn[ext] - следующий таб
+* <c-PageUp>/gT/:tabp[evious] - предыдущий таб
+* :tabs - список табов
+* :tabm[ove] [N] - переместить таб на N позицию (0 - первая)
+
+h1. External commands
+
+* :his - история команд
+* :sh[ell] - вход в shell
+* :! {command} - выполнение команды в shell 
+
+h1. Help
+
+* :help, :h, <F1>
+* <c-]> - jump to tag under cursor
+* <c-T>/<c-O> - jump back
+* help x - help for topic
+
+h1. Eclim
+
+Daemon:
+* start: eclimd [-Dosgi.instance.area.default=<workspace>] - по умолчанию ~/workspace
+* stop:  eclim -command shutdown / :ShutdownEclim
+
+Project:
+* :ProjectImport <path> - import existing into workspace
+* :ProjectImportDiscover <path> - import existing into workspace
+* :ProjectList
+* :ProjectRefresh [project]/ProjectRefreshAll/<f5> - обновить текущий/заданный/все проекты
+* :ProjectProblems[!] - список ошибок и других проблем текущего проекта (! - только ошибки)
+* :ProjectBuild [project] - собрать текущий/заданный
+* :ProjectRun [launch_config_name] - запустить первую/заданную launch config (требует запуска vim --servername run ...)
+  - :Terminate/закрытие окна/закрытие vim - прерывает запуск
+* :ProjectRunList - список доступных launch_configs
+* :ProjectCD/:ProjectLCD - установка текущей директории глобальной/для текущего окна в директорию текущего проекта
+* :ProjectTree [project/dir] - окно дерева проекта текущего/заданного/заданной директории
+  - <cr> - открывает/закрывает директорию, вызывает файл
+  - E/S/<|>/T - открывает файл в полном окне, горизонтальном разделе, вертикальном разделе, табе
+  - o открывает/закрывает директорию, или показывает список действий для файла (<cr> выбирает действие)
+  - s - выполняет :shell в выбранной директории
+  - R - обновляет директорию
+  - A - переключает показ скрытых файлов
+  - ~/C/B/K/:CD <dir> изменяет корень иерархии на директорию текущего пользователя/выбранную/родительскую/проекта/заданную
+  - D создать директорию в выбранной
+  - F создать файл в выбранной директории
+  - Y - копия выбранной директории в буфер обмена
+  - ? - помощь
+* :ProjectTreeToggle - переключить видимость иерархии проекта
+* :ProjectsTree - дерево проектов всего workspace
+* :ProjectTab <project/dir> - открыть дерево проекта в табе 
+* :Project[L]Grep[Add] /<pattern>/ <file_pattern> - [l]vimgrep[add] от директории текущего проекта
+* :ProjectTodo/:Todo - поиск всех TODO шаблонов текущего проекта/текущего файла  
+* :LocateFile <pattern> - быстро выполняет поиск файла
+  - <esc> - закрыть
+  - <cr> - открыть текущий
+  - <tab>/<s-tab> - навигация
+  - <c-e>/<c-s>/<c-t> - открыть в окне/разделе/табе
+  - <c-l> - переключить скоп
+  - <c-h> - помощь
+
+LocalHistory:
+* :History - локальная история измененийт екущего файла
+* :HistoryClear - очистка истории
+* :HistoryDiffNext/:HistoryDiffPrev - сравнение с последующей/предыдущей историей
+
+Signs:
+* :Sign - добавить марку в текущую строку
+* :Signs - показать список (текущего файла)
+* :SignClearUser/:SignClearAll - очистить все
+
+Разное:
+* :QuickFixClear/:LocationListClear - очистить quickfix location list
+* :Buffers/:BuffersToggle - список текущих буферов
+* :Only - аналог :only но оставляет фиксированные окна
+
+Java:
+* :Validate - валидация при сохранении (по умолчанию автоматическая)
+* :JavaCorrect/<c-1> - аналог quickfix eclipse
+* :JavaSearch/<f3> - поиск по элементу под курсором (с возможным переходом на результат поиска)
+* :JavaSearchContext [-a <cmd>]/<c-f3> - поиск для текущего элемента с учетом контекста
+  - на классе/интерфейсе - ищет наследников
+  - на методе поле ищет использование
+  - для остальных ищет объявление 
+* :JavaSearch <pattern> - упрощенная версия следующего
+* :JavaSearch <camelCase> - упрощенная версия следующего (поиск по начальным буквам типа NPE)
+* :JavaSearch -p <pattern> [-t <type> -x <context> -s <scope> -i -a <action>] - структурный поиск
+  - pattern - паттерн элемента (MyClass*, MyClass.myMethod*)
+  - type - type/field/method/package/constructor/class/interface/classOrInterface/enum/classOrEnum (default - type)
+  - context - all/declarations/references/implementors (default - declarations)
+  - scope - all/project (default - all)
+  - i - ignore case
+  - a - command to open result (edit, split, vsplit, tabedit...)
+* :JavaHierarchy/<f4>/:JavaCallHierarchy[!] [-s <project>] - показ иерархии наследование/вызова для текущего элемента (! - callees, иначе callers, -s текущий/заданный проект)
+  - <cr> - переход
+  - E/S/T - edit/split/tab открытие элемента
+  - ? - help 
+* :JavaNew <type> <name> - создание элемента
+  - type - class/interface/abstract/enum/@interface
+  - name - если пакет не задан, создает в текущем
+* :JavaConstructor[!] - создает конструктор (если выделены поля для заданных полей иначе без параметров, ! - force creation конструктора в случае ошибок)
+* :JavaGet/JavaSet/JavaGetSet - создает геттеры и сеттеры для выделенных полей или текущего поля
+* :JavaImpl - генерация методов реализаций (открывает окно с методами, для выбранного метода или всего класса генерирует заглушку реализацию в текущем классе)
+* :JavaDelegate - генерация метода делегата вызывающего метод класса для выбранного поля (позволяет выбрать метод/список методов класса поля)
+* :JavaImport/:JavaImportOrganize - импорт для текущего элемента/организация всех импортов
+* :JavaRename <new name> - переименование текущего элемента
+* :JavaMove <new package name> - перенос текущего класса в новый пакет
+* :RefactorUndo/:RefactorUndoPeek/:RefactorRedo/:RefactorRedoPeek - undo/redo последнего refactoring (Peek - показ имени рефакторинга)
+* :[%]JavaFormat - форматирование текущей строки/выделения/(% - всего файла)
+* :JavaDocComment/<c-f2> - добавление/обновление комментария для элемента под курсором
+* :JavaDocPreview/<f2> - показ javadoc текущего элемента
+* :JavaDocSearch ... - полный аналог :JavaSearch для поиска в javadoc
+* :JavaDoc - генерация javadoc
+* :Java [%] - запускает первый подходящий/текущий класс
+* :JUnit [<test name>] - запуск заданного JUnit теста
+  - если имя не задано пытается запустить текущий тест (если курсор на тесте), или все тесты класса
+  - org.test.MyTest - класс
+  - % - все тесты текущего класса
+  - * - все тесты workspace
+  - **/tests/*Test - ant-compatible шаблон
+* :JUnitResult - результат тестирования
+* :Ant [target] - запуск ant скрипта
+* :Jps - информация о процессах
+
+Java Debug:
+* запустить процесс с -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=<port>
+* запустить vim --servername debug
+* :JavaDebugStart localhost <port>/<f8> - запуск сессии отладки
+* :JavaDebugBreakpointToggle[!]/<f9> - включает/выключает точку останова (! - удаляет точку)
+* :JavaDebugBreakpointsList[!] - список всех точек (! - только для текущего проекта и его зависимостей)
+  - <cr> - переход на заданную точку
+  - T - toggle selected breakpoints
+  - D - delete selected breakpoints
+* :JavaDebugBreakpointRemove[!] - удалить все точки останова из текущего файла (! - из текущего проекта)
+* :JavaDebugStep over/<f6> | into/<f5> | return/<f7> - переход от точки останова
+* :JavaDebugStatus - status window содержит потоки и переменные
+  - <cr> открыть/закрыть дерево
+  - p - выдать значение переменной
+*  :JavaDebugThreadSuspendAll/ :JavaDebugThreadResumeAll - приостановка/продолжение сессии
+* :JavaDebugStop/<c-f8> остановка сессии отладки
+
+h1. CtrlP
+
+* <c-P>/:CtrlP [<dir>] - открытие окна поиска файлов
+* <c-m>/:CtrlPMRU - открытие MRU файлов
+* :CtrlPBuffer/CtrlPMRU - открытие буферов/MRU файлов
+* :CtrlPTag/:CtrlPTagAll - поиск в тегах
+* :CtrlPQuickfix - поиск в текущем quickfix
+* :CtrlPDir <dir> - поиск директории и установка ее текущей
+* :CtrlPUndo - поиск в undo history
+* :CtrlPLine - поиск строки во всех открытых буферах
+* :CtrlPBookmarkDir/:CtrlPBookmarkDirAdd - поиск по директориям закладкам и установка их в текущие
+* :CtrlPMixed - поиск везде
+* В окне:
+  - <c-f>/<c-b> - переключение режимов вперед/назад
+  - <c-d> - filename only search instead of full path
+  - <c-r> - regexp режим
+  - <c-t>/<c-v>/<c-x> - открытие в табе/вертикальном разделе/горизонтальном разделе
+  - <c-n>/<c-p> - следующая/предыдущая страница списка
+  - <c-y> - создание нового файла
+  - <c-z> - mark file, <c-o> - open marked files
+  - .. навигация на родительский уровень
+  - / навигация на корень
+  - ? help  
+ 
+h1. NERDCommenter
+
+* <Leader>|cl - add comments align left
+* <leader>c<space> - toggle comments on selected lines
+
+h1. NERDTree
+
+Дерево:
+* <c-f>/NERDTreeTabsToggle <dir | bookmark> - открывает/закрывает дерево в текущей/заданной/директории закладки
+* <c-s>/NERDTreeTabsFind
+* <c-cd>/NERDTreeCWD
+* В окне:
+  - Для файлов:
+    * <cr>/[g]o/[g]i/[g]s - открыть в разделе/вертикальном разделе (g - без перевода курсора в окно)
+    * t/T - открыть в табе (T - без перевода фокуса на новый таб)
+    * m - показать меню
+  - Для директорий:
+    * o - open/close dir
+    * O - recursively open
+    * x/X - закрыть текущую/все родительские
+    * e - проказать директорию в отдельном окне
+    * C - изменить корень на текущую директорию
+    * u/U - изменить корень на один уровень выше (последняя не менять откртости исходного узла)
+    * r/R - обновить текущую/корень
+    * m - показать меню
+    * cd - изменить CWD на заданную
+    * CD - изменить заданную на CWD
+  - Для закладок:
+    * открыть в разделе
+    * t/T - открыть в табе (T - без перевода фокуса на новый таб)
+    * D - удалить закладку
+  - Навигация:
+    * p - к родителю
+    * P - к корню
+    * K - первому дочернему
+    * J - последнему дочернему
+    * <c-j>/<c-k> - навигация к следующему/предыдущему элементу того же уровня
+  - Фильтрация
+    * I - скрытые
+    * F - файлы
+    * B - закладки
+  - Разное
+    * A - максимизация
+    * ? - помощь
+* :NERDTreeFind - поиск текущего открытого файла в дереве (аналог link with editor Eclipse)
+* :NERDTreeCWD - меняет корневую директорию на текущую (открытого файла)
+
+Букмарки:
+* :Bookmark <name> - cсоздать закладку для выбранного узла дерева
+* :BookmarkToRoot <name> - сделать директорию букмарка корнем дерева
+* :RevealBookmark <name> - показать закладку в дереве
+* :OpenBookmark <name> - открыть букмарк
+* :ClearBookmarks <name> - удалить закладки
+* :ClearAllBookmarks - удалить все закладки
+
+h1. vim-nerdtree-tabs
+
+Общий NERDTree для всех табов:
+* :NERDTreeTabsToggle - открытие/закрытие окна
+* :NERDTreeTabsFind find currently opened file and select it
+* let g:nerdtree_tabs_open_on_console_startup = 1
+
+h1. YouCompleteMe
+
+* <tab>/<s-tab> - прямая/обратная навигация по completion элементам в Insert режиме
+* <c-space> - аналог предыдущего, но только по семантическим completion'ам
+
+h1. Tagbar
+
+* <Leader>t/:TagbarToggle
+* <Leader>o/:TagbarOpenAutoClose
+* <cr> open tag
+  - p open tag but focus in tagbar
+  - P open tag in preview
+  - <c-n>/<c-p> next/prev top level tag
+  - <space> prototype of current tag in command line
+  - +/zo open fold 
+  - -/zc close fold
+  - o/za toggle fold
+  - */zR open all folds
+  - =/zM close all folds
+  - zj goto to start of next fold
+  - zk goto end of prev fold
+  - v hide non-public tags
+  - s toggle sort order betwen name and file modes
+  - c toggle autoclose option
+  - x toggle zooming window
+  - q close tagbar window
+  - ? help
+* let g:tagbar_left = 1
+
+h1. Ultisnips
+
+* Works in Insert mode only
+* <tab> expand snippet for the first time (должен точно соотв. имени сниппета)
+* <c-l> list of snippets, соотв. вводимой подстроке
+* <c-j>/<c-k> jump forward/backward to fill snippet arguments
+
+Сниппеты для Java:
+
+Keywords:
+* pr/po/pu - private/protected/public
+* ab - abstract
+* fi - final
+* st - static
+* sy - synchronized
+* re - return
+* br - break
+* de - default
+
+Структура:
+* im - import
+* in - interface
+* pa - package
+* ext/impl - extends/implements
+* cl/pcl/cle/clc - class/class-extends/class with constructor, fields, getters, setters
+* co/cos - static final field/static final String field
+* cc - this.field = var
+* f - поле
+* m/mt/md - method/method-throws/method with javadoc
+* get[ter]/set[ter]/setget - getter/setter/getter-setter
+* cn - constructor
+* main - main method
+
+Тело функции:
+* i/n - переменная примитивного типа
+* o/v - переменная объектного типа
+* list/map/set - list/map/set variable
+* str - string variable
+* if/el/elif - if/else/else-if
+* fore/fori/for - for-each/for(int;;)/for(;;)
+* wh - while
+* sw/cs - switch/case
+* try/tryf/ca/th - try-catch/try-catch-finally/catch/throw
+* p/pl - print/println
+* as - assert
+
+JavaDoc + Comments:  
+* /* - multiline comment
+* /** - javadoc comment
+* @pa/@re - @param/@return
+
+Тесты:
+* before - test @Before method
+* tc - test case class
+* t/tt - test method/test method throws
+* an/ann - assertNull/AssertNotNull
+* at/af/ae - assertTrue/assertFalse/assertEquals
+* sleep - try-sleep-catch
+
+Логи:
+* debug/error/info/warn - logger calls
+
+h1. vim-fugitive
+
+* :Git[!] [args] - выполняет команду git, установив путь к репозиторию (! - направляет вывод во временный файл и позволяет его отредактировать)
+* :Gcd/Glcd <dir> - :cd/:lcd относительно репозитория
+* :Gstatus - git status
+  - <c-N>/<c-P> next/prev file
+  - <cr> - git add (unstaged)/ git reset (staged)
+  - cA/c[v]a - commit amend (A - reuse message, v - verbose)
+  - c[v]c - commit (v - verbose)
+  - D/ds/dp/dv - Gdiff/Gsdiff/git diff/Gvdiff
+  - O/o/S - tab/split edit/vertical split
+  - U - checkout/clean (untracked)/rm (unmerged)
+  - q - close
+  - r reload
+  - ? help
+* :Gcommit <args> - commit
+* :Gmerge <args> - merge
+* :Gpull <args> - pull
+* :Gpush <args> - push
+* :Gfetch <args> - fetch
+* :Ggrep[!] [args] - git grep
+* :Glog [args] - список ревизий файла
+* :Gedit/:Gsplit/:Gvsplit:Gtabedit/:Gpedit - редактирование ревизии
+* :Gread/:GWrite - чтение/запись изменений 
+* :Gwq - запись+закрытие
+* :Gdiff/:Gsdiff/:Gvdiff - diff
+* :Gmove - rename
+* :Gremove - удаление
+* :Gblame
+* :Gbrowse - browse remote repository (requires additional plugins for specific repository types)
+
+h1. vim-gitgutter
+
+* [c/]c - next/prev hunk
+* <Leader>hp/<Leader>hs/<Leader>hu - preview/stage/undo hunks
+
+* :GitGutterToggle
+* :GitGutter/:GitGutterAll - обновить sings в текущем всех файлах
+* :GitGutterSignsToggle
+* :GitGutterLineHighlightsToggle
+* :GitGutterNextHunk/GitGutterPrevHunk
+* :GitGutterStageHunk/GitGutterUndoHunk
+* :GitGutterPreviewHunk
+
+h1. Command aliases
+
+* :CmdAlias[!] - list of all aliases (! in order they are defined)
+* :CmdAlias {alias} - list of specific aliases, started from given prefix
+
+* pre ProjectRefresh
+* pra ProjectRefreshAll
+* pp ProjectProblems
+* pb ProjectBuild
+* pru ProjectRun
+* pcd ProjectCD
+* plcd ProjectLCD
+* pgrep ProjectGrep
+* plgrep ProjectLGrep
+* ptodo ProjectTodo
+* todo Todo
+* loc LocateFile
+* si Sign
+* ss Signs
+* jc JavaCorrect
+* js JavaSearch
+* jsc JavaSearchContext
+* jh JavaHierarchy
+* jf JavaFormat
+* %jf %JavaFormat
+* jdc JavaDocComment
+* jdp JavaDocPreview
+* jds JavaDocSearch
+* ja Java
+* ju JavaUnit
+* jur JavaUnitResult
+* ant Ant
+* jps Jps
+* jrn JavaNew
+* jrc JavaConstructor
+* jrg JavaGet
+* jrs JavaSet
+* jrgs JavaGetSet
+* jri JavaImpl
+* jrd JavaDelegate
+* ji JavaImport
+* jo JavaImportOrganize
+* jrr JavaRename
+* jrm JavaMove
+* jru RefactorUndo
+* jrup RefactorUndoPeek
+* jro RefactorRedo
+* jrop RefactorRedoPeek
+* jdstart JavaDebugStart
+* jdstop JavaDebugStop
+* jdb JavaDebugBreakpointToggle
+* jdbl JavaDebugBreakpointsList
+* jdbr JavaDebugBreakpointRemove
+* jds JavaDebugStatus
+* jdsa JavaDebugThreadSuspendAll
+* jdra JavaDebugThreadResumeAll
+* bm Bookmark
+  
+h1. Other useful plugins (not installed)
+
+* syntastic
+* nerdtree-git-plugin - git status в дереве
+* session.vim/vim-obsession (работа с сессиями)
+* vim-signature (marks)
+* undotree
+* vebugger(eclim уже реализует функционал)
+* neocomplete/supertab (альтернатива youcompleteme)
