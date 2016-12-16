@@ -436,7 +436,8 @@ h1. Tagbar
 h1. Ultisnips
 
 * Works in Insert mode only
-* <tab> expand snippet for the first time (должен точно соотв. имени сниппета)
+* <c-j> expand snippet for the first time (должен точно соотв. имени сниппета,
+  YouCompleteMe подсказывает состав сниппетов)
 * <c-l> list of snippets, соотв. вводимой подстроке
 * <c-j>/<c-k> jump forward/backward to fill snippet arguments
 

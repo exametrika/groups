@@ -76,6 +76,7 @@ let g:airline#extensions#tabline#enabled = 1
 let g:airline_theme='solarized'
 
 " UltiSnips
+let g:UltiSnipsExpandTrigger="<c-j>"
 let g:UltiSnipsListSnippets = '<c-l>'
 
 " YouCompleteMe
