@@ -1,0 +1,314 @@
+h1. Vimwiki
+
+Плагины:
+* vimwiki - вики
+* utl (optional) - для реализации гиперлинков в произвольном файле)
+
+Key mappings (global):
+* [count]<Leader>ww - opens [count] wiki index file
+* [count]<Leader>wt - opens [count] wiki index file in tab
+* [count]<Leader>wi - opens [count] wiki diary index file
+* [count]<Leader>w<Leader>w - opens [count] wiki diary for today
+* [count]<Leader>w<Leader>t - opens [count] wiki diary for today in tab (conflict with tagbar remap)
+* <Leader>ws - list of wikis
+
+Key mappings (local) (normal mode):
+* <Leader>wh - convert current file to html
+* <Leader>whh - convert current file to html and open in browser
+* <Leader>w<Leader>i - update diary section (only for diary index)
+* <cr> - follow/create wiki link (create target page if needed). Works on selection too.
+* <s-cr>/<c-cr>/<c-s-cr> - аналог <cr> split/vertical split/tab window (not working, remapping is needed)
+* <backspace> - go back to prev page
+* <tab>/<s-tab> - select next/prev link on page
+* <Leader>wd - delete current page
+* <Leader>wr - rename current page
+* =/- - add/remove header level (in normal mode)
+* + - create and decorate link for current/selected text (in normal or selected mode)
+* <c-space> - toggle checkbox of list item
+* gl<space>/gL<space> - remove checkbox/all sibling checkboxes from the list item
+* gll/gLl - increase level of list item/list item and child items
+* glh/gLh - decrease level of list item/list item and child items
+* glr/gLr - renumber numeric list item/all numeric list items of current file
+* g[l/L][*#1aAiI] - mark/renumber by specified style
+* gqq - format table
+* <a-left>/<a-right> - moves table column to left/right (a=alt)
+* <c-up>/<c-down> - opens prev/next diary link
+
+Key mappings (local)(insert mode):
+Table:
+* <cr> - move to below cell (creating new row if last)
+* <tab> - goto next table cell (creating new row if last)
+List:
+* <cr> - add new list item
+* <s-cr> - adds new line (new list item is not created)
+* <c-T>/<c-D> - increase/decrease level of list item
+* <c-L><c-J>/<c-K> - change the symbol of list item to next/prev available
+* <c-L><c-M> - create/remove symbol of list item
+Links/Tags autocompletion:
+* [[ / : <link-or-tag-prefix-or_anchor><c-x><c-o> - autocompletion for specified prefix of tag/link/anchor
+
+Команды:
+* :VimwikiAll2HTML - convert all pages to html
+* :VimwikiSearch/:VWS /pattern/ - search in wiki
+* :VimwikiBacklinks/:VWB - search backlinks to current page
+* :VimwikiTable [<cols> [<rows>]] - создает таблицу с заданным количеством колонок и строк (если не задано то 5x2)
+* :VimwikiTOC - generate table of contents at the beginning of current file
+* :VimwikiCheckLinks - check page links in wiki
+* :VimwikiRebuildTags - rebuilds all tag in all pages
+* :VimwikiSearchTags <tag> - search for specified tag
+* :VimwikiGenerateTags - creates an overview of all tags
+
+h2. Syntax
+
+h3. Typefaces
+
+  *bold text*
+  _italic text_
+  ~~strikeout text~~
+  `code (no syntax) text`
+  super^script^
+  sub,,script,,
+  
+h3. Links
+
+Links:
+  [[This is a link]] - simple
+  [[This is a link source|Description of the link]] - simple with description
+  [[projects/Important Project 1]] - in subdirectory
+  [[../index]] - in parent directory
+  [[/index]] - in wiki root directory
+  [[a subdirectory/|Other files]] - link to subdirectory
+  [[diary:2012-03-05]] - diary link
+  [[Todo List#Tomorrow|Tasks for tomorrow]] - link with anchor and description
+  [[#Tomorrow]] - anchor in current file
+  https://github.com/vimwiki/vimwiki.git - url
+  mailto:habamax@gmail.com - url
+  ftp://vim.org - url
+  [[file:/home/somebody/a/b/c/music.mp3]] - local file
+  {{file:../../images/vimwiki_logo.png}} - transcluded link (included inplace)
+  {{http://vimwiki.googlecode.com/hg/images/vimwiki_logo.png|Vimwiki}} - transcluded with description
+  
+h3. Headers
+
+= Header level 1 =~
+== Header level 2 ==~
+=== Header level 3 ===~
+==== Header level 4 ====~
+===== Header level 5 =====~
+====== Header level 6 ======~
+
+<space>=<Header> - centered header
+
+h3. Paragraphs
+
+A paragraph is a group of lines starting in column 1 (no indentation).
+Paragraphs are separated by a blank line:
+
+This is first paragraph
+with two lines.
+
+h3. Lists
+
+Unordered lists: >
+  - Bulleted list item 1
+  - Bulleted list item 2
+or: >
+  * Bulleted list item 1
+  * Bulleted list item 2
+
+
+Ordered lists: >
+  1. Numbered list item 1
+  2. Numbered list item 2
+  3. Numbered list item 3
+or: >
+  1) Numbered list item 1
+  2) Numbered list item 2
+  3) Numbered list item 3
+or: >
+  a) Numbered list item 1
+  b) Numbered list item 2
+  c) Numbered list item 3
+or: >
+  A) Numbered list item 1
+  B) Numbered list item 2
+  C) Numbered list item 3
+or: >
+  i) Numbered list item 1
+  ii) Numbered list item 2
+  iii) Numbered list item 3
+or: >
+  I) Numbered list item 1
+  II) Numbered list item 2
+  III) Numbered list item 3
+or: >
+  # Bulleted list item 1
+  # the # become numbers when converted to HTML
+  
+Note that a space after the list item symbols (-, *, 1. etc.) is essential.
+
+You can nest and mix the various types: >
+  - Bulleted list item 1
+  - Bulleted list item 2
+    a) Numbered list sub item 1
+    b) more ...
+      * and more ...
+      * ...
+    c) Numbered list sub item 3
+      1. Numbered list sub sub item 1
+      2. Numbered list sub sub item 2
+    d) etc.
+  - Bulleted list item 3
+
+List items can span multiple lines: >
+  * Item 1
+    Item 1 continued line.
+    Item 1 next continued line.
+  * Item 2
+    - Sub item 1
+      Sub item 1 continued line.
+      Sub item 1 next continued line.
+    - Sub item 2
+    - etc.
+    Continuation of Item 2
+    Next continuation of Item 2
+
+Todo lists:
+= Toggleable list of todo items =
+   * [X] Toggle list item on/off.
+     * [X] Simple toggling between [ ] and [X].
+     * [X] All list's subitems should be toggled on/off appropriately.
+     * [X] Toggle child subitems only if current line is list item
+     * [X] Parent list item should be toggled depending on it's child items.
+   * [X] Make numbered list items toggleable too
+   * [X] Add highlighting to list item boxes
+   * [X] Add [ ] to the next list item created with o, O and <CR>.
+   
+Definition lists: >
+  Term 1:: Definition 1
+  Term 2::
+  :: Definition 2
+  :: Definition 3
+  
+h3. Tables
+
+Table are autoformattable.
+
+| Year | Temperature (low) | Temperature (high) |
+|------|-------------------|--------------------|
+| 1900 | -10               | 25                 |
+| 1910 | -15               | 30                 |
+| 1920 | -10               | 32                 |
+| 1930 | _N/A_             | _N/A_              |
+| 1940 | -2                | 40                 |
+ 
+h3. Preformatted text:
+
+Use {{{ and }}} to define a block of preformatted text:
+{{{ >
+  Tyger! Tyger! burning bright
+   In the forests of the night,
+    What immortal hand or eye
+     Could frame thy fearful symmetry?
+  In what distant deeps or skies
+   Burnt the fire of thine eyes?
+    On what wings dare he aspire?
+     What the hand dare sieze the fire?
+}}}
+
+You can add optional information after the {{{: >
+{{{python
+ def hello(world):
+     for x in range(10):
+         print("Hello {0} number {1}".format(world, x))
+}}}
+
+h3. Blockquotes
+
+Text which starts with 4 or more spaces is a blockquote.
+
+    This would be a blockquote in Vimwiki. It is not highlighted in Vim but
+    could be styled by CSS in HTML. Blockquotes are usually used to quote a
+    long piece of text from another source.
+    
+h3. Comments
+
+A line that starts with %% is a comment.
+E.g.: >
+ %% this text would not be in HTML
+ 
+h3. Horizontal line
+
+4 or more dashes at the start of the line is a horizontal line (<hr />): >
+----
+
+h3. Tags
+
+:tag1:tag2:...
+
+Placement:
+* full file tagging - first 2 lines of file
+* header tagging - 2 lines before header
+* simple tag - anywhere in file
+
+Tag completion:
+* :prefix<c-x><c-o>
+
+h3. Placeholders
+
+%title <title> - on first line of file
+%template name - apply template
+
+h3. Anchors
+
+Every header, tag, and bold text can be used as an anchor. To jump to it, use a wikilink of the form >
+[[file#anchor]]
+  
+If there are multiple instances of an anchor, you can use the long form which
+consists of the complete header hierarchy, separated by '#': >
+[[Todo#My tasks#Knitting club#Knitting projects#scary dog]]
+
+h2. Options
+
+Defined as:
+* let g:vimwiki_list = [{'path': '~/my_site/', 'path_html': '~/public_html/'}, {wiki2-options}...]
+
+Per-wiki options:
+* path - path to wiki dir (default ~/vimwiki)
+* path_html/template_path/template_default/css_name - path to html/template dir
+* auto_export/auto_toc/auto_tags - генерация html/toc/tag metadata при сохранении файла (по умолчанию выключены)
+
+Global options:
+* g:vimwiki_folding=(expr/syntax/list) - turn on folding (disabled by default)
+
+Tagbar integration:
+* можно отключить генерацию toc
+* Install script (see script for detail) - https://raw.githubusercontent.com/vimwiki/utils/master/vwtags.py
+
+Required remappings:
+* <Leader>w<Leader>t - opens [count] wiki diary for today in tab (conflicts with tagbar)
+* <s-cr>/<c-cr>/<c-s-cr> - follow/create link in split/vertical split/tab window (not invoked in cygwin)
+
+h1. Utl
+
+Реализация гиперлинков в любом файле. 
+
+Links:
+* <url:#r=here> - reference by anchor
+  - id=here - anchor format
+* <url:#tn=some text>/<url:#some text> - reference by text from the beginning
+* <url:#tp=some text> - reference by text from the end
+* <url:#line=10> - reference by line number
+* <url:../plugin/utl.vim#tn=thanks for> - reference to text in file
+* <url:http://www.vim.org>/http://www.vim.org/www.vim.org - external url
+* ../plugin/utl.vim / ./utl.vim / utl.vim / SomeText - naked links to files
+* The software can be downloaded from [ 10] - footnote
+    ...
+    [ 10] http://www.vim.org/download.php
+    
+Commands:
+* :Utl - открыть линк под курсором (стандартная vim команда <c-O> - навигация назад)
+* :Utl ol <link> [command] - oткрыть заданный линк (command - edit/tabeidt/split...)    
+
+Options:
+* let utl_opt_verbose=1 - for problmes with link navigation

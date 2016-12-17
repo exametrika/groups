@@ -1,0 +1,85 @@
+h1. Git
+
+Init:
+* git init - init git repository
+* git clone <url>
+
+Adding/removing/committing: 
+* git add/rm/mv <files> - add/remove/move files
+* git add -i - interactive staging (add/remove/revert...)
+* git rm --cached <files> - untrack files but keep them on disk
+* git commit [-a] [-m <message>] (a - add all new/modified files)
+    --amend - amend last commit
+* git reset <files> - unstage files but retain modified files on disk
+  --hard - reverts all tracked changes
+* git checkout -- <files> - revert changes    
+  
+Status/log/diff:
+* git status [-s] (s - short)
+* git diff - differences between unstaged and staged
+* git diff --staged - differences between staged and last commit
+* git difftool - diffs by external program (configurable)
+* git log [-p] - commit history (p - show differences)
+    --name-only - show names of modified files
+    -<n> - number of diff entries shown
+    --stats - commit statistics
+    --pretty=oneline/short/full/fuler - format output
+    --since=<date> - commits after specified date
+    --until=<date> - commits before specified date
+    --author=<author> - commit author
+    --grep=<pattern> - commit message pattern
+    -S<value> - commits with added or removed string value
+   -- <path> - commits with modified files in this path (always last option)
+   - L:<pattern>:<file> - show commit history of specific line or lines of code
+
+Searching:
+* git grep <pattern> [files] - searches for pattern in working dir or specified files
+  -n - line numbers
+  -count - number of matches in file 
+  -p - show matches
+* git blame [-L: start,end] <file> - shows who changed lines last
+  -C - where sections of code came from
+* git bisect (searches from large number of revisions)  
+
+Working with remotes:
+* git fetch - fetches all data from remote (that are not present locally)
+* git pull - fetches and merges changes
+* git push - pushing changes to remote
+* git remote -v - show repository remotes
+
+Working with branches:
+* git branch - list of repository branches with current one
+  -v - with last commit
+  --merged/--no-merged - list of branches merged/no merged to current branch 
+* git branch <name> - creates branch
+    -d - deletes branch
+* git checkout <branch> - makes branch current
+    -b creates branch
+* git merge <branch> - merges specified branch into the current branch
+* git mergetool - extern merge tool
+
+Stashing:
+* git stash [save] - saves unfinished work in current branch to stash, and removes this changes (to the top of the stashes stack)
+  --keep-index - only stash unstaged changes (not in index)
+  -u - include untracked changes
+  --patch - selective stashing for each hunk
+  --all - stashes (tracked/untracked/staged) all changes (and removes them from working directory)
+* git stash list - list of stashes
+* git stash show [<stash>] - shows diff between stash and its original parent
+* git stash apply [<stash>] - applies last saved/specified stash to working directory
+  --index - reapply staged changed
+* git stash drop <stash> - drops stash from list
+* git stash pop - apply and drop stash
+* git stash branch <branch> - creates new branch based on branch when stash was created and apply stash to it, and drops the stash
+* git stash clear - removes all stashes
+
+Cleanup:
+* git stash --all - stashes and removes all changes
+* git clean -d -f - removes all changes and empty directories
+  -n - lists what would be removed (not actually removes files)
+  -x - removes ignored (described in .gitignore) files as well
+  -i - interactive
+  
+Submodules (extern repositories as submodules of current repository):
+* git submodule add <repository_url> - adds submodule
+* git clone --recursive <main_repository> - clones repository with submodules
