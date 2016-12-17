@@ -24,10 +24,6 @@ set fillchars="fold: "
 execute pathogen#infect()
 Helptags
 
-" IndentLine
-let g:indentLine_color_term = 235
-let g:indentLine_char = '│'
-
 " NERDTree
 nmap <Leader>f :NERDTreeTabsToggle<CR>               
 nmap <Leader>s :NERDTreeTabsFind<CR>               

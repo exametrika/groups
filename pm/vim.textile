@@ -6,7 +6,6 @@ See vimawesome.com for links.
 * ctrlp
 * delimitMate
 * eclim
-* indentLine
 * nerdcommenter
 * nerdtree
 * ultisnips
