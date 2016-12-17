@@ -83,6 +83,12 @@ let g:UltiSnipsListSnippets = '<c-l>'
 set completeopt-=preview
 "let g:ycm_autoclose_preview_window_after_insertion = 1
 
+" vimwiki
+let g:vimwiki_list = [{'path': '~/workspace/pm', 'auto_tags': 1}]
+let g:vimwiki_folding='syntax'
+let g:tagbar_type_vimwiki = {'ctagstype':'vimwiki', 'kinds':['h:header'], 'sro':'&&&', 'kind2scope':{'h':'header'}
+    \ , 'sort':0, 'ctagsbin':'~/.vim/bundle/vimwiki/vwtags.py', 'ctagsargs': 'default'}
+
 " vim-colors-solarized 
 "let g:solarized_termcolors=256
 colorscheme solarized
