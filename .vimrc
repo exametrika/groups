@@ -31,6 +31,7 @@ nmap <Leader>cd :NERDTreeCWD<CR>
 let g:NERDTreeDirArrowExpandable="+"
 let g:NERDTreeDirArrowCollapsible="-"
 let NERDTreeShowHidden=1
+let g:NERDTreeChDirMode=2
 
 " NERDTreeTabs
 "let g:nerdtree_tabs_open_on_console_startup = 1
@@ -45,8 +46,8 @@ autocmd FileType tagbar setlocal nocursorline nocursorcolumn
 
 " Eclim
 nmap <f5> :ProjectRefreshAll<CR>
-nmap <f3> :JavaSearch<CR>
-nmap <c-f3> :JavaSearchContext<CR>
+nmap <f3> :JavaSearch -a tabedit<CR>
+nmap <c-f3> :JavaSearchContext -a tabedit<CR>
 imap <c-1> :JavaCorrect<CR>
 nmap <f4> :JavaHierarchy<CR>
 nmap <f2> :JavaDocPreview<CR>
@@ -63,6 +64,7 @@ let g:EclimLocateFileCaseInsensitive='always'
 
 " CtrlP
 nmap <c-m> :CtrlPMRU<CR>
+let g:ctrlp_working_path_mode = 'rw'
 
 " NERDCommenter
 let g:NERDDefaultAlign = 'left'
