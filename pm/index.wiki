@@ -1,0 +1,30 @@
+* [ ] проверить групповые протоколы на потокобезопасность при stop/start
+* Доделать flush тесты
+* Сделать StateTransfer Тесты
+* прогнать все тесты группы, чтобы работали
+--------------
+Groups Core:
+* сделать тесты groups
+  - настроить базовые параметры канала (таймауты и др.) в более короткие интервалы
+  - core discovery - протестировать 
+    * доделать multicast, azure/aws discovery
+  - core failure detection (heartbeat, tcp + node tracking strategies) - сделать тесты
+  - core dynamic membership + flush - сделать тесты
+  - core state transfer + data exchange - сделать тесты
+* atomic multicast
+* канал + фабрика канала + конфигурация
+  - Доделать GroupChannelFactory
+  - расширить параметры фабрики и канала параметрами групповых протоколов
+  - перенести из тестовой фабрики из Flush тестов реализацию
+* тесты
+  - unit тесты
+  - интеграционные и perf inprocess тесты
+  - распределенное функциональное и perf тестирование на azure, включая механику имитации сбоев (используя tester)
+* доп. сервисы (состав расширяемый)
+
+Последовательно тестируем, что уже сделано и формируем канал на базе messaging для распределенного тестирования:
+* тесты discovery, failure detection
+* тесты dynamic membership + flush
+* тесты state transfer + data exchange
+* тесты atomic multicast
+* тесты канала
