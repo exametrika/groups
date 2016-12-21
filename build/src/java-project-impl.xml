@@ -2,7 +2,7 @@
     <description>
         Java project implementation build script
     </description>
-
+ 
     <property name="lib.dir" location="../lib" />
     <property name="dist.dir" location="dist" />
     <property name="dist.docs.dir" location="dist/docs" />
@@ -260,4 +260,29 @@
 	    </java>
     </target>
 
+    <target name="run-test">
+
+        <path id="tests-libs">
+            <fileset dir="${lib.dir}">
+                <include name="**/*.jar" />
+                <exclude name="**/ant*.jar" />
+            </fileset>
+        </path>
+
+        <mkdir dir="${dist.dir}/tests" />
+        <junit printsummary="true" fork="yes">
+            <classpath refid="tests-libs" />
+            <classpath refid="dependencies" />
+		    <classpath location="${lib.dir}"/>
+            <classpath location="${dist.dir}/${target.jar}"/>
+            <sysproperty key="com.exametrika.home" value="${product.build.dir}"/>
+            <sysproperty key="java.library.path" value="${product.build.dir}/lib"/>
+		    <jvmarg line="${jvmargs}" />
+		    <jvmarg value="-Xdebug" />
+		    <jvmarg value="-Xrunjdwp:transport=dt_socket,address=${port},server=y,suspend=${suspend}" />
+            <test name="${class}" fork="yes" todir="${dist.dir}/tests" haltonerror="true">
+                <formatter type="xml" usefile="true" />
+            </test>
+        </junit>
+    </target>
 </project>

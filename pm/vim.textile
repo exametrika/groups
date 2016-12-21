@@ -303,7 +303,7 @@ Java:
 Java Debug:
 * запустить процесс с -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=<port>
 * запустить vim --servername debug
-* :JavaDebugStart localhost <port>/<f8> - запуск сессии отладки
+* :JavaDebugStart localhost <port> - запуск сессии отладки
 * :JavaDebugBreakpointToggle[!]/<f9> - включает/выключает точку останова (! - удаляет точку)
 * :JavaDebugBreakpointsList[!] - список всех точек (! - только для текущего проекта и его зависимостей)
   - <cr> - переход на заданную точку
@@ -314,7 +314,7 @@ Java Debug:
 * :JavaDebugStatus - status window содержит потоки и переменные
   - <cr> открыть/закрыть дерево
   - p - выдать значение переменной
-*  :JavaDebugThreadSuspendAll/ :JavaDebugThreadResumeAll - приостановка/продолжение сессии
+*  :JavaDebugThreadSuspendAll/ :JavaDebugThreadResumeAll/<f8> - приостановка/продолжение сессии
 * :JavaDebugStop/<c-f8> остановка сессии отладки
 
 h1. CtrlP
@@ -606,3 +606,22 @@ h1. Other useful plugins (not installed)
 * undotree
 * vebugger(eclim уже реализует функционал)
 * neocomplete/supertab (альтернатива youcompleteme)
+
+h1. Screen
+
+Commands:
+* screen - create screen session
+* screen -rd - reattach to screen session
+
+Keys:
+* <c-a>c - create new window
+* <c-a>n/<c-a>p - next/prev window
+* <c-a><c-a> - toggle prev/next window
+* <c-a>0-9 - switch to window by number
+* <c-a>" - select window from list
+* <c-a>A - set window title
+* <c-a>N - show number and title for window
+* <c-a>k/exit - kill/exit window
+* <c-a>C - clear window
+* <c-a>d - detach session from terminal
+

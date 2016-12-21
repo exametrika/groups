@@ -1,0 +1,25 @@
+<project name="product.all" default="release" basedir=".">
+    <description>
+        Product Exametrika build script
+    </description>
+
+    <import file="../../src/product.xml"/>
+    
+    <property name="product.version" value="1.0.0" />
+    <property name="product.name" value="пкщгзы" />
+    <property name="product.title" value="Groups product." />
+    <property name="product.dist" value="true" />
+    <fileset id="product.libraries" dir="${product.lib.dir}" includes="*.jar *.so *.dll" excludes="asm-debug*.jar ant*.jar junit*.jar *-src.jar *-src.zip" />
+    <fileset id="product.test-libraries" dir="${product.lib.dir}" includes="junit*.jar" excludes="asm-debug*.jar ant*.jar *-src.jar *-src.zip" />
+    
+    <target name="product.modules">
+        <module dir="${root.dir}/common"/>
+        <module dir="${root.dir}/groups"/>
+    </target>
+
+    <target name="product.test-modules">
+        <module dir="${root.dir}/tests.common"/>
+        <module dir="${root.dir}/tests.groups"/>
+    </target>
+    
+</project>

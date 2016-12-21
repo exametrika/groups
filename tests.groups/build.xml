@@ -11,7 +11,27 @@
     <path id="dependencies">
         <pathelement path="${common}" />
         <pathelement path="${groups}" />
-        <pathelement path="${test.common}" />
+        <pathelement path="${tests.common}" />
     </path>
-    
+
+    <target name="run">
+        <ant antfile="${java-project}" target="run-standalone" inheritAll="true" inheritRefs="true">
+            <property name="product.build.dir" value="${dist.dir}"/>
+            <property name="class" value="Test1"/>
+            <property name="args" value=""/>
+            <property name="jvmargs" value=""/>
+            <property name="port" value="8080"/>
+            <property name="suspend" value="n"/>
+        </ant>
+    </target>
+    <target name="run-test">
+        <ant antfile="${java-project}" target="run-test" inheritAll="true" inheritRefs="true">
+            <property name="product.build.dir" value="${dist.dir}"/>
+            <property name="class" value="com.exametrika.tests.groups.DiscoveryProtocolTests"/>
+            <property name="args" value=""/>
+            <property name="jvmargs" value=""/>
+            <property name="port" value="8080"/>
+            <property name="suspend" value="y"/>
+        </ant>
+    </target>
 </project>

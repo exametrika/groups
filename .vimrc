@@ -52,7 +52,7 @@ imap <c-1> :JavaCorrect<CR>
 nmap <f4> :JavaHierarchy<CR>
 nmap <f2> :JavaDocPreview<CR>
 imap <c-f2> :JavaDocComment<CR>
-nmap <f8> :JavaDebugStart<CR>
+nmap <f8> :JavaDebugThreadResumeAll<CR>
 nmap <c-f8> :JavaDebugStop<CR>
 nmap <f9> :JavaDebugBreakpointToggle<CR>
 nmap <f5> :JavaDebugStep into<CR>
