@@ -12,7 +12,6 @@
 		</attributes>
 	</classpathentry>
 	<classpathentry kind="lib" path="/lib"/>
-	<classpathentry kind="lib" path="/lib/sigar-1.6.4.jar" sourcepath="/lib/sigar-1.6.4-src.jar"/>
 	<classpathentry kind="lib" path="/lib/trove-3.0.3.jar" sourcepath="/lib/trove-3.0.3-src.jar"/>
 	<classpathentry kind="lib" path="/lib/javax.mail.jar"/>
 	<classpathentry kind="output" path="bin"/>

@@ -74,7 +74,7 @@ public class DiscoveryProtocolTests
             parameters.clientPart = true;
             parameters.serverPart = true;
             parameters.receiver = new ReceiverMock();
-            IChannel channel = channELfACtory.createChannel(parameters);
+            IChannel channel = channelFactory.createChannel(parameters);
             channel.start();
             wellKnownAddresses.add(channel.getLiveNodeProvider().getLocalNode().toString());
             channels[i] = channel;
