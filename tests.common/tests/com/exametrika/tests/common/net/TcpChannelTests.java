@@ -26,7 +26,7 @@ import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManagerFactory;
 
-import junit.framework.Assert;
+import org.junit.Assert;
 
 import org.junit.After;
 import org.junit.Before;

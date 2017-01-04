@@ -65,7 +65,7 @@ public class ExpressionNodeTests
         ArrayExpressionNode node = new ArrayExpressionNode(Arrays.<IExpressionNode>asList(new ConstantExpressionNode(123),
             new ConstantExpressionNode(null)));
         ExpressionContext context = new ExpressionContext();
-        assertThat((List)node.evaluate(context, null), is(Arrays.asList(123, null)));
+        assertThat((List)node.evaluate(context, null), is((List)Arrays.asList(123, null)));
     }
     
     @Test
@@ -375,7 +375,7 @@ public class ExpressionNodeTests
         Map<Object, Object> map = new HashMap<Object, Object>();
         map.put(123, 123);
         map.put(null, null);
-        assertThat((Map)node.evaluate(context, null), is(map));
+        assertThat((Map)node.evaluate(context, null), is((Map)map));
     }
     
     @Test
@@ -406,13 +406,13 @@ public class ExpressionNodeTests
     {
         ProjectionExpressionNode node = new ProjectionExpressionNode(new SelfExpressionNode());
         ExpressionContext context = new ExpressionContext();
-        assertThat((List)node.evaluate(context, null), is(Collections.emptyList()));
-        assertThat((List)node.evaluate(context, Arrays.asList(123, 345)), is(Arrays.asList(123, 345)));
-        assertThat((List)node.evaluate(context, new Object[]{123, 345}), is(Arrays.asList(123, 345)));
-        assertThat((List)node.evaluate(context, new int[]{123, 345}), is(Arrays.asList(123, 345)));
-        assertThat((List)node.evaluate(context, "abc"), is(Arrays.asList('a', 'b', 'c')));
+        assertThat((List)node.evaluate(context, null), is((List)Collections.emptyList()));
+        assertThat((List)node.evaluate(context, Arrays.asList(123, 345)), is((List)Arrays.asList(123, 345)));
+        assertThat((List)node.evaluate(context, new Object[]{123, 345}), is((List)Arrays.asList(123, 345)));
+        assertThat((List)node.evaluate(context, new int[]{123, 345}), is((List)Arrays.asList(123, 345)));
+        assertThat((List)node.evaluate(context, "abc"), is((List)Arrays.asList('a', 'b', 'c')));
         assertThat((List)node.evaluate(context, Collections.singletonMap(123, 345)), is(
-            com.exametrika.common.utils.Collections.toList(Collections.singletonMap(123, 345).entrySet().iterator())));
+            (List)com.exametrika.common.utils.Collections.toList(Collections.singletonMap(123, 345).entrySet().iterator())));
     }
     
     @Test
@@ -431,18 +431,25 @@ public class ExpressionNodeTests
         assertThat((Integer)node.evaluate(context, new TestB()), is(345));
         assertThat((String)node.evaluate(context, new TestC()), is("fieldB"));
         
+        TestA.fieldC = 345;
         node = new PropertyExpressionNode(true, new ConstantExpressionNode("fieldC"), new ConstantExpressionNode(TestA.class.getName()), true);
         assertThat((Integer)node.evaluate(context, null), is(345));
         assertThat((Integer)node.evaluate(context, null), is(345));
+        
+        TestB.fieldC = 789;
         node = new PropertyExpressionNode(true, new ConstantExpressionNode("fieldC"), new ConstantExpressionNode(TestB.class.getName()), true);
         assertThat((Integer)node.evaluate(context, null), is(789));
+        TestC.fieldC = "fieldC";
         node = new PropertyExpressionNode(true, new ConstantExpressionNode("fieldC"), new ConstantExpressionNode(TestC.class.getName()), true);
         assertThat((String)node.evaluate(context, null), is("fieldC"));
-        
+
+        TestA.setFieldD(567);
         node = new PropertyExpressionNode(true, new ConstantExpressionNode("fieldD"), new ConstantExpressionNode(TestA.class.getName()), true);
         assertThat((Integer)node.evaluate(context, null), is(567));
+        TestB.setFieldD(765);
         node = new PropertyExpressionNode(true, new ConstantExpressionNode("fieldD"), new ConstantExpressionNode(TestB.class.getName()), true);
         assertThat((Integer)node.evaluate(context, null), is(765));
+        TestC.setFieldD("fieldD");
         node = new PropertyExpressionNode(true, new ConstantExpressionNode("fieldD"), new ConstantExpressionNode(TestC.class.getName()), true);
         assertThat((String)node.evaluate(context, null), is("fieldD"));
     }
@@ -583,20 +590,20 @@ public class ExpressionNodeTests
         SelectionExpressionNode node = new SelectionExpressionNode(new BinaryExpressionNode(new SelfExpressionNode(), new ConstantExpressionNode(345),
             com.exametrika.common.expression.impl.nodes.BinaryExpressionNode.Operation.EQ), Operation.ALL);
         ExpressionContext context = new ExpressionContext();
-        assertThat((List)node.evaluate(context, null), is(Collections.emptyList()));
-        assertThat((List)node.evaluate(context, Arrays.asList(123, 345)), is(Arrays.asList(345)));
-        assertThat((List)node.evaluate(context, new Object[]{123, 345}), is(Arrays.asList(345)));
-        assertThat((List)node.evaluate(context, new int[]{123, 345}), is(Arrays.asList(345)));
+        assertThat((List)node.evaluate(context, null), is((List)Collections.emptyList()));
+        assertThat((List)node.evaluate(context, Arrays.asList(123, 345)), is((List)Arrays.asList(345)));
+        assertThat((List)node.evaluate(context, new Object[]{123, 345}), is((List)Arrays.asList(345)));
+        assertThat((List)node.evaluate(context, new int[]{123, 345}), is((List)Arrays.asList(345)));
         
         node = new SelectionExpressionNode(new BinaryExpressionNode(new SelfExpressionNode(), new ConstantExpressionNode(
             Collections.singletonMap(345, 123).entrySet().iterator().next()),
             com.exametrika.common.expression.impl.nodes.BinaryExpressionNode.Operation.EQ), Operation.ALL);
         assertThat((List)node.evaluate(context, Collections.singletonMap(345, 123)), is(
-            com.exametrika.common.utils.Collections.toList(Collections.singletonMap(345, 123).entrySet().iterator())));
+            (List)com.exametrika.common.utils.Collections.toList(Collections.singletonMap(345, 123).entrySet().iterator())));
         
         node = new SelectionExpressionNode(new BinaryExpressionNode(new SelfExpressionNode(), new ConstantExpressionNode('a'),
             com.exametrika.common.expression.impl.nodes.BinaryExpressionNode.Operation.EQ), Operation.ALL);
-        assertThat((List)node.evaluate(context, "abc"), is(Arrays.asList('a')));
+        assertThat((List)node.evaluate(context, "abc"), is((List)Arrays.asList('a')));
         
         node = new SelectionExpressionNode(new BinaryExpressionNode(new SelfExpressionNode(), new ConstantExpressionNode(123),
             com.exametrika.common.expression.impl.nodes.BinaryExpressionNode.Operation.EQ), Operation.FIRST);
@@ -608,7 +615,7 @@ public class ExpressionNodeTests
             Collections.singletonMap(123, 345).entrySet().iterator().next()),
             com.exametrika.common.expression.impl.nodes.BinaryExpressionNode.Operation.EQ), Operation.FIRST);
         assertThat((Map.Entry)node.evaluate(context, Collections.singletonMap(123, 345)), is(
-            Collections.singletonMap(123, 345).entrySet().iterator().next()));
+            (Map.Entry)Collections.singletonMap(123, 345).entrySet().iterator().next()));
         
         node = new SelectionExpressionNode(new BinaryExpressionNode(new SelfExpressionNode(), new ConstantExpressionNode('a'),
             com.exametrika.common.expression.impl.nodes.BinaryExpressionNode.Operation.EQ), Operation.FIRST);
@@ -624,7 +631,7 @@ public class ExpressionNodeTests
             Collections.singletonMap(345, 123).entrySet().iterator().next()),
             com.exametrika.common.expression.impl.nodes.BinaryExpressionNode.Operation.EQ), Operation.LAST);
         assertThat((Map.Entry)node.evaluate(context, Collections.singletonMap(345, 123)), is(
-            Collections.singletonMap(345, 123).entrySet().iterator().next()));
+            (Map.Entry)Collections.singletonMap(345, 123).entrySet().iterator().next()));
         
         node = new SelectionExpressionNode(new BinaryExpressionNode(new SelfExpressionNode(), new ConstantExpressionNode('a'),
             com.exametrika.common.expression.impl.nodes.BinaryExpressionNode.Operation.EQ), Operation.LAST);

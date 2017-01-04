@@ -10,7 +10,7 @@ import static org.junit.Assert.assertThat;
 import java.io.File;
 import java.util.UUID;
 
-import junit.framework.Assert;
+import org.junit.Assert;
 
 import org.junit.After;
 import org.junit.Before;
