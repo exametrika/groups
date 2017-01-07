@@ -6,7 +6,6 @@ package com.exametrika.common.messaging.impl.transports.tcp;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
-import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -211,7 +210,7 @@ public final class TcpTransport implements ITransport, ITcpChannelAcceptor, ITcp
                     return false;
                 }
                 
-                if (compare(serverConnection.getLocalAddress(), clientConnection.getRemoteAddress()) < 0)
+                if (TcpAddress.compare(serverConnection.getLocalAddress().getAddress(), clientConnection.getRemoteInetAddress()) < 0)
                 {
                     serverConnection.setDuplicateSend(null);
                     return false;
@@ -237,7 +236,9 @@ public final class TcpTransport implements ITransport, ITcpChannelAcceptor, ITcp
     @Override
     public void send(IMessage message)
     {
-        Assert.checkState(started && !stopped);
+        if (!started || stopped)
+            return;
+        
         Assert.isInstanceOf(TcpAddress.class, message.getDestination());
         
         TcpAddress address = (TcpAddress)message.getDestination();
@@ -378,6 +379,8 @@ public final class TcpTransport implements ITransport, ITcpChannelAcceptor, ITcp
     public void connect(String nodeAddress)
     {
         InetSocketAddress address = getInetAddress(nodeAddress);
+        if (stopped || (localNode != null && localNode.getAddress().equals(address)))
+            return;
         
         synchronized (this)
         {
@@ -390,10 +393,13 @@ public final class TcpTransport implements ITransport, ITcpChannelAcceptor, ITcp
     @Override
     public void connect(IAddress nodeAddress)
     {
-        Assert.checkState(started && !stopped);
+        if (!started || stopped)
+            return;
         Assert.isInstanceOf(TcpAddress.class, nodeAddress);
         
         TcpAddress address = (TcpAddress)nodeAddress;
+        if (address.equals(localNode))
+            return;
         
         synchronized (this)
         {
@@ -407,6 +413,8 @@ public final class TcpTransport implements ITransport, ITcpChannelAcceptor, ITcp
     public void disconnect(String nodeAddress)
     {
         InetSocketAddress address = getInetAddress(nodeAddress);
+        if (stopped || (localNode != null && localNode.getAddress().equals(address)))
+            return;
         
         synchronized (this)
         {
@@ -419,10 +427,13 @@ public final class TcpTransport implements ITransport, ITcpChannelAcceptor, ITcp
     @Override
     public void disconnect(IAddress nodeAddress)
     {
-        Assert.checkState(started && !stopped);
+        if (!started || stopped)
+            return;
         Assert.isInstanceOf(TcpAddress.class, nodeAddress);
         
         TcpAddress address = (TcpAddress)nodeAddress;
+        if (address.equals(localNode))
+            return;
         
         synchronized (this)
         {
@@ -737,30 +748,6 @@ public final class TcpTransport implements ITransport, ITcpChannelAcceptor, ITcp
             throw new ChannelException(e);
         }
         return address;
-    }
-    
-    private int compare(TcpAddress address1, TcpAddress address2)
-    {
-        ByteBuffer inetAddress1 = ByteBuffer.wrap(address1.getAddress().getAddress().getAddress());
-        ByteBuffer inetAddress2 = ByteBuffer.wrap(address2.getAddress().getAddress().getAddress());
-        
-        int res = inetAddress1.compareTo(inetAddress2);
-        if (res != 0)
-            return res;
-        
-        int port1 = address1.getAddress().getPort();
-        int port2 = address2.getAddress().getPort();
-        
-        if (port1 > port2)
-            return 1;
-        else if (port1 == port2)
-        {
-            // Addresses can not be equal
-            Assert.error();
-            return 0;
-        }
-        else
-            return -1;
     }
     
     private interface IMessages

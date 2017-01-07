@@ -185,7 +185,7 @@ public final class TcpChannelHandshaker implements ITcpChannelHandshaker<TcpPack
                 if ((flags & TcpTransport.FLAG_DISCONNECT_REQUEST) == TcpTransport.FLAG_DISCONNECT_REQUEST || 
                     (flags & TcpTransport.FLAG_DUPLICATE) == TcpTransport.FLAG_DUPLICATE)
                 {
-                    if (connection.getLocalAddress().compareTo(connection.getRemoteAddress()) < 0)
+                    if (TcpAddress.compare(connection.getLocalAddress().getAddress(), connection.getRemoteInetAddress()) < 0)
                     {
                         state = State.DISCONNECTING_SEND;
                         logState();

@@ -1,3 +1,5 @@
+* FailureDetectionTests
+* MembershipManagerTests
 * [ ] проверить групповые протоколы на потокобезопасность при stop/start
 * Доделать flush тесты
 * Сделать StateTransfer Тесты

@@ -30,6 +30,7 @@ import com.exametrika.common.messaging.impl.protocols.failuredetection.IFailureO
 import com.exametrika.common.messaging.impl.protocols.failuredetection.LiveNodeManager;
 import com.exametrika.common.messaging.impl.transports.ConnectionManager;
 import com.exametrika.common.messaging.impl.transports.tcp.TcpTransport;
+import com.exametrika.common.utils.Debug;
 import com.exametrika.common.utils.IOs;
 import com.exametrika.impl.groups.core.channel.GroupChannel;
 import com.exametrika.impl.groups.core.channel.IChannelReconnector;
@@ -81,7 +82,7 @@ public class FlushProtocolTests
             parameters.receiver = new ReceiverMock();
             IChannel channel = channelFactory.createChannel(parameters);
             channel.start();
-            wellKnownAddresses.add(channel.getLiveNodeProvider().getLocalNode().toString());
+            wellKnownAddresses.add(channel.getLiveNodeProvider().getLocalNode().getConnection());
             channels[i] = channel;
         }
     }
@@ -156,6 +157,7 @@ public class FlushProtocolTests
     {
         private final IDiscoveryStrategy discoveryStrategy;
         private final long discoveryPeriod = 200;
+        private final long discoveryCleanupPeriod = 1000;
         private final long groupFormationPeriod = 2000;
         private long failureUpdatePeriod = 500;
         private  long failureHistoryPeriod = 10000;
@@ -169,6 +171,7 @@ public class FlushProtocolTests
         
         public TestChannelFactory(IDiscoveryStrategy discoveryStrategy)
         {
+            super(new FactoryParameters(Debug.isDebug()));
             this.discoveryStrategy = discoveryStrategy;
         }
         
@@ -191,7 +194,8 @@ public class FlushProtocolTests
             
             GroupJoinStrategyMock joinStrategy = new GroupJoinStrategyMock(); 
             DiscoveryProtocol discoveryProtocol = new DiscoveryProtocol(channelName, messageFactory, membershipManager, 
-                failureDetectionProtocol, discoveryStrategy, liveNodeProvider, new GroupJoinStrategyMock(), discoveryPeriod, groupFormationPeriod);
+                failureDetectionProtocol, discoveryStrategy, liveNodeProvider, new GroupJoinStrategyMock(), discoveryPeriod, 
+                discoveryCleanupPeriod, groupFormationPeriod);
             preparedMembershipListeners.add(discoveryProtocol);
             protocols.add(discoveryProtocol);
             membershipManager.setNodeDiscoverer(discoveryProtocol);

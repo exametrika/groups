@@ -31,6 +31,7 @@ import com.exametrika.common.messaging.impl.ChannelFactory;
 import com.exametrika.common.messaging.impl.ChannelFactory.Parameters;
 import com.exametrika.common.messaging.impl.protocols.AbstractProtocol;
 import com.exametrika.common.messaging.impl.protocols.failuredetection.IFailureObserver;
+import com.exametrika.common.utils.Debug;
 import com.exametrika.common.utils.IOs;
 import com.exametrika.common.utils.Threads;
 import com.exametrika.impl.groups.core.discovery.DiscoveryProtocol;
@@ -40,6 +41,7 @@ import com.exametrika.impl.groups.core.discovery.WellKnownAddressesDiscoveryStra
 import com.exametrika.impl.groups.core.failuredetection.IFailureDetector;
 import com.exametrika.impl.groups.core.membership.Group;
 import com.exametrika.impl.groups.core.membership.Membership;
+import com.exametrika.impl.groups.core.membership.MembershipSerializationRegistrar;
 import com.exametrika.impl.groups.core.membership.Node;
 import com.exametrika.spi.groups.IDiscoveryStrategy;
 import com.exametrika.tests.common.messaging.ReceiverMock;
@@ -76,7 +78,7 @@ public class DiscoveryProtocolTests
             parameters.receiver = new ReceiverMock();
             IChannel channel = channelFactory.createChannel(parameters);
             channel.start();
-            wellKnownAddresses.add(channel.getLiveNodeProvider().getLocalNode().toString());
+            wellKnownAddresses.add(channel.getLiveNodeProvider().getLocalNode().getConnection());
             channels[i] = channel;
         }
         
@@ -119,7 +121,7 @@ public class DiscoveryProtocolTests
             if (i < COUNT - 2)
             {
                 channel.start();
-                wellKnownAddresses.add(channel.getLiveNodeProvider().getLocalNode().toString());
+                wellKnownAddresses.add(channel.getLiveNodeProvider().getLocalNode().getConnection());
             }
             channels[i] = channel;
         }
@@ -127,16 +129,16 @@ public class DiscoveryProtocolTests
         for (DiscoveryProtocol protocol : channelFactory.protocols)
             protocol.startDiscovery();
         
-        Threads.sleep(channelFactory.groupFormationPeriod + 500);
+        Threads.sleep(channelFactory.groupFormationPeriod + 2000);
         
         IOs.close(channels[0]);
         IOs.close(channels[1]);
         channels[COUNT - 2].start();
-        wellKnownAddresses.add(channels[COUNT - 2].getLiveNodeProvider().getLocalNode().toString());
+        wellKnownAddresses.add(channels[COUNT - 2].getLiveNodeProvider().getLocalNode().getConnection());
         channels[COUNT - 1].start();
-        wellKnownAddresses.add(channels[COUNT - 1].getLiveNodeProvider().getLocalNode().toString());
+        wellKnownAddresses.add(channels[COUNT - 1].getLiveNodeProvider().getLocalNode().getConnection());
         
-        Threads.sleep(channelFactory.groupFormationPeriod + 500);
+        Threads.sleep(channelFactory.groupFormationPeriod + 2000);
         
         Set<INode> discoveredNodes = null;
         for (int i = 2; i < COUNT; i++)
@@ -170,7 +172,7 @@ public class DiscoveryProtocolTests
         parameters.receiver = new ReceiverMock();
         IChannel channel = channelFactory.createChannel(parameters);
         channel.start();
-        wellKnownAddresses.add(channel.getLiveNodeProvider().getLocalNode().toString());
+        wellKnownAddresses.add(channel.getLiveNodeProvider().getLocalNode().getConnection());
         channels[0] = channel;
 
         DiscoveryProtocol protocol = channelFactory.protocols.get(0); 
@@ -207,7 +209,7 @@ public class DiscoveryProtocolTests
         channelFactory.failureDetectors.get(1).currentCoordinator = membership.getGroup().getCoordinator();
         channelFactory.failureDetectors.get(1).healthyMembers = membership.getGroup().getMembers();
 
-        wellKnownAddresses.add(membership.getGroup().getCoordinator().toString());
+        wellKnownAddresses.add(membership.getGroup().getCoordinator().getAddress().getConnection());
         
         channelFactory.protocols.get(0).onPreparedMembershipChanged(null, membership, null);
         channelFactory.protocols.get(1).onPreparedMembershipChanged(null, membership, null);
@@ -265,7 +267,7 @@ public class DiscoveryProtocolTests
         channelFactory.failureDetectors.get(1).currentCoordinator = membership.getGroup().getCoordinator();
         channelFactory.failureDetectors.get(1).healthyMembers = membership.getGroup().getMembers();
 
-        wellKnownAddresses.add(membership.getGroup().getMembers().get(1).toString());
+        wellKnownAddresses.add(membership.getGroup().getMembers().get(1).getAddress().getConnection());
         
         channelFactory.protocols.get(0).onPreparedMembershipChanged(null, membership, null);
         channelFactory.protocols.get(1).onPreparedMembershipChanged(null, membership, null);
@@ -312,10 +314,13 @@ public class DiscoveryProtocolTests
             parameters.receiver = new ReceiverMock();
             IChannel channel = channelFactory.createChannel(parameters);
             if (i < 2)
+            {
                 channel.start();
+                wellKnownAddresses.add(channel.getLiveNodeProvider().getLocalNode().getConnection());
+            }
             channels[i] = channel;
-            wellKnownAddresses.add(channels[i].getLiveNodeProvider().getLocalNode().toString());
         }
+
         
         IMembership membership = new Membership(1, new Group(UUID.randomUUID(), "test", true, Arrays.asList(
             channelFactory.membershipServices.get(0).getLocalNode(), channelFactory.membershipServices.get(1).getLocalNode())));
@@ -330,7 +335,7 @@ public class DiscoveryProtocolTests
         for (int i = 2; i < COUNT; i++)
         {
             channels[i].start();
-            wellKnownAddresses.add(channels[i].getLiveNodeProvider().getLocalNode().toString());
+            wellKnownAddresses.add(channels[i].getLiveNodeProvider().getLocalNode().getConnection());
         }
 
         for (DiscoveryProtocol protocol : channelFactory.protocols)
@@ -338,9 +343,9 @@ public class DiscoveryProtocolTests
         
         Threads.sleep(channelFactory.groupFormationPeriod + 500);
         
+        channelFactory.failureDetectors.get(1).currentCoordinator = channelFactory.membershipServices.get(1).getLocalNode();
+        channelFactory.failureDetectors.get(1).healthyMembers = Arrays.asList(channelFactory.membershipServices.get(1).getLocalNode());
         IOs.close(channels[0]);
-        channelFactory.failureDetectors.get(0).currentCoordinator = channelFactory.membershipServices.get(0).getLocalNode();
-        channelFactory.failureDetectors.get(0).healthyMembers = Arrays.asList(channelFactory.membershipServices.get(0).getLocalNode()); 
         
         Threads.sleep(channelFactory.groupFormationPeriod + 500);
         
@@ -378,9 +383,11 @@ public class DiscoveryProtocolTests
             parameters.receiver = new ReceiverMock();
             IChannel channel = channelFactory.createChannel(parameters);
             if (i < 2)
+            {
                 channel.start();
+                wellKnownAddresses.add(channel.getLiveNodeProvider().getLocalNode().getConnection());
+            }
             channels[i] = channel;
-            wellKnownAddresses.add(channels[i].getLiveNodeProvider().getLocalNode().toString());
         }
         
         IMembership membership = new Membership(1, new Group(UUID.randomUUID(), "test", true, Arrays.asList(
@@ -390,7 +397,7 @@ public class DiscoveryProtocolTests
         channelFactory.failureDetectors.get(1).currentCoordinator = membership.getGroup().getCoordinator();
         channelFactory.failureDetectors.get(1).healthyMembers = membership.getGroup().getMembers();
 
-        wellKnownAddresses.add(membership.getGroup().getCoordinator().toString());
+        wellKnownAddresses.add(membership.getGroup().getCoordinator().getAddress().getConnection());
         
         channelFactory.protocols.get(0).onPreparedMembershipChanged(null, membership, null);
         channelFactory.protocols.get(1).onPreparedMembershipChanged(null, membership, null);
@@ -398,18 +405,18 @@ public class DiscoveryProtocolTests
         for (int i = 2; i < COUNT; i++)
         {
             channels[i].start();
-            wellKnownAddresses.add(channels[i].getLiveNodeProvider().getLocalNode().toString());
+            wellKnownAddresses.add(channels[i].getLiveNodeProvider().getLocalNode().getConnection());
         }
 
         for (DiscoveryProtocol protocol : channelFactory.protocols)
             protocol.startDiscovery();
         
-        Threads.sleep(channelFactory.groupFormationPeriod + 500);
+        Threads.sleep(channelFactory.groupFormationPeriod + 5000);
         
         IOs.close(channels[0]);
         IOs.close(channels[1]);
         
-        Threads.sleep(channelFactory.groupFormationPeriod + 500);
+        Threads.sleep(channelFactory.groupFormationPeriod + 5000);
         
         Set<INode> discoveredNodes = null;
         for (int i = 2; i < COUNT; i++)
@@ -538,6 +545,7 @@ public class DiscoveryProtocolTests
     {
         private final IDiscoveryStrategy discoveryStrategy;
         private final long discoveryPeriod = 200;
+        private final long discoveryCleanupPeriod = 1000;
         private final long groupFormationPeriod = 2000;
         private List<DiscoveryProtocol> protocols = new ArrayList<DiscoveryProtocol>();
         private List<GroupJoinStrategyMock> joinStrategies = new ArrayList<GroupJoinStrategyMock>();
@@ -546,6 +554,7 @@ public class DiscoveryProtocolTests
         
         public TestChannelFactory(IDiscoveryStrategy discoveryStrategy)
         {
+            super(new FactoryParameters(Debug.isDebug()));
             this.discoveryStrategy = discoveryStrategy;
         }
         
@@ -556,13 +565,14 @@ public class DiscoveryProtocolTests
         {
             GroupJoinStrategyMock joinStrategy = new GroupJoinStrategyMock();
             joinStrategies.add(joinStrategy);
-            MembershipServiceMock membershipService = new MembershipServiceMock("test" + protocols.size(), liveNodeProvider);
+            MembershipServiceMock membershipService = new MembershipServiceMock(channelName, liveNodeProvider);
             membershipServices.add(membershipService);
             FailureDetectorMock failureDetector = new FailureDetectorMock();
             failureDetectors.add(failureDetector);
             
             DiscoveryProtocol discoveryProtocol = new DiscoveryProtocol(channelName, messageFactory, membershipService, 
-                failureDetector, discoveryStrategy, liveNodeProvider, joinStrategy, discoveryPeriod, groupFormationPeriod);
+                failureDetector, discoveryStrategy, liveNodeProvider, joinStrategy, discoveryPeriod, discoveryCleanupPeriod, 
+                groupFormationPeriod);
             protocols.add(discoveryProtocol);
             
             this.protocols.add(discoveryProtocol);
@@ -570,6 +580,8 @@ public class DiscoveryProtocolTests
             joinStrategy.protocol = discoveryProtocol;
             joinStrategy.membershipService = membershipService;
             joinStrategy.messageFactory = messageFactory;
+            
+            serializationRegistry.register(new MembershipSerializationRegistrar());
         }
     }
 }

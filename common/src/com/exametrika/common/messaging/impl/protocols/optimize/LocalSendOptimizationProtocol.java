@@ -22,7 +22,7 @@ public final class LocalSendOptimizationProtocol extends AbstractProtocol
 {
     private final ILiveNodeProvider liveNodeProvider;
 
-    public LocalSendOptimizationProtocol(String channelName, IMessageFactory messageFactory, ILiveNodeProvider liveNodeProvider)
+    public LocalSendOptimizationProtocol(String channelName, String loggerName, IMessageFactory messageFactory, ILiveNodeProvider liveNodeProvider)
     {
         super(channelName, null, messageFactory);
         

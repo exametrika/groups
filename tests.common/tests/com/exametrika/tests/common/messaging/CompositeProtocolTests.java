@@ -70,7 +70,7 @@ public class CompositeProtocolTests
         TestLeafProtocol leaf2 = new TestLeafProtocol("test", messageFactory);
         TestProtocol parent2 = new TestProtocol("test", messageFactory);
         TestRootProtocol root = new TestRootProtocol("test", messageFactory);
-        LocalSendOptimizationProtocol local = new LocalSendOptimizationProtocol("test", messageFactory, liveNodeManager);
+        LocalSendOptimizationProtocol local = new LocalSendOptimizationProtocol("test", null, messageFactory, liveNodeManager);
         UnhandledMessageProtocol error = new UnhandledMessageProtocol("test", messageFactory);
         
         TestProtocol[] protocols = new TestProtocol[]{leaf1, leaf2, parent1, parent2, root};

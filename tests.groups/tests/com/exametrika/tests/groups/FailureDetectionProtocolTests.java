@@ -34,6 +34,7 @@ import com.exametrika.common.messaging.impl.protocols.ProtocolStack;
 import com.exametrika.common.messaging.impl.protocols.failuredetection.IFailureObserver;
 import com.exametrika.common.messaging.impl.transports.tcp.TcpTransport;
 import com.exametrika.common.tests.Tests;
+import com.exametrika.common.utils.Debug;
 import com.exametrika.common.utils.IOs;
 import com.exametrika.common.utils.Threads;
 import com.exametrika.impl.groups.core.channel.IChannelReconnector;
@@ -41,6 +42,7 @@ import com.exametrika.impl.groups.core.failuredetection.FailureDetectionProtocol
 import com.exametrika.impl.groups.core.failuredetection.IFailureDetectionListener;
 import com.exametrika.impl.groups.core.membership.Group;
 import com.exametrika.impl.groups.core.membership.Membership;
+import com.exametrika.impl.groups.core.membership.MembershipSerializationRegistrar;
 import com.exametrika.impl.groups.core.membership.Node;
 import com.exametrika.tests.common.messaging.ReceiverMock;
 
@@ -305,6 +307,11 @@ public class FailureDetectionProtocolTests
         private List<FailureDetectionListenerMock> failureListeners = new ArrayList<FailureDetectionListenerMock>();
         private List<ChannelReconnectorMock> channelReconnectors = new ArrayList<ChannelReconnectorMock>();
         
+        public TestChannelFactory()
+        {
+            super(new FactoryParameters(Debug.isDebug()));
+        }
+        
         @Override
         protected void createProtocols(Parameters parameters, String channelName, IMessageFactory messageFactory, 
             ISerializationRegistry serializationRegistry, ILiveNodeProvider liveNodeProvider, List<IFailureObserver> failureObservers,
@@ -325,6 +332,8 @@ public class FailureDetectionProtocolTests
             failureObservers.add(failureDetectionProtocol);
             
             this.protocols.add(failureDetectionProtocol);
+            
+            serializationRegistry.register(new MembershipSerializationRegistrar());
         }
         
         @Override

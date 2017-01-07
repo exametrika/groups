@@ -185,8 +185,9 @@ public class ChannelFactory
             factoryParameters.streamingMaxFragmentSize, true, true);
         protocols.add(streamingProtocol);
 
-        LocalSendOptimizationProtocol local = new LocalSendOptimizationProtocol(channelName, messageFactory, liveNodeManager);
-        protocols.add(local);
+        LocalSendOptimizationProtocol highLocal = new LocalSendOptimizationProtocol(channelName, 
+            LocalSendOptimizationProtocol.class.getName() + ".High", messageFactory, liveNodeManager);
+        protocols.add(highLocal);
         
         BundlingProtocol bundlingProtocol = new BundlingProtocol(channelName, messageFactory, serializationRegistry, 
             factoryParameters.maxBundlingMessageSize, factoryParameters.maxBundlingPeriod, factoryParameters.maxBundleSize, 
@@ -198,6 +199,10 @@ public class ChannelFactory
         protocols.add(compressionProtocol);
         
         createProtocols(parameters, channelName, messageFactory, serializationRegistry, liveNodeManager, failureObservers, protocols);
+        
+        LocalSendOptimizationProtocol lowLocal = new LocalSendOptimizationProtocol(channelName, 
+            LocalSendOptimizationProtocol.class.getName() + ".Low", messageFactory, liveNodeManager);
+        protocols.add(lowLocal);
         
         HeartbeatProtocol heartbeatProtocol = new HeartbeatProtocol(channelName, new FullNodeTrackingStrategy(), messageFactory, 
             factoryParameters.heartbeatTrackPeriod, factoryParameters.heartbeatStartPeriod, factoryParameters.heartbeatPeriod, 
