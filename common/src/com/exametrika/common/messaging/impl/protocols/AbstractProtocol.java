@@ -23,6 +23,7 @@ import com.exametrika.common.messaging.IPullableSender;
 import com.exametrika.common.messaging.IReceiver;
 import com.exametrika.common.messaging.ISender;
 import com.exametrika.common.messaging.ISink;
+import com.exametrika.common.messaging.impl.protocols.failuredetection.ICleanupManager;
 import com.exametrika.common.tasks.ThreadInterruptedException;
 import com.exametrika.common.time.ITimeService;
 import com.exametrika.common.utils.Assert;
@@ -279,13 +280,13 @@ public abstract class AbstractProtocol implements ISender, IReceiver, IPullableS
     }
     
     /**
-     * Cleans up stale protocol data. Called by protocol stack when cleanup period has been elapsed and 
-     * live nodes disposition has been changed.
+     * Cleans up stale protocol data.
      *
+     * @param cleanupManager cleanup manager
      * @param liveNodeProvider live node provider
      * @param currentTime current time
      */
-    public void cleanup(ILiveNodeProvider liveNodeProvider, long currentTime)
+    public void cleanup(ICleanupManager cleanupManager, ILiveNodeProvider liveNodeProvider, long currentTime)
     {
     }
 

@@ -12,6 +12,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -28,6 +29,7 @@ import com.exametrika.common.messaging.IChannel;
 import com.exametrika.common.messaging.ILiveNodeProvider;
 import com.exametrika.common.messaging.IMessageFactory;
 import com.exametrika.common.messaging.impl.ChannelFactory;
+import com.exametrika.common.messaging.impl.ChannelFactory.FactoryParameters;
 import com.exametrika.common.messaging.impl.ChannelFactory.Parameters;
 import com.exametrika.common.messaging.impl.protocols.AbstractProtocol;
 import com.exametrika.common.messaging.impl.protocols.failuredetection.IFailureObserver;
@@ -90,16 +92,19 @@ public class DiscoveryProtocolTests
         Set<INode> discoveredNodes = null;
         for (int i = 0; i < COUNT; i++)
         {
+            INode local = channelFactory.membershipServices.get(i).getLocalNode();
+            
             DiscoveryProtocol protocol = channelFactory.protocols.get(i);
+            Set<INode> nodes = new TreeSet(protocol.getDiscoveredNodes());
+            assertTrue(!nodes.contains(local));
+            nodes.add(local);
             if (discoveredNodes == null)
-                discoveredNodes = protocol.getDiscoveredNodes();
+                discoveredNodes = nodes;
             else
-                assertThat(discoveredNodes, is(protocol.getDiscoveredNodes()));
+                assertThat(discoveredNodes, is(nodes));
             
             INode first = discoveredNodes.iterator().next();
-            INode local = channelFactory.membershipServices.get(i).getLocalNode();
             assertThat(protocol.canFormGroup(), is(first.equals(local)));
-            assertTrue(discoveredNodes.contains(local));
         }
         
         assertThat(discoveredNodes.size(), is(COUNT));
@@ -109,7 +114,9 @@ public class DiscoveryProtocolTests
     public void testGroupFormationWithChanges()
     {
         Set<String> wellKnownAddresses = new ConcurrentHashMap<String, String>().keySet("");
-        TestChannelFactory channelFactory = new TestChannelFactory(new WellKnownAddressesDiscoveryStrategy(wellKnownAddresses));
+        FactoryParameters factoryParameters = new FactoryParameters();
+        factoryParameters.nodeCleanupPeriod = 1000;
+        TestChannelFactory channelFactory = new TestChannelFactory(factoryParameters, new WellKnownAddressesDiscoveryStrategy(wellKnownAddresses));
         for (int i = 0; i < COUNT; i++)
         {
             Parameters parameters = new Parameters();
@@ -143,16 +150,19 @@ public class DiscoveryProtocolTests
         Set<INode> discoveredNodes = null;
         for (int i = 2; i < COUNT; i++)
         {
+            INode local = channelFactory.membershipServices.get(i).getLocalNode();
+            
             DiscoveryProtocol protocol = channelFactory.protocols.get(i);
+            Set<INode> nodes = new TreeSet(protocol.getDiscoveredNodes());
+            assertTrue(!nodes.contains(local));
+            nodes.add(local);
             if (discoveredNodes == null)
-                discoveredNodes = protocol.getDiscoveredNodes();
+                discoveredNodes = nodes;
             else
-                assertThat(discoveredNodes, is(protocol.getDiscoveredNodes()));
+                assertThat(discoveredNodes, is(nodes));
             
             INode first = discoveredNodes.iterator().next();
-            INode local = channelFactory.membershipServices.get(i).getLocalNode();
             assertThat(protocol.canFormGroup(), is(first.equals(local)));
-            assertTrue(discoveredNodes.contains(local));
         }
         
         assertThat(discoveredNodes.size(), is(COUNT - 2));
@@ -181,7 +191,7 @@ public class DiscoveryProtocolTests
         Threads.sleep(channelFactory.groupFormationPeriod + 500);
         
         assertThat(protocol.canFormGroup(), is(true));
-        assertThat(protocol.getDiscoveredNodes(), is(Collections.singleton(channelFactory.membershipServices.get(0).getLocalNode())));
+        assertThat(protocol.getDiscoveredNodes().isEmpty(), is(true));
     }
     
     @Test
@@ -373,7 +383,9 @@ public class DiscoveryProtocolTests
     public void testGroupJoinWithGroupFailure()
     {
         Set<String> wellKnownAddresses = new ConcurrentHashMap<String, String>().keySet("");
-        TestChannelFactory channelFactory = new TestChannelFactory(new WellKnownAddressesDiscoveryStrategy(wellKnownAddresses));
+        FactoryParameters factoryParameters = new FactoryParameters();
+        factoryParameters.nodeCleanupPeriod = 1000;
+        TestChannelFactory channelFactory = new TestChannelFactory(factoryParameters, new WellKnownAddressesDiscoveryStrategy(wellKnownAddresses));
         for (int i = 0; i < COUNT; i++)
         {
             Parameters parameters = new Parameters();
@@ -421,16 +433,20 @@ public class DiscoveryProtocolTests
         Set<INode> discoveredNodes = null;
         for (int i = 2; i < COUNT; i++)
         {
+            INode local = channelFactory.membershipServices.get(i).getLocalNode();
+            
             DiscoveryProtocol protocol = channelFactory.protocols.get(i);
+            Set<INode> nodes = new TreeSet(protocol.getDiscoveredNodes());
+            assertTrue(!nodes.contains(local));
+            nodes.add(local);
             if (discoveredNodes == null)
-                discoveredNodes = protocol.getDiscoveredNodes();
+                discoveredNodes = nodes;
             else
-                assertThat(discoveredNodes, is(protocol.getDiscoveredNodes()));
+                assertThat(discoveredNodes, is(nodes));
             
             INode first = discoveredNodes.iterator().next();
-            INode local = channelFactory.membershipServices.get(i).getLocalNode();
+            
             assertThat(protocol.canFormGroup(), is(first.equals(local)));
-            assertTrue(discoveredNodes.contains(local));
             assertTrue(channelFactory.joinStrategies.get(i).groupFailed);
         }
         
@@ -545,17 +561,21 @@ public class DiscoveryProtocolTests
     {
         private final IDiscoveryStrategy discoveryStrategy;
         private final long discoveryPeriod = 200;
-        private final long discoveryCleanupPeriod = 1000;
         private final long groupFormationPeriod = 2000;
         private List<DiscoveryProtocol> protocols = new ArrayList<DiscoveryProtocol>();
         private List<GroupJoinStrategyMock> joinStrategies = new ArrayList<GroupJoinStrategyMock>();
         private List<MembershipServiceMock> membershipServices = new ArrayList<MembershipServiceMock>();
         private List<FailureDetectorMock> failureDetectors = new ArrayList<FailureDetectorMock>();
         
+        public TestChannelFactory(FactoryParameters factoryParameters, IDiscoveryStrategy discoveryStrategy)
+        {
+            super(factoryParameters);
+            this.discoveryStrategy = discoveryStrategy;
+        }
+        
         public TestChannelFactory(IDiscoveryStrategy discoveryStrategy)
         {
-            super(new FactoryParameters(Debug.isDebug()));
-            this.discoveryStrategy = discoveryStrategy;
+            this(new FactoryParameters(Debug.isDebug()), discoveryStrategy);
         }
         
         @Override
@@ -571,8 +591,7 @@ public class DiscoveryProtocolTests
             failureDetectors.add(failureDetector);
             
             DiscoveryProtocol discoveryProtocol = new DiscoveryProtocol(channelName, messageFactory, membershipService, 
-                failureDetector, discoveryStrategy, liveNodeProvider, joinStrategy, discoveryPeriod, discoveryCleanupPeriod, 
-                groupFormationPeriod);
+                failureDetector, discoveryStrategy, liveNodeProvider, joinStrategy, discoveryPeriod, groupFormationPeriod);
             protocols.add(discoveryProtocol);
             
             this.protocols.add(discoveryProtocol);

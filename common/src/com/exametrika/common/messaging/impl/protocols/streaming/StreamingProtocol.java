@@ -26,6 +26,7 @@ import com.exametrika.common.messaging.IStreamReceiveHandler;
 import com.exametrika.common.messaging.IStreamSendHandler;
 import com.exametrika.common.messaging.impl.MessageFlags;
 import com.exametrika.common.messaging.impl.protocols.AbstractProtocol;
+import com.exametrika.common.messaging.impl.protocols.failuredetection.ICleanupManager;
 import com.exametrika.common.utils.Assert;
 import com.exametrika.common.utils.ByteArray;
 import com.exametrika.common.utils.Strings;
@@ -77,14 +78,14 @@ public final class StreamingProtocol extends AbstractProtocol
     }
 
     @Override
-    public void cleanup(ILiveNodeProvider liveNodeProvider, long currentTime)
+    public void cleanup(ICleanupManager cleanupManager, ILiveNodeProvider liveNodeProvider, long currentTime)
     {
         synchronized (incomingStreams)
         {
             for (Iterator<Map.Entry<StreamId, StreamReceiveInfo>> it = incomingStreams.entrySet().iterator(); it.hasNext();)
             {
                 StreamReceiveInfo info = it.next().getValue();
-                if (!liveNodeProvider.isLive(info.message.getSource()))
+                if (cleanupManager.canCleanup(info.message.getSource()))
                 {
                     IStreamReceiveHandler handler = info.message.getPart();
                     handler.receiveCanceled();
@@ -101,7 +102,7 @@ public final class StreamingProtocol extends AbstractProtocol
             for (Iterator<Map.Entry<IFeed, StreamSendInfo>> it = outgoingStreams.entrySet().iterator(); it.hasNext();)
             {
                 StreamSendInfo info = it.next().getValue();
-                if (!liveNodeProvider.isLive(info.message.getDestination()))
+                if (cleanupManager.canCleanup(info.message.getDestination()))
                 {
                     IStreamSendHandler handler = info.message.getPart();
                     handler.sendCanceled();

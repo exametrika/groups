@@ -42,6 +42,7 @@ public final class HeartbeatProtocol extends AbstractProtocol
     private IChannel channel;
     private volatile Map<IAddress, HeartbeatInfo> heartbeats = new LinkedHashMap<IAddress, HeartbeatInfo>();
     private long lastTrackTime;
+    private long lastLiveId = -1;
 
     /**
      * Creates a new object.
@@ -104,25 +105,30 @@ public final class HeartbeatProtocol extends AbstractProtocol
     }
     
     @Override
-    public void cleanup(ILiveNodeProvider liveNodeProvider, long currentTime)
+    public void cleanup(ICleanupManager cleanupManager, ILiveNodeProvider liveNodeProvider, long currentTime)
     {
-        Set<IAddress> trackedNodes = nodeTrackingStrategy.getTrackedNodes(liveNodeProvider.getLocalNode(), 
-            liveNodeProvider.getLiveNodes());
-                
-        Map<IAddress, HeartbeatInfo> heartbeats = new LinkedHashMap<IAddress, HeartbeatInfo>();
-        for (IAddress node : trackedNodes)
+        if (lastLiveId != liveNodeProvider.getId())
         {
-            HeartbeatInfo info = this.heartbeats.get(node);
-            if (info == null)
+            lastLiveId = liveNodeProvider.getId();
+            
+            Set<IAddress> trackedNodes = nodeTrackingStrategy.getTrackedNodes(liveNodeProvider.getLocalNode(), 
+                liveNodeProvider.getLiveNodes());
+                    
+            Map<IAddress, HeartbeatInfo> heartbeats = new LinkedHashMap<IAddress, HeartbeatInfo>();
+            for (IAddress node : trackedNodes)
             {
-                info = new HeartbeatInfo();
-                info.lastRequestTime = currentTime;
+                HeartbeatInfo info = this.heartbeats.get(node);
+                if (info == null)
+                {
+                    info = new HeartbeatInfo();
+                    info.lastRequestTime = currentTime;
+                }
+                    
+                heartbeats.put(node, info);
             }
-                
-            heartbeats.put(node, info);
+            
+            this.heartbeats = heartbeats;
         }
-        
-        this.heartbeats = heartbeats;
     }
     
     @Override

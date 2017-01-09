@@ -30,7 +30,7 @@ public interface INodeDiscoverer
     /**
      * Returns discovered nodes.
      *
-     * @return discovered nodes
+     * @return discovered nodes (excluding local node)
      */
     Set<INode> getDiscoveredNodes();
 }

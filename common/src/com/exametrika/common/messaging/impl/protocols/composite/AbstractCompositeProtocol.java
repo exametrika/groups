@@ -9,6 +9,7 @@ import com.exametrika.common.io.ISerializationRegistry;
 import com.exametrika.common.messaging.ILiveNodeProvider;
 import com.exametrika.common.messaging.IMessageFactory;
 import com.exametrika.common.messaging.impl.protocols.AbstractProtocol;
+import com.exametrika.common.messaging.impl.protocols.failuredetection.ICleanupManager;
 import com.exametrika.common.utils.Assert;
 
 /**
@@ -79,10 +80,10 @@ public abstract class AbstractCompositeProtocol extends AbstractProtocol
     }
     
     @Override
-    public final void cleanup(ILiveNodeProvider liveNodeProvider, long currentTime)
+    public final void cleanup(ICleanupManager cleanupManager, ILiveNodeProvider liveNodeProvider, long currentTime)
     {
         for (AbstractProtocol protocol : protocols)
-            protocol.cleanup(liveNodeProvider, currentTime);
+            protocol.cleanup(cleanupManager, liveNodeProvider, currentTime);
     }
 
     /**

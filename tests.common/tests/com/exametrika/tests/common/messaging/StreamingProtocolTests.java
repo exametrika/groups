@@ -371,7 +371,7 @@ public class StreamingProtocolTests
         liveNodeManager.onNodesFailed(Collections.singleton(member2));
         
         Thread.sleep(100);
-        protocol.cleanup(liveNodeManager, 1500);
+        protocol.cleanup(new CleanupManagerMock(liveNodeManager), liveNodeManager, 1500);
         
         assertThat(outStreams.isEmpty(), is(true));
         assertThat(outHandler.sendCanceled, is(true));

@@ -25,6 +25,7 @@ import com.exametrika.common.messaging.impl.MessageFlags;
 import com.exametrika.common.messaging.impl.message.Message;
 import com.exametrika.common.messaging.impl.message.MessageSerializers;
 import com.exametrika.common.messaging.impl.protocols.AbstractProtocol;
+import com.exametrika.common.messaging.impl.protocols.failuredetection.ICleanupManager;
 import com.exametrika.common.utils.Assert;
 import com.exametrika.common.utils.ByteArray;
 import com.exametrika.common.utils.Serializers;
@@ -95,12 +96,12 @@ public final class BundlingProtocol extends AbstractProtocol
     }
     
     @Override
-    public void cleanup(ILiveNodeProvider liveNodeProvider, long currentTime)
+    public void cleanup(ICleanupManager cleanupManager, ILiveNodeProvider liveNodeProvider, long currentTime)
     {
         for (Iterator<Map.Entry<IAddress, SendQueue>> it = sendQueues.entrySet().iterator(); it.hasNext(); )
         {
             Map.Entry<IAddress, SendQueue> entry = it.next();
-            if (!liveNodeProvider.isLive(entry.getKey()))
+            if (cleanupManager.canCleanup(entry.getKey()))
                 it.remove();
         }
     }

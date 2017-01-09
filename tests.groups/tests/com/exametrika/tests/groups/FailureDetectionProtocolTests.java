@@ -37,6 +37,7 @@ import com.exametrika.common.tests.Tests;
 import com.exametrika.common.utils.Debug;
 import com.exametrika.common.utils.IOs;
 import com.exametrika.common.utils.Threads;
+import com.exametrika.impl.groups.MessageFlags;
 import com.exametrika.impl.groups.core.channel.IChannelReconnector;
 import com.exametrika.impl.groups.core.failuredetection.FailureDetectionProtocol;
 import com.exametrika.impl.groups.core.failuredetection.IFailureDetectionListener;
@@ -90,16 +91,13 @@ public class FailureDetectionProtocolTests
             nodes.get(4).getId(), UUID.randomUUID()));
         channelFactory.protocols.get(2).addLeftMembers(com.exametrika.common.utils.Collections.asSet(nodes.get(3).getId(), 
             nodes.get(4).getId(), UUID.randomUUID()));
-        
+
         Threads.sleep(3000);
         
         for (int i = 0; i < COUNT; i++)
         {
             if (i == 0 || i == 3 || i == 4)
-            {
-                assertThat(channelFactory.channelReconnectors.get(i).reconnectRequested, is(true));
                 continue;
-            }
             
             List<INode> healthy = new ArrayList<INode>(nodes);
             healthy.remove(nodes.get(0));
@@ -108,16 +106,17 @@ public class FailureDetectionProtocolTests
             FailureDetectionProtocol protocol = channelFactory.protocols.get(i);
             assertThat(protocol.getCurrentCoordinator(), is(nodes.get(1)));
             assertThat(protocol.getHealthyMembers(), is(healthy));
-            assertThat(protocol.getFailedMembers(), is(com.exametrika.common.utils.Collections.asSet(nodes.get(0), nodes.get(3))));
-            assertThat(protocol.getLeftMembers(), is(Collections.singleton(nodes.get(4))));
+            assertThat(protocol.getLeftMembers(), is(com.exametrika.common.utils.Collections.asSet(nodes.get(3), nodes.get(4))));
+            assertThat(protocol.getFailedMembers(), is(Collections.singleton(nodes.get(0))));
             
             assertTrue(!channels[i].getLiveNodeProvider().isLive(nodes.get(0).getAddress()));
             assertTrue(!channels[i].getLiveNodeProvider().isLive(nodes.get(3).getAddress()));
             assertTrue(!channels[i].getLiveNodeProvider().isLive(nodes.get(4).getAddress()));
             
             FailureDetectionListenerMock listener = channelFactory.failureListeners.get(i);
-            assertThat(listener.failedMembers, is(com.exametrika.common.utils.Collections.asSet(nodes.get(0), nodes.get(3))));
-            assertThat(listener.leftMembers, is(Collections.singleton(nodes.get(4))));
+            assertThat(listener.leftMembers, is(com.exametrika.common.utils.Collections.asSet(nodes.get(3), nodes.get(4))));
+            assertThat(listener.failedMembers.contains(nodes.get(0)), is(true));
+            assertThat(!listener.failedMembers.contains(nodes.get(3)), is(true));
             assertThat(channelFactory.channelReconnectors.get(i).reconnectRequested, is(false));
         }
         
@@ -125,24 +124,77 @@ public class FailureDetectionProtocolTests
         newNodes.remove(nodes.get(0));
         newNodes.remove(nodes.get(3));
         
+        List<INode> healthy = new ArrayList<INode>(newNodes);
+        healthy.remove(nodes.get(4));
+        
         IMembership membership2 = new Membership(2, new Group(UUID.randomUUID(), "test", true, newNodes));
         for (int i = 0; i < COUNT; i++)
         {
+            if (i == 0 || i == 3 || i == 4)
+                continue;
             FailureDetectionProtocol protocol = channelFactory.protocols.get(i);
             protocol.onPreparedMembershipChanged(null, membership2, null);
             assertThat(protocol.getCurrentCoordinator(), is(nodes.get(1)));
-            assertThat(protocol.getHealthyMembers(), is(newNodes));
+            assertThat(protocol.getHealthyMembers(), is(healthy));
             assertThat(protocol.getFailedMembers(), is(Collections.<INode>emptySet()));
             assertThat(protocol.getLeftMembers(), is(Collections.singleton(nodes.get(4))));
         }
         
-        Threads.sleep(2000);
+        Threads.sleep(3000);
         
         for (int i = 0; i < COUNT; i++)
         {
             FailureDetectionProtocol protocol = channelFactory.protocols.get(i);
             Map history = Tests.get(protocol, "failureHistory");
             assertTrue(history.isEmpty());
+        }
+    }
+    
+    @Test
+    public void testShun() throws Exception
+    {
+        TestChannelFactory channelFactory = new TestChannelFactory();
+        channelFactory.failureHistoryPeriod = 20000;
+        List<INode> nodes = new ArrayList<INode>();
+        for (int i = 0; i < COUNT; i++)
+        {
+            Parameters parameters = new Parameters();
+            parameters.channelName = "test" + i;
+            parameters.clientPart = true;
+            parameters.serverPart = true;
+            parameters.receiver = new ReceiverMock();
+            IChannel channel = channelFactory.createChannel(parameters);
+            channel.start();
+            channels[i] = channel;
+            nodes.add(channelFactory.membershipServices.get(i).getLocalNode());
+        }
+        
+        IMembership membership = new Membership(1, new Group(UUID.randomUUID(), "test", true, nodes));
+        for (int i = 0; i < COUNT; i++)
+            channelFactory.protocols.get(i).onPreparedMembershipChanged(null, membership, null);
+        
+        channelFactory.protocols.get(2).addFailedMembers(com.exametrika.common.utils.Collections.asSet(nodes.get(0).getId(), 
+            nodes.get(4).getId(), UUID.randomUUID()));
+        channelFactory.protocols.get(2).addLeftMembers(com.exametrika.common.utils.Collections.asSet(nodes.get(3).getId(), 
+            nodes.get(4).getId(), UUID.randomUUID()));
+
+        Threads.sleep(1000);
+        
+        for (int i = 0; i < 3; i++)
+        {
+            channelFactory.protocols.get(1).receive(channelFactory.messageFactories.get(0).create(nodes.get(1).getAddress(), 
+                MessageFlags.HIGH_PRIORITY | MessageFlags.PARALLEL));
+            channelFactory.protocols.get(1).receive(channelFactory.messageFactories.get(3).create(nodes.get(1).getAddress(), 
+                MessageFlags.HIGH_PRIORITY | MessageFlags.PARALLEL));
+            channelFactory.protocols.get(1).receive(channelFactory.messageFactories.get(4).create(nodes.get(1).getAddress(),
+                MessageFlags.HIGH_PRIORITY | MessageFlags.PARALLEL));
+        }
+        
+        Threads.sleep(3000);
+        
+        for (int i = 0; i < COUNT; i++)
+        {
+            assertThat(channelFactory.channelReconnectors.get(i).reconnectRequested, is(i == 0));
         }
     }
     
@@ -172,7 +224,7 @@ public class FailureDetectionProtocolTests
         IOs.close(channels[3]);
         IOs.close(channels[4]);
         
-        Threads.sleep(3000);
+        Threads.sleep(300000);
         
         for (int i = 0; i < COUNT; i++)
         {
@@ -300,12 +352,13 @@ public class FailureDetectionProtocolTests
     private class TestChannelFactory extends ChannelFactory
     {
         private long failureUpdatePeriod = 500;
-        private  long failureHistoryPeriod = 10000;
+        private  long failureHistoryPeriod = 2000;
         private  int maxShunCount = 3;
         private List<FailureDetectionProtocol> protocols = new ArrayList<FailureDetectionProtocol>();
         private List<MembershipServiceMock> membershipServices = new ArrayList<MembershipServiceMock>();
         private List<FailureDetectionListenerMock> failureListeners = new ArrayList<FailureDetectionListenerMock>();
         private List<ChannelReconnectorMock> channelReconnectors = new ArrayList<ChannelReconnectorMock>();
+        private List<IMessageFactory> messageFactories = new ArrayList<IMessageFactory>();
         
         public TestChannelFactory()
         {
@@ -317,7 +370,8 @@ public class FailureDetectionProtocolTests
             ISerializationRegistry serializationRegistry, ILiveNodeProvider liveNodeProvider, List<IFailureObserver> failureObservers,
             List<AbstractProtocol> protocols)
         {
-            MembershipServiceMock membershipService = new MembershipServiceMock("test" + protocols.size(), liveNodeProvider);
+            messageFactories.add(messageFactory);
+            MembershipServiceMock membershipService = new MembershipServiceMock(channelName, liveNodeProvider);
             membershipServices.add(membershipService);
             FailureDetectionListenerMock failureListener = new FailureDetectionListenerMock();
             failureListeners.add(failureListener);

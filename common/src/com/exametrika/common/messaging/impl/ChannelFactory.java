@@ -84,6 +84,7 @@ public class ChannelFactory
     {
         public long selectionPeriod = 100;
         public long cleanupPeriod = 1000;
+        public long nodeCleanupPeriod = 30000;
         public int compressionLevel = 5;
         public int streamingMaxFragmentSize = 10000; 
         public long heartbeatTrackPeriod = 500;
@@ -216,7 +217,8 @@ public class ChannelFactory
         protocols.add(interceptorProtocol);
         channelObserver.addChannelListener(interceptorProtocol);
         
-        ProtocolStack protocolStack = new ProtocolStack(channelName, protocols, liveNodeManager, factoryParameters.cleanupPeriod);
+        ProtocolStack protocolStack = new ProtocolStack(channelName, protocols, liveNodeManager, factoryParameters.cleanupPeriod,
+            factoryParameters.nodeCleanupPeriod);
         protocolStack.register(serializationRegistry);
         protocolStack.getFirst().setReceiver(parameters.receiver);
         

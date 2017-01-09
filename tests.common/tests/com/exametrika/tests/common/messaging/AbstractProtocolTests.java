@@ -29,6 +29,7 @@ import com.exametrika.common.messaging.impl.message.MessageFactory;
 import com.exametrika.common.messaging.impl.protocols.AbstractProtocol;
 import com.exametrika.common.messaging.impl.protocols.ProtocolStack;
 import com.exametrika.common.messaging.impl.protocols.failuredetection.ChannelObserver;
+import com.exametrika.common.messaging.impl.protocols.failuredetection.ICleanupManager;
 import com.exametrika.common.messaging.impl.protocols.failuredetection.IFailureObserver;
 import com.exametrika.common.messaging.impl.protocols.failuredetection.LiveNodeManager;
 import com.exametrika.common.messaging.impl.protocols.trace.TracingProtocol;
@@ -152,7 +153,7 @@ public class AbstractProtocolTests
         SenderMock sender = new SenderMock();
         ProtocolMock protocol1 = new ProtocolMock("protocol1");
         ProtocolMock protocol2 = new ProtocolMock("protocol2");
-        ProtocolStack stack = new ProtocolStack("test", Arrays.<AbstractProtocol>asList(protocol1, protocol2), liveNodeProvider, 100);
+        ProtocolStack stack = new ProtocolStack("test", Arrays.<AbstractProtocol>asList(protocol1, protocol2), liveNodeProvider, 100, 1000);
         stack.setTimeService(timeService);
         
         assertThat(stack.getFirst() == protocol1, is(true));
@@ -189,14 +190,13 @@ public class AbstractProtocolTests
         protocol1.cleanup = false;
         protocol2.cleanup = false;
         
-        timeService.time = 2000;
+        timeService.time = 1050;
         
         stack.onTimer(timeService.time);
         
         assertThat(protocol1.cleanup, is(false));
         assertThat(protocol2.cleanup, is(false));
         
-        liveNodeProvider.id = 1;
         timeService.time = 3000;
         
         stack.onTimer(timeService.time);
@@ -205,12 +205,6 @@ public class AbstractProtocolTests
         assertThat(protocol2.cleanup, is(true));
         protocol1.cleanup = false;
         protocol2.cleanup = false;
-        
-        timeService.time = 4000;
-        
-        stack.onTimer(timeService.time);
-        assertThat(protocol1.cleanup, is(false));
-        assertThat(protocol2.cleanup, is(false));
         
         stack.stop();
             
@@ -229,9 +223,10 @@ public class AbstractProtocolTests
         }
     }
     
-    private static class TestLiveNodeProvider implements ILiveNodeProvider
+    public static class TestLiveNodeProvider implements ILiveNodeProvider
     {
         long id;
+        public List<IAddress> liveNodes;
         
         @Override
         public long getId()
@@ -248,13 +243,16 @@ public class AbstractProtocolTests
         @Override
         public List<IAddress> getLiveNodes()
         {
-            return null;
+            return liveNodes;
         }
 
         @Override
         public boolean isLive(IAddress node)
         {
-            return false;
+            if (liveNodes == null)
+                return false;
+            else
+                return liveNodes.contains(node);
         }
 
         @Override
@@ -298,13 +296,13 @@ public class AbstractProtocolTests
         }
     }
     
-    private static class ProtocolMock extends AbstractProtocol
+    public static class ProtocolMock extends AbstractProtocol
     {
         List<IMessage> messages = new ArrayList<IMessage>();
         private boolean timer;
         private boolean registered;
         private boolean unregistered;
-        private boolean cleanup;
+        public boolean cleanup;
         private boolean stopped;
         private boolean started;
         private boolean sendPending;
@@ -362,7 +360,7 @@ public class AbstractProtocolTests
         }
         
         @Override
-        public void cleanup(ILiveNodeProvider liveNodeProvider, long currentTime)
+        public void cleanup(ICleanupManager cleanupManager, ILiveNodeProvider liveNodeProvider, long currentTime)
         {
             cleanup = true;
         }

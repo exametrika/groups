@@ -189,7 +189,7 @@ public class BundlingProtocolTests
         assertThat(sendQueues.size(), is(2));
         
         liveNodeManager.onNodesFailed(com.exametrika.common.utils.Collections.asSet(member3));
-        protocol.cleanup(liveNodeManager, 200);
+        protocol.cleanup(new CleanupManagerMock(liveNodeManager), liveNodeManager, 200);
         
         assertThat(sendQueues.size(), is(1));
         

@@ -69,6 +69,7 @@ public final class Memberships
     {
         Assert.notNull(localNode);
         Assert.notNull(discoveredNodes);
+        Assert.isTrue(!discoveredNodes.contains(localNode));
         
         List<INode> members = new ArrayList<INode>(discoveredNodes.size() + 1);
         members.add(localNode);

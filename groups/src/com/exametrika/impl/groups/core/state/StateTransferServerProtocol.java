@@ -21,6 +21,7 @@ import com.exametrika.common.messaging.IMessage;
 import com.exametrika.common.messaging.IMessageFactory;
 import com.exametrika.common.messaging.IReceiver;
 import com.exametrika.common.messaging.impl.protocols.AbstractProtocol;
+import com.exametrika.common.messaging.impl.protocols.failuredetection.ICleanupManager;
 import com.exametrika.common.tasks.IFlowController;
 import com.exametrika.common.utils.Assert;
 import com.exametrika.common.utils.ICompletionHandler;
@@ -145,9 +146,9 @@ public final class StateTransferServerProtocol extends AbstractProtocol implemen
     }
 
     @Override
-    public void cleanup(ILiveNodeProvider liveNodeProvider, long currentTime)
+    public void cleanup(ICleanupManager cleanupManager, ILiveNodeProvider liveNodeProvider, long currentTime)
     {
-        if (stateTransfer != null && !liveNodeProvider.isLive(stateTransfer.client))
+        if (stateTransfer != null && cleanupManager.canCleanup(stateTransfer.client))
         {
             stateTransfer.cancel();
             stateTransfer = null;

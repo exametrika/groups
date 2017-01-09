@@ -30,6 +30,7 @@ import com.exametrika.common.messaging.impl.protocols.composite.AbstractComposit
 import com.exametrika.common.messaging.impl.protocols.composite.ProtocolSubStack;
 import com.exametrika.common.messaging.impl.protocols.error.UnhandledMessageProtocol;
 import com.exametrika.common.messaging.impl.protocols.failuredetection.ChannelObserver;
+import com.exametrika.common.messaging.impl.protocols.failuredetection.ICleanupManager;
 import com.exametrika.common.messaging.impl.protocols.failuredetection.IFailureObserver;
 import com.exametrika.common.messaging.impl.protocols.failuredetection.LiveNodeManager;
 import com.exametrika.common.messaging.impl.protocols.optimize.LocalSendOptimizationProtocol;
@@ -82,7 +83,7 @@ public class CompositeProtocolTests
             Arrays.asList(new Pair<ICondition<IMessage>, IReceiver>(new AllMessageFlagsRoutingCondition(MessageFlags.HIGH_PRIORITY), subStack1), 
                 new Pair<ICondition<IMessage>, IReceiver>(new AllMessageFlagsRoutingCondition(MessageFlags.LOW_PRIORITY), subStack2)));
         
-        ProtocolStack stack = new ProtocolStack("test", Arrays.asList(error, router, local, root), liveNodeManager, 100);
+        ProtocolStack stack = new ProtocolStack("test", Arrays.asList(error, router, local, root), liveNodeManager, 100, 1000);
         stack.setTimeService(new SystemTimeService());
         
         stack.register(registry);
@@ -173,7 +174,7 @@ public class CompositeProtocolTests
         }
         
         @Override
-        public void cleanup(ILiveNodeProvider liveNodeProvider, long currentTime)
+        public void cleanup(ICleanupManager cleanupManager, ILiveNodeProvider liveNodeProvider, long currentTime)
         {
             cleanedup = true;
         }

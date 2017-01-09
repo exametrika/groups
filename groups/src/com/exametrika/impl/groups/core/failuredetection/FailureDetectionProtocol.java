@@ -398,23 +398,32 @@ public final class FailureDetectionProtocol extends AbstractProtocol implements 
         if (membership == null)
             return;
 
-        if (currentCoordinator != null && !failedMembers.contains(currentCoordinator) && !leftMembers.contains(currentCoordinator))
-            return;
-
-        currentCoordinator = null;
+        if (currentCoordinator == null || failedMembers.contains(currentCoordinator) || leftMembers.contains(currentCoordinator))
+        {
+            currentCoordinator = null;
+            for (INode member : membership.getGroup().getMembers())
+            {
+                if (!failedMembers.contains(member) && !leftMembers.contains(member))
+                {
+                    currentCoordinator = member;
+                    break;
+                }
+            }
+    
+            if (logger.isLogEnabled(LogLevel.DEBUG))
+                logger.log(LogLevel.DEBUG, marker, messages.currentCoordinatorUpdated(currentCoordinator));
+        }
+        
         healthyMembers.clear();
         for (INode member : membership.getGroup().getMembers())
         {
             if (!failedMembers.contains(member) && !leftMembers.contains(member))
-            {
-                if (currentCoordinator == null)
-                    currentCoordinator = member;
                 healthyMembers.add(member);
-            }
         }
 
-        if (logger.isLogEnabled(LogLevel.DEBUG))
-            logger.log(LogLevel.DEBUG, marker, messages.currentCoordinatorUpdated(currentCoordinator));
+        if (logger.isLogEnabled(LogLevel.TRACE))
+            logger.log(LogLevel.TRACE, marker, messages.healthyMembersUpdated(healthyMembers));
+
     }
     
     private static class FailureInfo
@@ -438,5 +447,7 @@ public final class FailureDetectionProtocol extends AbstractProtocol implements 
         ILocalizedMessage nodeLeft(INode node);
         @DefaultMessage("Current coordinator has been set to ''{0}''.")
         ILocalizedMessage currentCoordinatorUpdated(INode currentCoordinator);  
+        @DefaultMessage("Healthy members have been set to ''{0}''.")
+        ILocalizedMessage healthyMembersUpdated(List<INode> currentCoordinator);
     }
 }

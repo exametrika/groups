@@ -157,7 +157,6 @@ public class FlushProtocolTests
     {
         private final IDiscoveryStrategy discoveryStrategy;
         private final long discoveryPeriod = 200;
-        private final long discoveryCleanupPeriod = 1000;
         private final long groupFormationPeriod = 2000;
         private long failureUpdatePeriod = 500;
         private  long failureHistoryPeriod = 10000;
@@ -195,7 +194,7 @@ public class FlushProtocolTests
             GroupJoinStrategyMock joinStrategy = new GroupJoinStrategyMock(); 
             DiscoveryProtocol discoveryProtocol = new DiscoveryProtocol(channelName, messageFactory, membershipManager, 
                 failureDetectionProtocol, discoveryStrategy, liveNodeProvider, new GroupJoinStrategyMock(), discoveryPeriod, 
-                discoveryCleanupPeriod, groupFormationPeriod);
+                groupFormationPeriod);
             preparedMembershipListeners.add(discoveryProtocol);
             protocols.add(discoveryProtocol);
             membershipManager.setNodeDiscoverer(discoveryProtocol);

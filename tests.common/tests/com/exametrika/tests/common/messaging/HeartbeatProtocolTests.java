@@ -104,7 +104,7 @@ public class HeartbeatProtocolTests
     public void testCleanup() throws Throwable
     {
         timeService.time = 1000;
-        protocol.cleanup(liveNodeManager, 1000);
+        protocol.cleanup(new CleanupManagerMock(liveNodeManager), liveNodeManager, 1000);
         Map heartbeats = Tests.get(protocol, "heartbeats");
         assertThat(heartbeats.size(), is(3));
         check(heartbeats, member2, 1000);
@@ -117,7 +117,7 @@ public class HeartbeatProtocolTests
         
         Thread.sleep(100);
         
-        protocol.cleanup(liveNodeManager, 2000);
+        protocol.cleanup(new CleanupManagerMock(liveNodeManager), liveNodeManager, 2000);
         
         heartbeats = Tests.get(protocol, "heartbeats");
         assertThat(heartbeats.size(), is(2));
@@ -128,7 +128,7 @@ public class HeartbeatProtocolTests
     @Test
     public void testReceive() throws Throwable
     {
-        protocol.cleanup(liveNodeManager, 1000);
+        protocol.cleanup(new CleanupManagerMock(liveNodeManager), liveNodeManager, 1000);
         timeService.time = 2000;
         
         protocol.receive(new Message(member5, member1, 0, registry));
@@ -170,7 +170,7 @@ public class HeartbeatProtocolTests
     {
         accessTimeProvider.lastReadTimes.put(member2, 2000l);
         
-        protocol.cleanup(liveNodeManager, 2000);
+        protocol.cleanup(new CleanupManagerMock(liveNodeManager), liveNodeManager, 2000);
 
         timeService.time = 2000;
         protocol.onTimer(timeService.time);

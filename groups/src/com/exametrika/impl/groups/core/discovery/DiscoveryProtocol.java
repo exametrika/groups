@@ -7,9 +7,8 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
-import java.util.TreeMap;
+import java.util.TreeSet;
 
 import com.exametrika.api.groups.core.IMembership;
 import com.exametrika.api.groups.core.IMembershipChange;
@@ -27,6 +26,7 @@ import com.exametrika.common.messaging.IMessageFactory;
 import com.exametrika.common.messaging.IReceiver;
 import com.exametrika.common.messaging.MessageFlags;
 import com.exametrika.common.messaging.impl.protocols.AbstractProtocol;
+import com.exametrika.common.messaging.impl.protocols.failuredetection.ICleanupManager;
 import com.exametrika.common.utils.Assert;
 import com.exametrika.impl.groups.core.failuredetection.IFailureDetector;
 import com.exametrika.impl.groups.core.membership.IPreparedMembershipListener;
@@ -42,32 +42,27 @@ import com.exametrika.spi.groups.IDiscoveryStrategy;
 public final class DiscoveryProtocol extends AbstractProtocol implements INodeDiscoverer, IPreparedMembershipListener
 {
     private static final IMessages messages = Messages.get(IMessages.class);
-    private static final int SENDS_COUNT_THRESHOLD = 3;
-    private static final int FAILURES_COUNT_THRESHOLD = 3;
     private final IMembershipService membershipService;
     private final IDiscoveryStrategy discoveryStrategy;
     private final IFailureDetector failureDetector;
     private final ILiveNodeProvider liveNodeProvider;
     private final long discoveryPeriod;
-    private final long discoveryCleanupPeriod;
     private final long groupFormationPeriod;
     private final IGroupJoinStrategy groupJoinStrategy;
     private IMembership membership;
     private long membershipId;
     private IAddress coordinator;
     private List<IAddress> healthyMembers = new ArrayList<IAddress>();
-    private TreeMap<INode, DiscoveryInfo> discoveredNodes = new TreeMap<INode, DiscoveryInfo>();
+    private TreeSet<INode> discoveredNodes = new TreeSet<INode>();
     private long startTime;
-    private boolean started;
     private long lastDiscoveryTime;
-    private long lastDiscoveryCleanupTime;
-    private long coordinatorAssignTime;
+    private boolean started;
     private boolean stopped;
 
     public DiscoveryProtocol(String channelName, IMessageFactory messageFactory, IMembershipService membershipService, 
         IFailureDetector failureDetector, IDiscoveryStrategy discoveryStrategy, 
         ILiveNodeProvider liveNodeProvider, IGroupJoinStrategy groupJoinStrategy,
-        long discoveryPeriod, long discoveryCleanupPeriod, long groupFormationPeriod)
+        long discoveryPeriod, long groupFormationPeriod)
     {
         super(channelName, messageFactory);
 
@@ -83,7 +78,6 @@ public final class DiscoveryProtocol extends AbstractProtocol implements INodeDi
         this.liveNodeProvider = liveNodeProvider;
         this.groupJoinStrategy = groupJoinStrategy;
         this.discoveryPeriod = discoveryPeriod;
-        this.discoveryCleanupPeriod = discoveryCleanupPeriod;
         this.groupFormationPeriod = groupFormationPeriod;
     }
 
@@ -114,7 +108,7 @@ public final class DiscoveryProtocol extends AbstractProtocol implements INodeDi
         if (startTime == 0 || timeService.getCurrentTime() < startTime + groupFormationPeriod)
             return false;
 
-        if (!discoveredNodes.isEmpty() && discoveredNodes.firstKey().compareTo(membershipService.getLocalNode()) < 0)
+        if (!discoveredNodes.isEmpty() && discoveredNodes.first().compareTo(membershipService.getLocalNode()) < 0)
             return false;
 
         return true;
@@ -123,7 +117,7 @@ public final class DiscoveryProtocol extends AbstractProtocol implements INodeDi
     @Override
     public Set<INode> getDiscoveredNodes()
     {
-        return discoveredNodes.keySet();
+        return discoveredNodes;
     }
 
     @Override
@@ -136,7 +130,7 @@ public final class DiscoveryProtocol extends AbstractProtocol implements INodeDi
         if (oldMembership == null)
             discoveredNodes.clear();
         else
-            discoveredNodes.keySet().removeAll(newMembership.getGroup().getMembers());
+            discoveredNodes.removeAll(newMembership.getGroup().getMembers());
     }
 
     @Override
@@ -153,11 +147,12 @@ public final class DiscoveryProtocol extends AbstractProtocol implements INodeDi
             if (currentTime > lastDiscoveryTime + discoveryPeriod)
             {
                 Set<INode> nodes = new HashSet<INode>();
-                for (Map.Entry<INode, DiscoveryInfo> entry : discoveredNodes.entrySet())
+                for (INode node : discoveredNodes)
                 {
-                    if (entry.getValue().failuresCount == 0)
-                        nodes.add(entry.getKey());
+                    if (liveNodeProvider.isLive(node.getAddress()))
+                        nodes.add(node);
                 }
+                
                 nodes.add(membershipService.getLocalNode());
                 DiscoveryMessagePart discoveryPart = new DiscoveryMessagePart(nodes);
                 
@@ -171,44 +166,13 @@ public final class DiscoveryProtocol extends AbstractProtocol implements INodeDi
                         addresses.add(address);
                 }
         
-                for (Map.Entry<INode, DiscoveryInfo> entry : discoveredNodes.entrySet())
-                {
-                    entry.getValue().sendsCount++;
-                    addresses.add(entry.getKey().getAddress());
-                }
+                for (INode node : discoveredNodes)
+                    addresses.add(node.getAddress());
                 
                 for (IAddress address : addresses)
                     send(messageFactory.create(address, discoveryPart, MessageFlags.HIGH_PRIORITY));
                 
                 lastDiscoveryTime = currentTime;
-            }
-            
-            if (currentTime > lastDiscoveryCleanupTime + discoveryCleanupPeriod)
-            {
-                for (Iterator<Map.Entry<INode, DiscoveryInfo>> it = discoveredNodes.entrySet().iterator(); it.hasNext(); )
-                {
-                    Map.Entry<INode, DiscoveryInfo> entry = it.next();
-                    INode node = entry.getKey();
-                    DiscoveryInfo info = entry.getValue();
-                    if (!liveNodeProvider.isLive(node.getAddress()))
-                    {
-                        if (info.sendsCount >= SENDS_COUNT_THRESHOLD)
-                        {
-                            info.failuresCount++;
-                            if (info.failuresCount >= FAILURES_COUNT_THRESHOLD)
-                            {
-                                it.remove();
-                                
-                                if (logger.isLogEnabled(LogLevel.DEBUG))
-                                    logger.log(LogLevel.DEBUG, marker, messages.nodeFailed(node));
-                            }
-                        }
-                    }
-                    else
-                        info.failuresCount = 0;
-                }
-                
-                lastDiscoveryCleanupTime = currentTime;
             }
         }
         else
@@ -232,21 +196,36 @@ public final class DiscoveryProtocol extends AbstractProtocol implements INodeDi
                 
                 lastDiscoveryTime = currentTime;
             }
-            
-            if (currentTime > lastDiscoveryCleanupTime + discoveryCleanupPeriod)
-            {
-                if (currentTime > coordinatorAssignTime + discoveryCleanupPeriod * FAILURES_COUNT_THRESHOLD &&
-                    !liveNodeProvider.isLive(coordinator))
-                {
-                    healthyMembers.remove(coordinator);
-                    updateHealthyMembers(healthyMembers);
-                }
-                
-                lastDiscoveryCleanupTime = currentTime;
-            }
         }
     }
 
+    @Override
+    public void cleanup(ICleanupManager cleanupManager, ILiveNodeProvider liveNodeProvider, long currentTime)
+    {
+        if (coordinator == null)
+        {
+            for (Iterator<INode> it = discoveredNodes.iterator(); it.hasNext(); )
+            {
+                INode node = it.next();
+                if (cleanupManager.canCleanup(node.getAddress()))
+                {
+                    it.remove();
+                    
+                    if (logger.isLogEnabled(LogLevel.DEBUG))
+                        logger.log(LogLevel.DEBUG, marker, messages.nodeFailed(node));
+                }
+            }
+        }
+        else
+        {
+            if (cleanupManager.canCleanup(coordinator))
+            {
+                healthyMembers.remove(coordinator);
+                updateHealthyMembers(healthyMembers);
+            }  
+        }
+    }
+    
     @Override
     public void register(ISerializationRegistry registry)
     {
@@ -274,9 +253,11 @@ public final class DiscoveryProtocol extends AbstractProtocol implements INodeDi
             {
                 if (membership == null)
                 {
-                    if (coordinator == null && !discoveredNodes.containsKey(node))
+                    if (coordinator == null && !discoveredNodes.contains(node) && !membershipService.getLocalNode().equals(node))
                     {
-                        discoveredNodes.put(node, new DiscoveryInfo());
+                        discoveredNodes.add(node);
+                        connectionProvider.connect(node.getAddress());
+                        
                         if (logger.isLogEnabled(LogLevel.DEBUG))
                             logger.log(LogLevel.DEBUG, marker, messages.nodeDiscovered(node));
                     }
@@ -300,17 +281,20 @@ public final class DiscoveryProtocol extends AbstractProtocol implements INodeDi
         }
         else if (message.getPart() instanceof GroupJoinMessagePart)
         {
-            GroupJoinMessagePart part = message.getPart();
             if (membership == null)
                 return;
             
+            GroupJoinMessagePart part = message.getPart();
+            INode joiningNode = part.getJoiningNode();
             if (membershipService.getLocalNode().equals(failureDetector.getCurrentCoordinator()))
             {
-                if (!discoveredNodes.containsKey(part.getJoiningNode()))
+                if (!discoveredNodes.contains(joiningNode))
                 {
-                    discoveredNodes.put(part.getJoiningNode(), new DiscoveryInfo());
+                    discoveredNodes.add(joiningNode);
+                    connectionProvider.connect(joiningNode.getAddress());
+                    
                     if (logger.isLogEnabled(LogLevel.DEBUG))
-                        logger.log(LogLevel.DEBUG, marker, messages.nodeDiscovered(part.getJoiningNode()));
+                        logger.log(LogLevel.DEBUG, marker, messages.nodeDiscovered(joiningNode));
                 }
             }
             else
@@ -322,6 +306,8 @@ public final class DiscoveryProtocol extends AbstractProtocol implements INodeDi
 
     private void updateHealthyMembers(List<IAddress> healthyMembers)
     {
+        Assert.checkState(membership == null);
+        
         IAddress oldCoordinator = coordinator;
         if (coordinator != null && (healthyMembers.isEmpty() || !coordinator.equals(healthyMembers.get(0))))
         {
@@ -346,7 +332,6 @@ public final class DiscoveryProtocol extends AbstractProtocol implements INodeDi
         {
             connectionProvider.connect(coordinator);
             groupJoinStrategy.onGroupDiscovered(healthyMembers);
-            coordinatorAssignTime = timeService.getCurrentTime();
             
             if (logger.isLogEnabled(LogLevel.DEBUG))
                 logger.log(LogLevel.DEBUG, marker, messages.coordinatorDiscovered(coordinator));
@@ -360,12 +345,6 @@ public final class DiscoveryProtocol extends AbstractProtocol implements INodeDi
             addresses.add(node.getAddress());
             
         return addresses;
-    }
-    
-    private static class DiscoveryInfo
-    {
-        int sendsCount;
-        int failuresCount;
     }
     
     private interface IMessages

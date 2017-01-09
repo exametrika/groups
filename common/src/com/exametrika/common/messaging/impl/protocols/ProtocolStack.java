@@ -17,6 +17,7 @@ import com.exametrika.common.log.LogLevel;
 import com.exametrika.common.log.Loggers;
 import com.exametrika.common.messaging.IConnectionProvider;
 import com.exametrika.common.messaging.ILiveNodeProvider;
+import com.exametrika.common.messaging.impl.protocols.failuredetection.CleanupManager;
 import com.exametrika.common.time.ITimeService;
 import com.exametrika.common.utils.Assert;
 import com.exametrika.common.utils.ILifecycle;
@@ -33,14 +34,11 @@ public final class ProtocolStack implements ILifecycle, ICompartmentProcessor, I
     private final ILogger logger = Loggers.get(ProtocolStack.class);
     private final IMarker marker;
     private final List<AbstractProtocol> protocols;
-    private final ILiveNodeProvider liveNodeProvider;
+    private final CleanupManager cleanupManager;
     private ITimeService timeService;
-    private final long cleanupPeriod;
-    private long lastCleanupTime;
-    private long liveNodeId = -1;
 
     public ProtocolStack(String channelName, List<AbstractProtocol> protocols, ILiveNodeProvider liveNodeProvider,
-        long cleanupPeriod)
+        long cleanupPeriod, long nodeCleanupPeriod)
     {
         Assert.notNull(channelName);
         Assert.notNull(protocols);
@@ -49,8 +47,7 @@ public final class ProtocolStack implements ILifecycle, ICompartmentProcessor, I
         
         marker = Loggers.getMarker(channelName);
         this.protocols = protocols;
-        this.liveNodeProvider = liveNodeProvider;
-        this.cleanupPeriod = cleanupPeriod;
+        this.cleanupManager = new CleanupManager(protocols, liveNodeProvider, cleanupPeriod, nodeCleanupPeriod);
     }
     
     public AbstractProtocol getFirst()
@@ -82,6 +79,8 @@ public final class ProtocolStack implements ILifecycle, ICompartmentProcessor, I
         
         for (AbstractProtocol protocol : protocols)
             protocol.setTimeService(timeService);
+        
+        cleanupManager.setTimeService(timeService);
     }
     
     public void setConnectionProvider(IConnectionProvider connectionProvider)
@@ -130,18 +129,7 @@ public final class ProtocolStack implements ILifecycle, ICompartmentProcessor, I
         for (AbstractProtocol protocol : protocols)
             protocol.onTimer(currentTime);
         
-        if (lastCleanupTime != 0 && currentTime - lastCleanupTime < cleanupPeriod)
-            return;
-        
-        lastCleanupTime = currentTime;
-        
-        if (liveNodeId != liveNodeProvider.getId())
-        {
-            liveNodeId = liveNodeProvider.getId();
-            
-            for (AbstractProtocol protocol : protocols)
-                protocol.cleanup(liveNodeProvider, currentTime);
-        }
+        cleanupManager.onTimer(currentTime);
     }
 
     @Override
