@@ -23,18 +23,25 @@ import com.exametrika.impl.groups.core.membership.IMembershipManager;
  */
 public final class GroupNodeTrackingStrategy implements INodeTrackingStrategy
 {
-    private final IMembershipManager membershipManager;
-    private final IFailureDetector failureDetector;
+    private IMembershipManager membershipManager;
+    private IFailureDetector failureDetector;
 
-    public GroupNodeTrackingStrategy(IMembershipManager membershipManager, IFailureDetector failureDetector)
+    public void setMembershipManager(IMembershipManager membershipManager)
     {
         Assert.notNull(membershipManager);
-        Assert.notNull(failureDetector);
+        Assert.isNull(this.membershipManager);
         
         this.membershipManager = membershipManager;
+    }
+
+    public void setFailureDetector(IFailureDetector failureDetector)
+    {
+        Assert.notNull(failureDetector);
+        Assert.isNull(this.failureDetector);
+        
         this.failureDetector = failureDetector;
     }
-    
+
     @Override
     public Set<IAddress> getTrackedNodes(IAddress localNode, List<IAddress> liveNodes)
     {

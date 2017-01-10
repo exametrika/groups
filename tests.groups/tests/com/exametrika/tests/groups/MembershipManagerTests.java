@@ -29,6 +29,7 @@ import com.exametrika.api.groups.core.MembershipEvent;
 import com.exametrika.common.messaging.IAddress;
 import com.exametrika.common.messaging.ILiveNodeProvider;
 import com.exametrika.common.messaging.impl.transports.tcp.TcpAddress;
+import com.exametrika.common.tests.Tests;
 import com.exametrika.common.utils.MapBuilder;
 import com.exametrika.impl.groups.core.discovery.INodeDiscoverer;
 import com.exametrika.impl.groups.core.failuredetection.IFailureDetector;
@@ -59,11 +60,11 @@ public class MembershipManagerTests
     @Test
     public void testNode()
     {
-        IAddress local = new TcpAddress(UUID.randomUUID(), new InetSocketAddress("localhost", 9090), "test");
+        IAddress local = new TcpAddress(new UUID(1, 1), new InetSocketAddress("localhost", 9090), "test");
         Node node = new Node(local.getId(), local.getName(), local, Collections.<String, Object>singletonMap("key", "value"));
         Node node2 = new Node(new UUID(0, 0), local.getName(), local, Collections.<String, Object>singletonMap("key", "value"));
         assertThat(node, is(node));
-        assertThat(!node.equals(node2), is(false));
+        assertThat(!node.equals(node2), is(true));
         assertThat(node.compareTo(node2) > 0, is(true));
         assertThat((String)node.getProperty("key"), is("value"));
     }
@@ -76,7 +77,7 @@ public class MembershipManagerTests
         Node node1 = new Node(address1.getId(), address1.getName(), address1, Collections.<String, Object>singletonMap("key", "value"));
         Node node2 = new Node(address2.getId(), address2.getName(), address2, Collections.<String, Object>singletonMap("key", "value"));
         
-        Group group = new Group(UUID.randomUUID(), "test", true, Arrays.<INode>asList(node1, node2));
+        Group group = new Group(new UUID(1, 1), "test", true, Arrays.<INode>asList(node1, node2));
         Group group2 = new Group(new UUID(0, 0), "test", true, Arrays.<INode>asList(node1, node2));
         assertThat(group.getCoordinator(), is((INode)node1));
         assertThat(group.getMembers(), is(Arrays.<INode>asList(node1, node2)));
@@ -84,7 +85,7 @@ public class MembershipManagerTests
         assertThat(group.findMember(node1.getId()), is((INode)node1));
         
         assertThat(group, is(group));
-        assertThat(!group.equals(group2), is(false));
+        assertThat(!group.equals(group2), is(true));
         assertThat(group.compareTo(group2) > 0, is(true));
     }
     
@@ -135,11 +136,11 @@ public class MembershipManagerTests
         assertThat(changeInfo.newMembership.getGroup().getCoordinator(), is((INode)node3));
         assertThat(changeInfo.newMembership.getGroup().getMembers(), is(Arrays.<INode>asList(node3, node4, node5)));
         assertThat(changeInfo.newMembership.getGroup().getName(), is("core"));
-        assertThat(changeInfo.newMembership.getGroup().isPrimary(), is(true));
+        assertThat(changeInfo.newMembership.getGroup().isPrimary(), is(false));
         
         assertThat(changeInfo.membershipChange.getJoinedMembers(), is(com.exametrika.common.utils.Collections.<INode>asSet(node4, node5)));
-        assertThat(changeInfo.membershipChange.getFailedMembers(), is(com.exametrika.common.utils.Collections.<INode>asSet(node1)));
-        assertThat(changeInfo.membershipChange.getLeftMembers(), is(com.exametrika.common.utils.Collections.<INode>asSet(node2)));
+        assertThat(changeInfo.membershipChange.getLeftMembers(), is(com.exametrika.common.utils.Collections.<INode>asSet(node1)));
+        assertThat(changeInfo.membershipChange.getFailedMembers(), is(com.exametrika.common.utils.Collections.<INode>asSet(node2)));
         
         MembershipDeltaInfo deltaInfo = Memberships.createMembership(membership, com.exametrika.common.utils.Collections.<INode>asSet(node1), 
             com.exametrika.common.utils.Collections.<INode>asSet(node2), com.exametrika.common.utils.Collections.<INode>asSet(node4, node5));
@@ -148,7 +149,7 @@ public class MembershipManagerTests
         assertThat(deltaInfo.newMembership.getGroup().getCoordinator(), is((INode)node3));
         assertThat(deltaInfo.newMembership.getGroup().getMembers().size(), is(3));
         assertThat(deltaInfo.newMembership.getGroup().getName(), is("core"));
-        assertThat(deltaInfo.newMembership.getGroup().isPrimary(), is(true));
+        assertThat(deltaInfo.newMembership.getGroup().isPrimary(), is(false));
         assertThat(deltaInfo.newMembership.getGroup().findMember(node3.getId()) == node3, is(true));
         assertThat(deltaInfo.newMembership.getGroup().findMember(node4.getId()) == node4, is(true));
         assertThat(deltaInfo.newMembership.getGroup().findMember(node5.getId()) == node5, is(true));
@@ -183,7 +184,7 @@ public class MembershipManagerTests
             new InetSocketAddress("localhost", 9090), "test"), Collections.<String, Object>emptyMap());
         nodeDiscoverer.canFormGroup = true;
         nodeDiscoverer.discoveredNodes.add(discoveredNode1);
-        tracker.onTimer(0);
+        tracker.onTimer(1);
         assertTrue(flushManager.membershipDelta == null);
         assertThat(flushManager.membership.getId(), is(1l));
         assertThat(flushManager.membership.getGroup().getMembers(), is(Arrays.asList(membershipManager.getLocalNode(), discoveredNode1)));
@@ -191,7 +192,7 @@ public class MembershipManagerTests
         membershipManager.preparedMembership = flushManager.membership;
         membershipManager.membership = flushManager.membership;
         flushManager.membership = null;
-        tracker.onTimer(0);
+        tracker.onTimer(1);
         assertTrue(flushManager.membership == null);
         nodeDiscoverer.discoveredNodes.clear();
         
@@ -218,7 +219,7 @@ public class MembershipManagerTests
     }
     
     @Test
-    public void testMembershipManager()
+    public void testMembershipManager() throws Exception
     {
         LiveNodeProviderMock liveNodeProvider = new LiveNodeProviderMock();
         PropertyProviderMock propertyProvider = new PropertyProviderMock();
@@ -281,7 +282,7 @@ public class MembershipManagerTests
         assertThat(listener.leaveReason, is(LeaveReason.GRACEFUL_CLOSE));
         
         manager.stop();
-        assertThat(manager.getLocalNode() == null, is(true));
+        assertThat(Tests.get(manager, "localNode") == null, is(true));
     }
     
     private static class PreparedMembershipListenerMock implements IPreparedMembershipListener

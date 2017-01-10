@@ -19,8 +19,9 @@ import org.junit.After;
 import org.junit.Test;
 
 import com.exametrika.api.groups.core.IMembership;
+import com.exametrika.api.groups.core.IMembershipChange;
 import com.exametrika.api.groups.core.IMembershipListener;
-import com.exametrika.api.groups.core.IMembershipService;
+import com.exametrika.api.groups.core.IMembershipListener.LeaveReason;
 import com.exametrika.api.groups.core.INode;
 import com.exametrika.common.io.ISerializationRegistry;
 import com.exametrika.common.messaging.IChannel;
@@ -31,7 +32,9 @@ import com.exametrika.common.messaging.impl.ChannelFactory;
 import com.exametrika.common.messaging.impl.ChannelFactory.Parameters;
 import com.exametrika.common.messaging.impl.protocols.AbstractProtocol;
 import com.exametrika.common.messaging.impl.protocols.ProtocolStack;
+import com.exametrika.common.messaging.impl.protocols.failuredetection.HeartbeatProtocol;
 import com.exametrika.common.messaging.impl.protocols.failuredetection.IFailureObserver;
+import com.exametrika.common.messaging.impl.protocols.failuredetection.INodeTrackingStrategy;
 import com.exametrika.common.messaging.impl.transports.tcp.TcpTransport;
 import com.exametrika.common.tests.Tests;
 import com.exametrika.common.utils.Debug;
@@ -40,8 +43,10 @@ import com.exametrika.common.utils.Threads;
 import com.exametrika.impl.groups.MessageFlags;
 import com.exametrika.impl.groups.core.channel.IChannelReconnector;
 import com.exametrika.impl.groups.core.failuredetection.FailureDetectionProtocol;
+import com.exametrika.impl.groups.core.failuredetection.GroupNodeTrackingStrategy;
 import com.exametrika.impl.groups.core.failuredetection.IFailureDetectionListener;
 import com.exametrika.impl.groups.core.membership.Group;
+import com.exametrika.impl.groups.core.membership.IMembershipManager;
 import com.exametrika.impl.groups.core.membership.Membership;
 import com.exametrika.impl.groups.core.membership.MembershipSerializationRegistrar;
 import com.exametrika.impl.groups.core.membership.Node;
@@ -224,7 +229,7 @@ public class FailureDetectionProtocolTests
         IOs.close(channels[3]);
         IOs.close(channels[4]);
         
-        Threads.sleep(300000);
+        Threads.sleep(3000);
         
         for (int i = 0; i < COUNT; i++)
         {
@@ -276,7 +281,7 @@ public class FailureDetectionProtocolTests
         }
     }
     
-    private static class MembershipServiceMock implements IMembershipService
+    private static class MembershipServiceMock implements IMembershipManager
     {
         private Node localNode;
         private Membership membership;
@@ -317,6 +322,40 @@ public class FailureDetectionProtocolTests
         @Override
         public void removeAllMembershipListeners()
         {
+        }
+
+        @Override
+        public IMembership getPreparedMembership()
+        {
+            return membership;
+        }
+
+        @Override
+        public void prepareInstallMembership(IMembership membership)
+        {
+            // TODO Auto-generated method stub
+            
+        }
+
+        @Override
+        public void prepareChangeMembership(IMembership membership, IMembershipChange membershipChange)
+        {
+            // TODO Auto-generated method stub
+            
+        }
+
+        @Override
+        public void commitMembership()
+        {
+            // TODO Auto-generated method stub
+            
+        }
+
+        @Override
+        public void uninstallMembership(LeaveReason reason)
+        {
+            // TODO Auto-generated method stub
+            
         }
     }
     
@@ -366,6 +405,12 @@ public class FailureDetectionProtocolTests
         }
         
         @Override
+        protected INodeTrackingStrategy createNodeTrackingStrategy()
+        {
+            return new GroupNodeTrackingStrategy();
+        }
+        
+        @Override
         protected void createProtocols(Parameters parameters, String channelName, IMessageFactory messageFactory, 
             ISerializationRegistry serializationRegistry, ILiveNodeProvider liveNodeProvider, List<IFailureObserver> failureObservers,
             List<AbstractProtocol> protocols)
@@ -393,7 +438,11 @@ public class FailureDetectionProtocolTests
         @Override
         protected void wireProtocols(Channel channel, TcpTransport transport, ProtocolStack protocolStack)
         {
-            protocolStack.find(FailureDetectionProtocol.class).setFailureObserver(transport);
+            GroupNodeTrackingStrategy strategy = (GroupNodeTrackingStrategy)protocolStack.find(HeartbeatProtocol.class).getNodeTrackingStrategy();
+            FailureDetectionProtocol failureDetectionProtocol = protocolStack.find(FailureDetectionProtocol.class);
+            failureDetectionProtocol.setFailureObserver(transport);
+            strategy.setFailureDetector(failureDetectionProtocol);
+            strategy.setMembershipManager((IMembershipManager)failureDetectionProtocol.getMembersipService());
         }
     }
 }

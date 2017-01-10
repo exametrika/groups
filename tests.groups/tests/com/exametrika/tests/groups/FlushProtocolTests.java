@@ -26,7 +26,9 @@ import com.exametrika.common.messaging.impl.message.MessageFactory;
 import com.exametrika.common.messaging.impl.protocols.AbstractProtocol;
 import com.exametrika.common.messaging.impl.protocols.ProtocolStack;
 import com.exametrika.common.messaging.impl.protocols.failuredetection.ChannelObserver;
+import com.exametrika.common.messaging.impl.protocols.failuredetection.HeartbeatProtocol;
 import com.exametrika.common.messaging.impl.protocols.failuredetection.IFailureObserver;
+import com.exametrika.common.messaging.impl.protocols.failuredetection.INodeTrackingStrategy;
 import com.exametrika.common.messaging.impl.protocols.failuredetection.LiveNodeManager;
 import com.exametrika.common.messaging.impl.transports.ConnectionManager;
 import com.exametrika.common.messaging.impl.transports.tcp.TcpTransport;
@@ -38,11 +40,13 @@ import com.exametrika.impl.groups.core.channel.IGracefulCloseStrategy;
 import com.exametrika.impl.groups.core.discovery.DiscoveryProtocol;
 import com.exametrika.impl.groups.core.discovery.WellKnownAddressesDiscoveryStrategy;
 import com.exametrika.impl.groups.core.failuredetection.FailureDetectionProtocol;
+import com.exametrika.impl.groups.core.failuredetection.GroupNodeTrackingStrategy;
 import com.exametrika.impl.groups.core.failuredetection.IFailureDetectionListener;
 import com.exametrika.impl.groups.core.flush.FlushCoordinatorProtocol;
 import com.exametrika.impl.groups.core.flush.FlushParticipantProtocol;
 import com.exametrika.impl.groups.core.flush.IFlush;
 import com.exametrika.impl.groups.core.flush.IFlushParticipant;
+import com.exametrika.impl.groups.core.membership.IMembershipManager;
 import com.exametrika.impl.groups.core.membership.IPreparedMembershipListener;
 import com.exametrika.impl.groups.core.membership.MembershipManager;
 import com.exametrika.impl.groups.core.membership.MembershipTracker;
@@ -175,6 +179,12 @@ public class FlushProtocolTests
         }
         
         @Override
+        protected INodeTrackingStrategy createNodeTrackingStrategy()
+        {
+            return new GroupNodeTrackingStrategy();
+        }
+        
+        @Override
         protected void createProtocols(Parameters parameters, String channelName, IMessageFactory messageFactory, 
             ISerializationRegistry serializationRegistry, ILiveNodeProvider liveNodeProvider, List<IFailureObserver> failureObservers, 
             List<AbstractProtocol> protocols)
@@ -228,6 +238,11 @@ public class FlushProtocolTests
             failureDetectionProtocol.setFailureObserver(transport);
             failureDetectionProtocol.setChannelReconnector((IChannelReconnector)channel);
             channel.getCompartment().addProcessor(membershipTracker);
+            
+            GroupNodeTrackingStrategy strategy = (GroupNodeTrackingStrategy)protocolStack.find(HeartbeatProtocol.class).getNodeTrackingStrategy();
+            strategy.setFailureDetector(failureDetectionProtocol);
+            strategy.setMembershipManager((IMembershipManager)failureDetectionProtocol.getMembersipService());
+        
         }
         
         @Override

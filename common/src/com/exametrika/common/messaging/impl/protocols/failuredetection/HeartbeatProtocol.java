@@ -93,6 +93,11 @@ public final class HeartbeatProtocol extends AbstractProtocol
         this.channel = channel;
     }
     
+    public INodeTrackingStrategy getNodeTrackingStrategy()
+    {
+        return nodeTrackingStrategy;
+    }
+    
     @Override
     public void onTimer(long currentTime)
     {

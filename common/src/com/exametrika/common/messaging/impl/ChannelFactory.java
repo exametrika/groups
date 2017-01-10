@@ -47,6 +47,7 @@ import com.exametrika.common.messaging.impl.protocols.failuredetection.ChannelOb
 import com.exametrika.common.messaging.impl.protocols.failuredetection.FullNodeTrackingStrategy;
 import com.exametrika.common.messaging.impl.protocols.failuredetection.HeartbeatProtocol;
 import com.exametrika.common.messaging.impl.protocols.failuredetection.IFailureObserver;
+import com.exametrika.common.messaging.impl.protocols.failuredetection.INodeTrackingStrategy;
 import com.exametrika.common.messaging.impl.protocols.failuredetection.LiveNodeManager;
 import com.exametrika.common.messaging.impl.protocols.optimize.BundlingProtocol;
 import com.exametrika.common.messaging.impl.protocols.optimize.LocalSendOptimizationProtocol;
@@ -205,7 +206,7 @@ public class ChannelFactory
             LocalSendOptimizationProtocol.class.getName() + ".Low", messageFactory, liveNodeManager);
         protocols.add(lowLocal);
         
-        HeartbeatProtocol heartbeatProtocol = new HeartbeatProtocol(channelName, new FullNodeTrackingStrategy(), messageFactory, 
+        HeartbeatProtocol heartbeatProtocol = new HeartbeatProtocol(channelName, createNodeTrackingStrategy(), messageFactory, 
             factoryParameters.heartbeatTrackPeriod, factoryParameters.heartbeatStartPeriod, factoryParameters.heartbeatPeriod, 
             factoryParameters.heartbeatFailureDetectionPeriod);
         protocols.add(heartbeatProtocol);
@@ -305,6 +306,11 @@ public class ChannelFactory
             connectionManager, compartment);
     }
 
+    protected INodeTrackingStrategy createNodeTrackingStrategy()
+    {
+        return new FullNodeTrackingStrategy();
+    }
+    
     protected void createProtocols(Parameters parameters, String channelName, IMessageFactory messageFactory, ISerializationRegistry serializationRegistry, 
         ILiveNodeProvider liveNodeProvider, List<IFailureObserver> failureObservers, List<AbstractProtocol> protocols)
     {

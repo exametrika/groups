@@ -92,6 +92,11 @@ public final class FailureDetectionProtocol extends AbstractProtocol implements 
         this.channelReconnector = channelReconnector;
     }
     
+    public IMembershipService getMembersipService()
+    {
+        return membershipService;
+    }
+    
     @Override
     public INode getCurrentCoordinator()
     {
