@@ -88,9 +88,12 @@ public class FailureDetectionProtocolTests
             nodes.add(channelFactory.membershipServices.get(i).getLocalNode());
         }
         
-        IMembership membership = new Membership(1, new Group(UUID.randomUUID(), "test", true, nodes));
+        Membership membership = new Membership(1, new Group(UUID.randomUUID(), "test", true, nodes));
         for (int i = 0; i < COUNT; i++)
+        {
             channelFactory.protocols.get(i).onPreparedMembershipChanged(null, membership, null);
+            channelFactory.membershipServices.get(i).membership = membership;
+        }
         
         channelFactory.protocols.get(2).addFailedMembers(com.exametrika.common.utils.Collections.asSet(nodes.get(0).getId(), 
             nodes.get(4).getId(), UUID.randomUUID()));
@@ -132,11 +135,12 @@ public class FailureDetectionProtocolTests
         List<INode> healthy = new ArrayList<INode>(newNodes);
         healthy.remove(nodes.get(4));
         
-        IMembership membership2 = new Membership(2, new Group(UUID.randomUUID(), "test", true, newNodes));
+        Membership membership2 = new Membership(2, new Group(UUID.randomUUID(), "test", true, newNodes));
         for (int i = 0; i < COUNT; i++)
         {
             if (i == 0 || i == 3 || i == 4)
                 continue;
+            channelFactory.membershipServices.get(i).membership = membership2;
             FailureDetectionProtocol protocol = channelFactory.protocols.get(i);
             protocol.onPreparedMembershipChanged(null, membership2, null);
             assertThat(protocol.getCurrentCoordinator(), is(nodes.get(1)));
@@ -174,9 +178,12 @@ public class FailureDetectionProtocolTests
             nodes.add(channelFactory.membershipServices.get(i).getLocalNode());
         }
         
-        IMembership membership = new Membership(1, new Group(UUID.randomUUID(), "test", true, nodes));
+        Membership membership = new Membership(1, new Group(UUID.randomUUID(), "test", true, nodes));
         for (int i = 0; i < COUNT; i++)
+        {
             channelFactory.protocols.get(i).onPreparedMembershipChanged(null, membership, null);
+            channelFactory.membershipServices.get(i).membership = membership;
+        }
         
         channelFactory.protocols.get(2).addFailedMembers(com.exametrika.common.utils.Collections.asSet(nodes.get(0).getId(), 
             nodes.get(4).getId(), UUID.randomUUID()));
@@ -221,15 +228,18 @@ public class FailureDetectionProtocolTests
             nodes.add(channelFactory.membershipServices.get(i).getLocalNode());
         }
         
-        IMembership membership = new Membership(1, new Group(UUID.randomUUID(), "test", true, nodes));
+        Membership membership = new Membership(1, new Group(UUID.randomUUID(), "test", true, nodes));
         for (int i = 0; i < COUNT; i++)
+        {
             channelFactory.protocols.get(i).onPreparedMembershipChanged(null, membership, null);
+            channelFactory.membershipServices.get(i).membership = membership;
+        }
         
         IOs.close(channels[0]);
         IOs.close(channels[3]);
         IOs.close(channels[4]);
         
-        Threads.sleep(3000);
+        Threads.sleep(30000000);
         
         for (int i = 0; i < COUNT; i++)
         {
@@ -260,9 +270,10 @@ public class FailureDetectionProtocolTests
         newNodes.remove(nodes.get(0));
         newNodes.remove(nodes.get(3));
         
-        IMembership membership2 = new Membership(2, new Group(UUID.randomUUID(), "test", true, newNodes));
+        Membership membership2 = new Membership(2, new Group(UUID.randomUUID(), "test", true, newNodes));
         for (int i = 0; i < COUNT; i++)
         {
+            channelFactory.membershipServices.get(i).membership = membership2;
             FailureDetectionProtocol protocol = channelFactory.protocols.get(i);
             protocol.onPreparedMembershipChanged(null, membership2, null);
             assertThat(protocol.getCurrentCoordinator(), is(nodes.get(1)));
@@ -333,29 +344,21 @@ public class FailureDetectionProtocolTests
         @Override
         public void prepareInstallMembership(IMembership membership)
         {
-            // TODO Auto-generated method stub
-            
         }
 
         @Override
         public void prepareChangeMembership(IMembership membership, IMembershipChange membershipChange)
         {
-            // TODO Auto-generated method stub
-            
         }
 
         @Override
         public void commitMembership()
         {
-            // TODO Auto-generated method stub
-            
         }
 
         @Override
         public void uninstallMembership(LeaveReason reason)
         {
-            // TODO Auto-generated method stub
-            
         }
     }
     
