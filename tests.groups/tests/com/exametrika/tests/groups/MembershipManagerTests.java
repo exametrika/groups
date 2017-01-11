@@ -61,8 +61,8 @@ public class MembershipManagerTests
     public void testNode()
     {
         IAddress local = new TcpAddress(new UUID(1, 1), new InetSocketAddress("localhost", 9090), "test");
-        Node node = new Node(local.getId(), local.getName(), local, Collections.<String, Object>singletonMap("key", "value"));
-        Node node2 = new Node(new UUID(0, 0), local.getName(), local, Collections.<String, Object>singletonMap("key", "value"));
+        Node node = new Node(local.getName(), local, Collections.<String, Object>singletonMap("key", "value"));
+        Node node2 = new Node(local.getName(), new TcpAddress(new UUID(0, 0), new InetSocketAddress("localhost", 9090), "test"), Collections.<String, Object>singletonMap("key", "value"));
         assertThat(node, is(node));
         assertThat(!node.equals(node2), is(true));
         assertThat(node.compareTo(node2) > 0, is(true));
@@ -74,8 +74,8 @@ public class MembershipManagerTests
     {
         IAddress address1 = new TcpAddress(UUID.randomUUID(), new InetSocketAddress("localhost", 9090), "test1");
         IAddress address2 = new TcpAddress(UUID.randomUUID(), new InetSocketAddress("localhost", 9090), "test2");
-        Node node1 = new Node(address1.getId(), address1.getName(), address1, Collections.<String, Object>singletonMap("key", "value"));
-        Node node2 = new Node(address2.getId(), address2.getName(), address2, Collections.<String, Object>singletonMap("key", "value"));
+        Node node1 = new Node(address1.getName(), address1, Collections.<String, Object>singletonMap("key", "value"));
+        Node node2 = new Node(address2.getName(), address2, Collections.<String, Object>singletonMap("key", "value"));
         
         Group group = new Group(new UUID(1, 1), "test", true, Arrays.<INode>asList(node1, node2));
         Group group2 = new Group(new UUID(0, 0), "test", true, Arrays.<INode>asList(node1, node2));
@@ -94,8 +94,8 @@ public class MembershipManagerTests
     {
         IAddress address1 = new TcpAddress(UUID.randomUUID(), new InetSocketAddress("localhost", 9090), "test1");
         IAddress address2 = new TcpAddress(UUID.randomUUID(), new InetSocketAddress("localhost", 9090), "test2");
-        Node node1 = new Node(address1.getId(), address1.getName(), address1, Collections.<String, Object>singletonMap("key", "value"));
-        Node node2 = new Node(address2.getId(), address2.getName(), address2, Collections.<String, Object>singletonMap("key", "value"));
+        Node node1 = new Node(address1.getName(), address1, Collections.<String, Object>singletonMap("key", "value"));
+        Node node2 = new Node(address2.getName(), address2, Collections.<String, Object>singletonMap("key", "value"));
         
         Group group = new Group(UUID.randomUUID(), "test", true, Arrays.<INode>asList(node1, node2));
         
@@ -113,11 +113,11 @@ public class MembershipManagerTests
         IAddress address3 = new TcpAddress(UUID.randomUUID(), new InetSocketAddress("localhost", 9090), "test3");
         IAddress address4 = new TcpAddress(UUID.randomUUID(), new InetSocketAddress("localhost", 9090), "test4");
         IAddress address5 = new TcpAddress(UUID.randomUUID(), new InetSocketAddress("localhost", 9090), "test5");
-        Node node1 = new Node(address1.getId(), address1.getName(), address1, Collections.<String, Object>singletonMap("key", "value"));
-        Node node2 = new Node(address2.getId(), address2.getName(), address2, Collections.<String, Object>singletonMap("key", "value"));
-        Node node3 = new Node(address3.getId(), address3.getName(), address3, Collections.<String, Object>singletonMap("key", "value"));
-        Node node4 = new Node(address4.getId(), address4.getName(), address4, Collections.<String, Object>singletonMap("key", "value"));
-        Node node5 = new Node(address5.getId(), address5.getName(), address5, Collections.<String, Object>singletonMap("key", "value"));
+        Node node1 = new Node(address1.getName(), address1, Collections.<String, Object>singletonMap("key", "value"));
+        Node node2 = new Node(address2.getName(), address2, Collections.<String, Object>singletonMap("key", "value"));
+        Node node3 = new Node(address3.getName(), address3, Collections.<String, Object>singletonMap("key", "value"));
+        Node node4 = new Node(address4.getName(), address4, Collections.<String, Object>singletonMap("key", "value"));
+        Node node5 = new Node(address5.getName(), address5, Collections.<String, Object>singletonMap("key", "value"));
         
         IMembership membership = Memberships.createMembership(node1, com.exametrika.common.utils.Collections.<INode>asSet(node2, node3));
         assertThat(membership.getId(), is(1l));
@@ -178,9 +178,9 @@ public class MembershipManagerTests
         FlushManagerMock flushManager = new FlushManagerMock();
         MembershipTracker tracker = new MembershipTracker(1000, membershipManager, nodeDiscoverer, failureDetector, flushManager);
         
-        INode discoveredNode1 = new Node(UUID.randomUUID(), "test", new TcpAddress(UUID.randomUUID(), 
+        INode discoveredNode1 = new Node("test", new TcpAddress(UUID.randomUUID(), 
             new InetSocketAddress("localhost", 9090), "test"), Collections.<String, Object>emptyMap());
-        INode discoveredNode2 = new Node(UUID.randomUUID(), "test", new TcpAddress(UUID.randomUUID(), 
+        INode discoveredNode2 = new Node("test", new TcpAddress(UUID.randomUUID(), 
             new InetSocketAddress("localhost", 9090), "test"), Collections.<String, Object>emptyMap());
         nodeDiscoverer.canFormGroup = true;
         nodeDiscoverer.discoveredNodes.add(discoveredNode1);
@@ -239,9 +239,9 @@ public class MembershipManagerTests
         assertThat(manager.getLocalNode().getProperties(), is(Collections.<String, Object>singletonMap("key", "value")));
         
         IAddress address1 = new TcpAddress(UUID.randomUUID(), new InetSocketAddress("localhost", 9090), "test1");
-        Node node1 = new Node(address1.getId(), address1.getName(), address1, Collections.<String, Object>singletonMap("key", "value"));
+        Node node1 = new Node(address1.getName(), address1, Collections.<String, Object>singletonMap("key", "value"));
         IAddress address2 = new TcpAddress(UUID.randomUUID(), new InetSocketAddress("localhost", 9090), "test2");
-        Node node2 = new Node(address2.getId(), address2.getName(), address2, Collections.<String, Object>singletonMap("key", "value"));
+        Node node2 = new Node(address2.getName(), address2, Collections.<String, Object>singletonMap("key", "value"));
         Group group = new Group(UUID.randomUUID(), "test", true, Arrays.<INode>asList(manager.getLocalNode(), node1));
         Membership membership = new Membership(1, group);
         
@@ -386,7 +386,7 @@ public class MembershipManagerTests
     
     private static class MembershipManagerMock implements IMembershipManager
     {
-        private INode localNode = new Node(UUID.randomUUID(), "test", new TcpAddress(UUID.randomUUID(), 
+        private INode localNode = new Node("test", new TcpAddress(UUID.randomUUID(), 
             new InetSocketAddress("localhost", 9090), "test"), Collections.<String, Object>emptyMap());
         private IMembership membership;
         private IMembership preparedMembership;

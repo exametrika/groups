@@ -24,14 +24,13 @@ public final class Node implements INode
     private final IAddress address;
     private final Map<String, Object> properties;
 
-    public Node(UUID id, String name, IAddress address, Map<String, Object> properties)
+    public Node(String name, IAddress address, Map<String, Object> properties)
     {
-        Assert.notNull(id);
         Assert.notNull(name);
         Assert.notNull(address);
         Assert.notNull(properties);
 
-        this.id = id;
+        this.id = address.getId();
         this.name = name;
         this.address = address;
         this.properties = Immutables.wrap(properties);

@@ -29,6 +29,7 @@ import com.exametrika.common.messaging.ILiveNodeProvider;
 import com.exametrika.common.messaging.IMessageFactory;
 import com.exametrika.common.messaging.impl.Channel;
 import com.exametrika.common.messaging.impl.ChannelFactory;
+import com.exametrika.common.messaging.impl.ChannelFactory.FactoryParameters;
 import com.exametrika.common.messaging.impl.ChannelFactory.Parameters;
 import com.exametrika.common.messaging.impl.protocols.AbstractProtocol;
 import com.exametrika.common.messaging.impl.protocols.ProtocolStack;
@@ -73,7 +74,7 @@ public class FailureDetectionProtocolTests
     @Test
     public void testExplicitLeaveFailure() throws Exception
     {
-        TestChannelFactory channelFactory = new TestChannelFactory();
+        TestChannelFactory channelFactory = new TestChannelFactory(new FactoryParameters(Debug.isDebug()));
         List<INode> nodes = new ArrayList<INode>();
         for (int i = 0; i < COUNT; i++)
         {
@@ -162,7 +163,7 @@ public class FailureDetectionProtocolTests
     @Test
     public void testShun() throws Exception
     {
-        TestChannelFactory channelFactory = new TestChannelFactory();
+        TestChannelFactory channelFactory = new TestChannelFactory(new FactoryParameters(Debug.isDebug()));
         channelFactory.failureHistoryPeriod = 20000;
         List<INode> nodes = new ArrayList<INode>();
         for (int i = 0; i < COUNT; i++)
@@ -213,7 +214,13 @@ public class FailureDetectionProtocolTests
     @Test
     public void testDetectedLeaveFailure() throws Exception
     {
-        TestChannelFactory channelFactory = new TestChannelFactory();
+        FactoryParameters factoryParameters = new FactoryParameters(Debug.isDebug());
+        factoryParameters.heartbeatTrackPeriod = 100;
+        factoryParameters.heartbeatPeriod = 100;
+        factoryParameters.heartbeatStartPeriod = 300;
+        factoryParameters.heartbeatFailureDetectionPeriod = 1000;
+        factoryParameters.transportChannelTimeout = 1000;
+        TestChannelFactory channelFactory = new TestChannelFactory(factoryParameters);
         List<INode> nodes = new ArrayList<INode>();
         for (int i = 0; i < COUNT; i++)
         {
@@ -309,7 +316,7 @@ public class FailureDetectionProtocolTests
         public synchronized INode getLocalNode()
         {
             if (localNode == null)
-                localNode = new Node(UUID.randomUUID(), name, provider.getLocalNode(), Collections.<String, Object>emptyMap());
+                localNode = new Node(name, provider.getLocalNode(), Collections.<String, Object>emptyMap());
             
             return localNode;
         }
@@ -402,9 +409,9 @@ public class FailureDetectionProtocolTests
         private List<ChannelReconnectorMock> channelReconnectors = new ArrayList<ChannelReconnectorMock>();
         private List<IMessageFactory> messageFactories = new ArrayList<IMessageFactory>();
         
-        public TestChannelFactory()
+        public TestChannelFactory(FactoryParameters factoryParameters)
         {
-            super(new FactoryParameters(Debug.isDebug()));
+            super(factoryParameters);
         }
         
         @Override

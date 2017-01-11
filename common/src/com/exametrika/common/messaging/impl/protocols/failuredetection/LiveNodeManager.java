@@ -184,12 +184,13 @@ public final class LiveNodeManager implements IFailureObserver, IConnectionObser
                 this.liveNodesById = liveNodesById;
                 this.liveNodesByName = liveNodesByName;
                 this.liveNodesByConnection = liveNodesByConnection;
-                id++;
             }
+            
+            id++;
         }
         
         for (IFailureObserver failureObserver : failureObservers)
-            failureObserver.onNodesFailed(changedNodes);
+            failureObserver.onNodesFailed(nodes);
     }
 
     @Override

@@ -153,14 +153,17 @@ public final class FailureDetectionProtocol extends AbstractProtocol implements 
         
         updateCurrentCoordinator();
         
-        inProgress = true;
-        
-        failureObserver.onNodesFailed(newFailedAddresses);
+        if (!inProgress)
+        {
+            inProgress = true;
+            
+            failureObserver.onNodesFailed(newFailedAddresses);
+            
+            inProgress = false;
+        }
         
         for (INode member : newFailedMembers)
             onMemberFailed(member);
-        
-        inProgress = false;
     }
 
     @Override
@@ -214,7 +217,7 @@ public final class FailureDetectionProtocol extends AbstractProtocol implements 
         
         Set<UUID> memberIds = new HashSet<UUID>();
         for (IAddress address : nodes)
-            memberIds.add(address.getId());
+            memberIds.add(address.getId());//TODO: node id required not address id
         
         inProgress = true;
         
@@ -231,7 +234,7 @@ public final class FailureDetectionProtocol extends AbstractProtocol implements 
         
         Set<UUID> memberIds = new HashSet<UUID>();
         for (IAddress address : nodes)
-            memberIds.add(address.getId());
+            memberIds.add(address.getId());//TODO: node id required not address id
         
         inProgress = true;
         
@@ -428,7 +431,17 @@ public final class FailureDetectionProtocol extends AbstractProtocol implements 
 
         if (logger.isLogEnabled(LogLevel.TRACE))
             logger.log(LogLevel.TRACE, marker, messages.healthyMembersUpdated(healthyMembers));
-
+        
+        if (currentCoordinator == null)
+            return;
+        
+        if (membershipService.getLocalNode().equals(currentCoordinator))
+        {
+            for (INode member : healthyMembers)
+                connectionProvider.connect(member.getAddress());
+        }
+        else
+            connectionProvider.connect(currentCoordinator.getAddress());
     }
     
     private static class FailureInfo
