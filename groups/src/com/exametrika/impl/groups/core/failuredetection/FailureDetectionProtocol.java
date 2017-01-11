@@ -142,9 +142,6 @@ public final class FailureDetectionProtocol extends AbstractProtocol implements 
                 newFailedAddresses.add(member.getAddress());
                 newFailedMembers.add(member);
                 failureHistory.put(member.getAddress(), new FailureInfo(currentTime, true));
-                
-                if (logger.isLogEnabled(LogLevel.DEBUG))
-                    logger.log(LogLevel.DEBUG, marker, messages.nodeFailed(member));
             }
         }
 
@@ -185,9 +182,6 @@ public final class FailureDetectionProtocol extends AbstractProtocol implements 
                 leftMembers.add(member);
                 failedMembers.remove(member);
                 failureHistory.put(member.getAddress(), new FailureInfo(currentTime, false));
-                
-                if (logger.isLogEnabled(LogLevel.DEBUG))
-                    logger.log(LogLevel.DEBUG, marker, messages.nodeLeft(member));
             }
         }
 
@@ -217,7 +211,7 @@ public final class FailureDetectionProtocol extends AbstractProtocol implements 
         
         Set<UUID> memberIds = new HashSet<UUID>();
         for (IAddress address : nodes)
-            memberIds.add(address.getId());//TODO: node id required not address id
+            memberIds.add(address.getId());
         
         inProgress = true;
         
@@ -234,7 +228,7 @@ public final class FailureDetectionProtocol extends AbstractProtocol implements 
         
         Set<UUID> memberIds = new HashSet<UUID>();
         for (IAddress address : nodes)
-            memberIds.add(address.getId());//TODO: node id required not address id
+            memberIds.add(address.getId());
         
         inProgress = true;
         
@@ -246,6 +240,8 @@ public final class FailureDetectionProtocol extends AbstractProtocol implements 
     @Override
     public void onPreparedMembershipChanged(IMembership oldMembership, IMembership newMembership, IMembershipChange membershipChange)
     {
+        Assert.notNull(newMembership);
+        
         failedMembers.retainAll(newMembership.getGroup().getMembers());
         leftMembers.retainAll(newMembership.getGroup().getMembers());
         this.membership = newMembership;
