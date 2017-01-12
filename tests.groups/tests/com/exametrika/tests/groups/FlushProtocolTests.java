@@ -91,7 +91,7 @@ public class FlushProtocolTests
         TestChannelFactory channelFactory = new TestChannelFactory(new WellKnownAddressesDiscoveryStrategy(wellKnownAddresses));
         createGroup(wellKnownAddresses, channelFactory, Collections.<Integer>asSet());
          
-        Threads.sleep(3000);
+        Threads.sleep(5000);
          
         checkMembership(channelFactory, Collections.<Integer>asSet());
     }
@@ -110,7 +110,7 @@ public class FlushProtocolTests
         FailureDetectionProtocolTests.failChannel(channels[nodes[0]]);
         IOs.close(channels[nodes[1]]);
         
-        Threads.sleep(3000);
+        Threads.sleep(5000);
          
         checkMembership(channelFactory, Collections.asSet(nodes[0], nodes[1]));
     }
@@ -294,6 +294,7 @@ public class FlushProtocolTests
     
     private void failOnFlush(TestChannelFactory factory)
     {
+        factory.failOnFlush = true;
         for (FlushParticipantMock participant : factory.flushParticipants)
             participant.failOnFlush = true;
     }
@@ -342,7 +343,7 @@ public class FlushProtocolTests
         public void startFlush(IFlush flush)
         {
             this.flush = flush;
-            nextFlushTime = Times.getCurrentTime() + 500;
+            nextFlushTime = Times.getCurrentTime() + 200;
             if (failOnFlush)
                 sequencer.allowSingle();
         }
@@ -357,7 +358,7 @@ public class FlushProtocolTests
         public void processFlush()
         {
             processFlush = true;
-            nextFlushTime = Times.getCurrentTime() + 500;
+            nextFlushTime = Times.getCurrentTime() + 200;
         }
 
         @Override
@@ -365,7 +366,7 @@ public class FlushProtocolTests
         {
             endFlush = true;
             clearFlush = true;
-            nextFlushTime = Times.getCurrentTime() + 500;
+            nextFlushTime = Times.getCurrentTime() + 200;
         }
 
         @Override
@@ -397,6 +398,7 @@ public class FlushProtocolTests
         private MembershipTracker membershipTracker;
         private MembershipManager membershipManager;
         private List<IGracefulCloseStrategy> gracefulCloseStrategies = new ArrayList<IGracefulCloseStrategy>();
+        private boolean failOnFlush;
         
         public TestChannelFactory(IDiscoveryStrategy discoveryStrategy)
         {
@@ -429,7 +431,7 @@ public class FlushProtocolTests
             
             GroupJoinStrategyMock joinStrategy = new GroupJoinStrategyMock(); 
             DiscoveryProtocol discoveryProtocol = new DiscoveryProtocol(channelName, messageFactory, membershipManager, 
-                failureDetectionProtocol, discoveryStrategy, liveNodeProvider, new GroupJoinStrategyMock(), discoveryPeriod, 
+                failureDetectionProtocol, discoveryStrategy, liveNodeProvider, joinStrategy, discoveryPeriod, 
                 groupFormationPeriod);
             preparedMembershipListeners.add(discoveryProtocol);
             protocols.add(discoveryProtocol);
@@ -440,6 +442,7 @@ public class FlushProtocolTests
             joinStrategy.messageFactory = messageFactory;
             
             FlushParticipantMock flushParticipant = new FlushParticipantMock();
+            flushParticipant.failOnFlush = failOnFlush;
             flushParticipants.add(flushParticipant);
             FlushParticipantProtocol flushParticipantProtocol = new FlushParticipantProtocol(channelName, messageFactory, 
                 Arrays.<IFlushParticipant>asList(flushParticipant), membershipManager, failureDetectionProtocol);

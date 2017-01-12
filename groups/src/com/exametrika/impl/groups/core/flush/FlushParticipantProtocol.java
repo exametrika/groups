@@ -44,7 +44,7 @@ public final class FlushParticipantProtocol extends AbstractProtocol implements 
     private final IFailureDetector failureDetector;
     private IMembership preparedMembership;
     private IMembershipDelta preparedMembershipDelta;
-    private IFlush flush;
+    private Flush flush;
     private Set<IFlushParticipant> notGrantedParticipants;
     private Phase phase = Phase.READY;
     private boolean flushProcessingRequired;
@@ -186,6 +186,7 @@ public final class FlushParticipantProtocol extends AbstractProtocol implements 
                 return;
             }
 
+            flush.close();
             flush = null;
             phase = Phase.READY;
             flushProcessingRequired = false;
@@ -296,6 +297,7 @@ public final class FlushParticipantProtocol extends AbstractProtocol implements 
         private final IMembership oldMembership;
         private final IMembership newMembership;
         private final IMembershipChange membershipChange;
+        private boolean closed;
 
         public Flush(boolean groupForming, IMembership oldMembership, IMembership newMembership, IMembershipChange membershipChange)
         {
@@ -305,6 +307,11 @@ public final class FlushParticipantProtocol extends AbstractProtocol implements 
             this.membershipChange = membershipChange;
         }
 
+        public void close()
+        {
+            closed = true;
+        }
+        
         @Override
         public boolean isGroupForming()
         {
@@ -332,13 +339,15 @@ public final class FlushParticipantProtocol extends AbstractProtocol implements 
         @Override
         public void grantFlush(IFlushParticipant participant)
         {
-            FlushParticipantProtocol.this.grantFlush(participant);
+            if (!closed)
+                FlushParticipantProtocol.this.grantFlush(participant);
         }
         
         @Override
         public void revokeFlush(IFlushParticipant participant)
         {
-            FlushParticipantProtocol.this.revokeFlush(participant);
+            if (!closed)
+                FlushParticipantProtocol.this.revokeFlush(participant);
         }
         
         @Override
