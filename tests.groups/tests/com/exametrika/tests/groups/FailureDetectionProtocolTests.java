@@ -330,7 +330,7 @@ public class FailureDetectionProtocolTests
         }
     }
     
-    private void failChannel(IChannel channel) throws Exception
+    public static void failChannel(IChannel channel) throws Exception
     {
         ((TcpNioDispatcher)Tests.get(((Channel)channel).getCompartment(), "dispatcher")).getSelector().close();
         IOs.close(channel);

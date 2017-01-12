@@ -3,6 +3,9 @@
  */
 package com.exametrika.tests.groups;
 
+import static org.hamcrest.CoreMatchers.is;
+import static org.junit.Assert.assertThat;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -13,8 +16,11 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.junit.After;
 import org.junit.Test;
 
+import com.exametrika.api.groups.core.IMembership;
 import com.exametrika.api.groups.core.IMembershipListener;
+import com.exametrika.api.groups.core.INode;
 import com.exametrika.common.compartment.ICompartment;
+import com.exametrika.common.compartment.ICompartmentProcessor;
 import com.exametrika.common.io.ISerializationRegistry;
 import com.exametrika.common.messaging.IChannel;
 import com.exametrika.common.messaging.ILiveNodeProvider;
@@ -32,8 +38,13 @@ import com.exametrika.common.messaging.impl.protocols.failuredetection.INodeTrac
 import com.exametrika.common.messaging.impl.protocols.failuredetection.LiveNodeManager;
 import com.exametrika.common.messaging.impl.transports.ConnectionManager;
 import com.exametrika.common.messaging.impl.transports.tcp.TcpTransport;
+import com.exametrika.common.tests.Sequencer;
+import com.exametrika.common.utils.Assert;
+import com.exametrika.common.utils.Collections;
 import com.exametrika.common.utils.Debug;
 import com.exametrika.common.utils.IOs;
+import com.exametrika.common.utils.Threads;
+import com.exametrika.common.utils.Times;
 import com.exametrika.impl.groups.core.channel.GroupChannel;
 import com.exametrika.impl.groups.core.channel.IChannelReconnector;
 import com.exametrika.impl.groups.core.channel.IGracefulCloseStrategy;
@@ -63,7 +74,8 @@ import com.exametrika.tests.groups.MembershipManagerTests.PropertyProviderMock;
 public class FlushProtocolTests
 {
     private static final int COUNT = 10;
-    private IChannel[] channels = new IChannel[COUNT];
+    private GroupChannel[] channels = new GroupChannel[COUNT];
+    private Sequencer sequencer = new Sequencer();
     
     @After
     public void tearDown()
@@ -77,7 +89,82 @@ public class FlushProtocolTests
     {
         Set<String> wellKnownAddresses = new ConcurrentHashMap<String, String>().keySet("");
         TestChannelFactory channelFactory = new TestChannelFactory(new WellKnownAddressesDiscoveryStrategy(wellKnownAddresses));
+        createGroup(wellKnownAddresses, channelFactory, COUNT);
+         
+        Threads.sleep(3000);
+         
+        checkMembership(channelFactory, Collections.<Integer>asSet());
+    }
+
+    @Test
+    public void testGroupFormationNonCoordinatorFailure() throws Exception
+    {
+        Set<String> wellKnownAddresses = new ConcurrentHashMap<String, String>().keySet("");
+        TestChannelFactory channelFactory = new TestChannelFactory(new WellKnownAddressesDiscoveryStrategy(wellKnownAddresses));
+        channelFactory.failOnFlush = true;
+        createGroup(wellKnownAddresses, channelFactory, COUNT);
+         
+        sequencer.waitSingle(5000);
+        FailureDetectionProtocolTests.failChannel(channels[COUNT - 2]);
+        IOs.close(channels[COUNT - 1]);
+        
+        Threads.sleep(3000);
+         
+        checkMembership(channelFactory, Collections.asSet(COUNT - 1, COUNT - 2));
+    }
+    
+    @Test
+    public void testGroupFormationCoordinatorFailure() throws Exception
+    {
+        Set<String> wellKnownAddresses = new ConcurrentHashMap<String, String>().keySet("");
+        TestChannelFactory channelFactory = new TestChannelFactory(new WellKnownAddressesDiscoveryStrategy(wellKnownAddresses));
+        channelFactory.failOnFlush = true;
+        createGroup(wellKnownAddresses, channelFactory, COUNT);
+         
+        sequencer.waitSingle(5000);
+        int nodeIndex = findNodeIndex(channelFactory.flushParticipants.get(0).flush.getNewMembership().getGroup().getCoordinator());
+        FailureDetectionProtocolTests.failChannel(channels[nodeIndex]);
+        
+        Threads.sleep(3000);
+         
+        checkMembership(channelFactory, Collections.asSet(nodeIndex));
+    }
+
+    private void checkMembership(TestChannelFactory channelFactory, Set<Integer> skipIndexes)
+    {
+        IMembership membership = null;
         for (int i = 0; i < COUNT; i++)
+        {
+            if (skipIndexes.contains(i))
+                continue;
+            
+            IMembership nodeMembership = channels[i].getMembershipService().getMembership();
+            if (membership == null)
+                membership = nodeMembership;
+            
+            assertThat(membership, is(nodeMembership));
+            assertThat(membership.getGroup(), is(nodeMembership.getGroup()));
+            assertThat(membership.getGroup().getMembers(), is(nodeMembership.getGroup().getMembers()));
+            assertThat(membership.getGroup().isPrimary(), is(nodeMembership.getGroup().isPrimary()));
+            assertThat(membership.getGroup().getName(), is(nodeMembership.getGroup().getName()));
+            assertThat(membership.getGroup().getAddress(), is(nodeMembership.getGroup().getAddress()));
+            assertThat(membership.getGroup().getCoordinator(), is(nodeMembership.getGroup().getCoordinator()));
+            assertThat(membership.getGroup().findMember(channels[i].getMembershipService().getLocalNode().getId()), 
+                is(channels[i].getMembershipService().getLocalNode()));
+            
+            FlushParticipantMock participant = channelFactory.flushParticipants.get(i);
+            assertThat(participant.beforeProcessingFlush, is(true));
+            assertThat(participant.processFlush, is(true));
+            assertThat(participant.endFlush, is(true));
+            assertThat(participant.isCoordinator, is(channels[i].getMembershipService().getLocalNode().equals(
+                membership.getGroup().getCoordinator())));
+        }
+        assertThat(membership.getGroup().getMembers().size(), is(COUNT - skipIndexes.size()));
+    }
+    
+    private void createGroup(Set<String> wellKnownAddresses, TestChannelFactory channelFactory, int count)
+    {
+        for (int i = 0; i < count; i++)
         {
             Parameters parameters = new Parameters();
             parameters.channelName = "test" + i;
@@ -87,73 +174,103 @@ public class FlushProtocolTests
             IChannel channel = channelFactory.createChannel(parameters);
             channel.start();
             wellKnownAddresses.add(channel.getLiveNodeProvider().getLocalNode().getConnection());
-            channels[i] = channel;
+            channels[i] = (GroupChannel)channel;
         }
     }
     
-    private static class FlushParticipantMock implements IFlushParticipant
+    private int findNodeIndex(INode node)
     {
+        for (int i = 0; i < COUNT; i++)
+        {
+            if (channels[i].getMembershipService().getLocalNode().equals(node))
+                return i;
+        }
+        Assert.error();
+        return 0;
+    }
+
+    private class FlushParticipantMock implements IFlushParticipant, ICompartmentProcessor
+    {
+        private boolean isCoordinator;
+        private IFlush flush;
+        private boolean beforeProcessingFlush;
+        private boolean processFlush;
+        private boolean endFlush;
+        private long nextFlushTime;
+        private boolean clearFlush;
+        private boolean failOnFlush;
+        
         @Override
         public boolean isFlushProcessingRequired(IFlush flush)
         {
-            // TODO Auto-generated method stub
-            return false;
+            return true;
         }
 
         @Override
         public boolean isCoordinatorStateSupported()
         {
-            // TODO Auto-generated method stub
             return false;
         }
 
         @Override
         public void setCoordinator()
         {
-            // TODO Auto-generated method stub
-            
+            isCoordinator = true;
         }
 
         @Override
         public Object getCoordinatorState()
         {
-            // TODO Auto-generated method stub
             return null;
         }
 
         @Override
         public void setCoordinatorState(List<Object> states)
         {
-            // TODO Auto-generated method stub
-            
         }
 
         @Override
         public void startFlush(IFlush flush)
         {
-            // TODO Auto-generated method stub
-            
+            this.flush = flush;
+            nextFlushTime = Times.getCurrentTime() + 500;
+            if (failOnFlush)
+                sequencer.allowSingle();
         }
 
         @Override
         public void beforeProcessFlush()
         {
-            // TODO Auto-generated method stub
-            
+            beforeProcessingFlush = true;
         }
 
         @Override
         public void processFlush()
         {
-            // TODO Auto-generated method stub
-            
+            processFlush = true;
+            nextFlushTime = Times.getCurrentTime() + 500;
         }
 
         @Override
         public void endFlush()
         {
-            // TODO Auto-generated method stub
+            endFlush = true;
+            clearFlush = true;
+            nextFlushTime = Times.getCurrentTime() + 500;
+        }
+
+        @Override
+        public void onTimer(long currentTime)
+        {
+            if (nextFlushTime != 0 && currentTime > nextFlushTime)
+            {
+                flush.grantFlush(this);
             
+                if (clearFlush)
+                    flush = null;
+                
+                nextFlushTime = 0;
+            }
         }
     }
     
@@ -171,6 +288,7 @@ public class FlushProtocolTests
         private MembershipTracker membershipTracker;
         private MembershipManager membershipManager;
         private List<IGracefulCloseStrategy> gracefulCloseStrategies = new ArrayList<IGracefulCloseStrategy>();
+        private boolean failOnFlush;
         
         public TestChannelFactory(IDiscoveryStrategy discoveryStrategy)
         {
@@ -214,6 +332,7 @@ public class FlushProtocolTests
             joinStrategy.messageFactory = messageFactory;
             
             FlushParticipantMock flushParticipant = new FlushParticipantMock();
+            flushParticipant.failOnFlush = failOnFlush;
             flushParticipants.add(flushParticipant);
             FlushParticipantProtocol flushParticipantProtocol = new FlushParticipantProtocol(channelName, messageFactory, 
                 Arrays.<IFlushParticipant>asList(flushParticipant), membershipManager, failureDetectionProtocol);
@@ -242,7 +361,8 @@ public class FlushProtocolTests
             GroupNodeTrackingStrategy strategy = (GroupNodeTrackingStrategy)protocolStack.find(HeartbeatProtocol.class).getNodeTrackingStrategy();
             strategy.setFailureDetector(failureDetectionProtocol);
             strategy.setMembershipManager((IMembershipManager)failureDetectionProtocol.getMembersipService());
-        
+            
+            channel.getCompartment().addProcessor(flushParticipants.get(flushParticipants.size() - 1));
         }
         
         @Override
