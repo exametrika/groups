@@ -169,6 +169,9 @@ public final class FlushCoordinatorProtocol extends AbstractProtocol implements 
     @Override
     public void onTimer(long currentTime)
     {
+        if (!flushCoordinator)
+            return;
+        
         Set<UUID> memberIds = null;
 
         if (startWaitTime != 0 && timeService.getCurrentTime() > startWaitTime + flushTimeout && !respondingMembers.isEmpty())
@@ -187,6 +190,8 @@ public final class FlushCoordinatorProtocol extends AbstractProtocol implements 
 
             if (!part.getFailedMembers().isEmpty())
                 failureDetector.addFailedMembers(part.getFailedMembers());
+            if (!part.getLeftMembers().isEmpty())
+                failureDetector.addLeftMembers(part.getLeftMembers());
 
             if (!flushCoordinator || phase == Phase.READY)
                 return;
@@ -215,6 +220,8 @@ public final class FlushCoordinatorProtocol extends AbstractProtocol implements 
 
             if (!part.getFailedMembers().isEmpty())
                 failureDetector.addFailedMembers(part.getFailedMembers());
+            if (!part.getLeftMembers().isEmpty())
+                failureDetector.addLeftMembers(part.getLeftMembers());
 
             if (!flushCoordinator || phase != Phase.UNKNOWN)
                 return;

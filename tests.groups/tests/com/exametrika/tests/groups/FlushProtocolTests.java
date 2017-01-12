@@ -89,7 +89,7 @@ public class FlushProtocolTests
     {
         Set<String> wellKnownAddresses = new ConcurrentHashMap<String, String>().keySet("");
         TestChannelFactory channelFactory = new TestChannelFactory(new WellKnownAddressesDiscoveryStrategy(wellKnownAddresses));
-        createGroup(wellKnownAddresses, channelFactory, COUNT);
+        createGroup(wellKnownAddresses, channelFactory, Collections.<Integer>asSet());
          
         Threads.sleep(3000);
          
@@ -101,16 +101,18 @@ public class FlushProtocolTests
     {
         Set<String> wellKnownAddresses = new ConcurrentHashMap<String, String>().keySet("");
         TestChannelFactory channelFactory = new TestChannelFactory(new WellKnownAddressesDiscoveryStrategy(wellKnownAddresses));
-        channelFactory.failOnFlush = true;
-        createGroup(wellKnownAddresses, channelFactory, COUNT);
+        failOnFlush(channelFactory);
+        createGroup(wellKnownAddresses, channelFactory, Collections.<Integer>asSet());
          
         sequencer.waitSingle(5000);
-        FailureDetectionProtocolTests.failChannel(channels[COUNT - 2]);
-        IOs.close(channels[COUNT - 1]);
+        int coordinatorNodeIndex = findNodeIndex(channelFactory.flushParticipants.get(0).flush.getNewMembership().getGroup().getCoordinator());
+        int[] nodes = selectNodes(COUNT, 2, coordinatorNodeIndex);
+        FailureDetectionProtocolTests.failChannel(channels[nodes[0]]);
+        IOs.close(channels[nodes[1]]);
         
         Threads.sleep(3000);
          
-        checkMembership(channelFactory, Collections.asSet(COUNT - 1, COUNT - 2));
+        checkMembership(channelFactory, Collections.asSet(nodes[0], nodes[1]));
     }
     
     @Test
@@ -118,16 +120,115 @@ public class FlushProtocolTests
     {
         Set<String> wellKnownAddresses = new ConcurrentHashMap<String, String>().keySet("");
         TestChannelFactory channelFactory = new TestChannelFactory(new WellKnownAddressesDiscoveryStrategy(wellKnownAddresses));
-        channelFactory.failOnFlush = true;
-        createGroup(wellKnownAddresses, channelFactory, COUNT);
+        failOnFlush(channelFactory);
+        createGroup(wellKnownAddresses, channelFactory, Collections.<Integer>asSet());
          
         sequencer.waitSingle(5000);
-        int nodeIndex = findNodeIndex(channelFactory.flushParticipants.get(0).flush.getNewMembership().getGroup().getCoordinator());
-        FailureDetectionProtocolTests.failChannel(channels[nodeIndex]);
+        int coordinatorNodeIndex = findNodeIndex(channelFactory.flushParticipants.get(0).flush.getNewMembership().getGroup().getCoordinator());
+        FailureDetectionProtocolTests.failChannel(channels[coordinatorNodeIndex]);
         
         Threads.sleep(3000);
          
-        checkMembership(channelFactory, Collections.asSet(nodeIndex));
+        checkMembership(channelFactory, Collections.asSet(coordinatorNodeIndex));
+    }
+
+    @Test
+    public void testChangeMembership() throws Exception
+    {
+        Set<String> wellKnownAddresses = new ConcurrentHashMap<String, String>().keySet("");
+        TestChannelFactory channelFactory = new TestChannelFactory(new WellKnownAddressesDiscoveryStrategy(wellKnownAddresses));
+        createGroup(wellKnownAddresses, channelFactory, Collections.<Integer>asSet(0, 1));
+         
+        Threads.sleep(3000);
+         
+        checkMembership(channelFactory, Collections.<Integer>asSet(0, 1));
+        
+        channels[0].start();
+        channels[1].start();
+        
+        FailureDetectionProtocolTests.failChannel(channels[COUNT - 1]);
+        IOs.close(channels[COUNT - 2]);
+        
+        Threads.sleep(3000);
+        
+        checkMembership(channelFactory, Collections.<Integer>asSet(COUNT - 1, COUNT - 2));
+    }
+    
+    @Test
+    public void testChangeMembershipNonCoordinatorFailureOnFlush() throws Exception
+    {
+        Set<String> wellKnownAddresses = new ConcurrentHashMap<String, String>().keySet("");
+        TestChannelFactory channelFactory = new TestChannelFactory(new WellKnownAddressesDiscoveryStrategy(wellKnownAddresses));
+        createGroup(wellKnownAddresses, channelFactory, Collections.<Integer>asSet(0, 1));
+         
+        Threads.sleep(3000);
+         
+        checkMembership(channelFactory, Collections.<Integer>asSet(0, 1));
+
+        failOnFlush(channelFactory);
+        
+        channels[0].start();
+        channels[1].start();
+        
+        FailureDetectionProtocolTests.failChannel(channels[COUNT - 1]);
+        IOs.close(channels[COUNT - 2]);
+        
+        sequencer.waitSingle(5000);
+        int coordinatorNodeIndex = findNodeIndex(channelFactory.flushParticipants.get(0).flush.getNewMembership().getGroup().getCoordinator());
+        int[] nodes = selectNodes(COUNT - 2, 2, coordinatorNodeIndex);
+        FailureDetectionProtocolTests.failChannel(channels[nodes[0]]);
+        IOs.close(channels[nodes[1]]);
+        
+        Threads.sleep(3000);
+        
+        checkMembership(channelFactory, Collections.<Integer>asSet(COUNT - 1, COUNT - 2, nodes[0], nodes[1]));
+    }
+    
+    @Test
+    public void testChangeMembershipCoordinatorFailureOnFlush() throws Exception
+    {
+        Set<String> wellKnownAddresses = new ConcurrentHashMap<String, String>().keySet("");
+        TestChannelFactory channelFactory = new TestChannelFactory(new WellKnownAddressesDiscoveryStrategy(wellKnownAddresses));
+        createGroup(wellKnownAddresses, channelFactory, Collections.<Integer>asSet(0, 1));
+         
+        Threads.sleep(3000);
+         
+        checkMembership(channelFactory, Collections.<Integer>asSet(0, 1));
+
+        failOnFlush(channelFactory);
+        
+        channels[0].start();
+        channels[1].start();
+        
+        FailureDetectionProtocolTests.failChannel(channels[COUNT - 1]);
+        IOs.close(channels[COUNT - 2]);
+        
+        sequencer.waitSingle(5000);
+        int coordinatorNodeIndex = findNodeIndex(channelFactory.flushParticipants.get(0).flush.getNewMembership().getGroup().getCoordinator());
+        FailureDetectionProtocolTests.failChannel(channels[coordinatorNodeIndex]);
+        
+        Threads.sleep(3000);
+        
+        checkMembership(channelFactory, Collections.<Integer>asSet(COUNT - 1, COUNT - 2, coordinatorNodeIndex));
+    }
+    
+    private void createGroup(Set<String> wellKnownAddresses, TestChannelFactory channelFactory, Set<Integer> skipIndexes)
+    {
+        for (int i = 0; i < COUNT; i++)
+        {
+            Parameters parameters = new Parameters();
+            parameters.channelName = "test" + i;
+            parameters.clientPart = true;
+            parameters.serverPart = true;
+            parameters.receiver = new ReceiverMock();
+            IChannel channel = channelFactory.createChannel(parameters);
+            if (!skipIndexes.contains(i))
+            {
+                channel.start();
+                wellKnownAddresses.add(channel.getLiveNodeProvider().getLocalNode().getConnection());
+            }
+            channels[i] = (GroupChannel)channel;
+        }
     }
 
     private void checkMembership(TestChannelFactory channelFactory, Set<Integer> skipIndexes)
@@ -162,22 +263,6 @@ public class FlushProtocolTests
         assertThat(membership.getGroup().getMembers().size(), is(COUNT - skipIndexes.size()));
     }
     
-    private void createGroup(Set<String> wellKnownAddresses, TestChannelFactory channelFactory, int count)
-    {
-        for (int i = 0; i < count; i++)
-        {
-            Parameters parameters = new Parameters();
-            parameters.channelName = "test" + i;
-            parameters.clientPart = true;
-            parameters.serverPart = true;
-            parameters.receiver = new ReceiverMock();
-            IChannel channel = channelFactory.createChannel(parameters);
-            channel.start();
-            wellKnownAddresses.add(channel.getLiveNodeProvider().getLocalNode().getConnection());
-            channels[i] = (GroupChannel)channel;
-        }
-    }
-    
     private int findNodeIndex(INode node)
     {
         for (int i = 0; i < COUNT; i++)
@@ -187,6 +272,30 @@ public class FlushProtocolTests
         }
         Assert.error();
         return 0;
+    }
+    
+    private int[] selectNodes(int count, int selectCount, int coordinator)
+    {
+        int[] indexes = new int[selectCount];
+        for (int i = 0; i < count; i++)
+        {
+            if (selectCount == 0)
+                break;
+            
+            if (i != coordinator)
+            {
+                indexes[selectCount - 1] = i;
+                selectCount--;
+            }
+        }
+        
+        return indexes;
+    }
+    
+    private void failOnFlush(TestChannelFactory factory)
+    {
+        for (FlushParticipantMock participant : factory.flushParticipants)
+            participant.failOnFlush = true;
     }
 
     private class FlushParticipantMock implements IFlushParticipant, ICompartmentProcessor
@@ -288,7 +397,6 @@ public class FlushProtocolTests
         private MembershipTracker membershipTracker;
         private MembershipManager membershipManager;
         private List<IGracefulCloseStrategy> gracefulCloseStrategies = new ArrayList<IGracefulCloseStrategy>();
-        private boolean failOnFlush;
         
         public TestChannelFactory(IDiscoveryStrategy discoveryStrategy)
         {
@@ -332,7 +440,6 @@ public class FlushProtocolTests
             joinStrategy.messageFactory = messageFactory;
             
             FlushParticipantMock flushParticipant = new FlushParticipantMock();
-            flushParticipant.failOnFlush = failOnFlush;
             flushParticipants.add(flushParticipant);
             FlushParticipantProtocol flushParticipantProtocol = new FlushParticipantProtocol(channelName, messageFactory, 
                 Arrays.<IFlushParticipant>asList(flushParticipant), membershipManager, failureDetectionProtocol);

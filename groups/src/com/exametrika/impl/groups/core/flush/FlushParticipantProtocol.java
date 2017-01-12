@@ -181,7 +181,8 @@ public final class FlushParticipantProtocol extends AbstractProtocol implements 
             if (flush == null)
             {
                 send(messageFactory.create(message.getSource(), new FlushResponseMessagePart(flushProcessingRequired, 
-                    getNodesIds(failureDetector.getFailedMembers())), MessageFlags.HIGH_PRIORITY));
+                    getNodesIds(failureDetector.getFailedMembers()), getNodesIds(failureDetector.getLeftMembers())), 
+                    MessageFlags.HIGH_PRIORITY));
                 return;
             }
 
@@ -205,7 +206,8 @@ public final class FlushParticipantProtocol extends AbstractProtocol implements 
                 logger.log(LogLevel.DEBUG, marker, messages.completeFlush());
 
             send(messageFactory.create(message.getSource(), new FlushResponseMessagePart(flushProcessingRequired, 
-                getNodesIds(failureDetector.getFailedMembers())), MessageFlags.HIGH_PRIORITY));
+                getNodesIds(failureDetector.getFailedMembers()), getNodesIds(failureDetector.getLeftMembers())), 
+                MessageFlags.HIGH_PRIORITY));
         }
         else if (message.getPart() instanceof FlushMessagePart &&
             ((FlushMessagePart)message.getPart()).getType() == FlushMessagePart.Type.REQUEST_STATE)
@@ -219,14 +221,15 @@ public final class FlushParticipantProtocol extends AbstractProtocol implements 
 
             List<Object> coordinatorStates = getCoordinatorStates();
             Set<UUID> failedNodeIds = getNodesIds(failureDetector.getFailedMembers());
+            Set<UUID> leftNodeIds = getNodesIds(failureDetector.getLeftMembers());
             
             FlushStateResponseMessagePart responsePart;
             if (phase != Phase.READY && preparedMembershipDelta != null)
                 responsePart = new FlushStateResponseMessagePart(phase, null, preparedMembershipDelta, flushProcessingRequired,
-                    failedNodeIds, coordinatorStates);
+                    failedNodeIds, leftNodeIds, coordinatorStates);
             else
                 responsePart = new FlushStateResponseMessagePart(phase, preparedMembership, null, flushProcessingRequired,
-                    failedNodeIds, coordinatorStates);
+                    failedNodeIds, leftNodeIds, coordinatorStates);
             
             send(messageFactory.create(message.getSource(), responsePart, MessageFlags.HIGH_PRIORITY));
         }
@@ -272,7 +275,8 @@ public final class FlushParticipantProtocol extends AbstractProtocol implements 
             logger.log(LogLevel.DEBUG, marker, messages.grantFlush());
         
         send(messageFactory.create(failureDetector.getCurrentCoordinator().getAddress(),
-            new FlushResponseMessagePart(flushProcessingRequired, getNodesIds(failureDetector.getFailedMembers())), 
+            new FlushResponseMessagePart(flushProcessingRequired, getNodesIds(failureDetector.getFailedMembers()),
+            getNodesIds(failureDetector.getLeftMembers())), 
             MessageFlags.HIGH_PRIORITY));
     }
     

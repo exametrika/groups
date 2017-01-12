@@ -37,18 +37,28 @@ public final class FlushResponseMessagePartSerializer extends AbstractSerializer
         
         for (UUID nodeId : part.getFailedMembers())
             Serializers.writeUUID(serialization, nodeId);
+        
+        serialization.writeInt(part.getLeftMembers().size());
+        
+        for (UUID nodeId : part.getLeftMembers())
+            Serializers.writeUUID(serialization, nodeId);
     }
     
     @Override
     public Object deserialize(IDeserialization deserialization, UUID id)
     {
         boolean flushProcessingRequired = deserialization.readBoolean();
-        int count = deserialization.readInt();
         
-        Set<UUID> failedMembers = new HashSet<UUID>();
+        int count = deserialization.readInt();
+        Set<UUID> failedMembers = new HashSet<UUID>(count);
         for (int i = 0; i < count; i++)
             failedMembers.add(Serializers.readUUID(deserialization));
         
-        return new FlushResponseMessagePart(flushProcessingRequired, failedMembers);
+        count = deserialization.readInt();
+        Set<UUID> leftMembers = new HashSet<UUID>(count);
+        for (int i = 0; i < count; i++)
+            leftMembers.add(Serializers.readUUID(deserialization));
+        
+        return new FlushResponseMessagePart(flushProcessingRequired, failedMembers, leftMembers);
     }
 }

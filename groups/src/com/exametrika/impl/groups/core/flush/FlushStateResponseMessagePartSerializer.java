@@ -43,8 +43,11 @@ public final class FlushStateResponseMessagePartSerializer extends AbstractSeria
         serialization.writeBoolean(part.isFlushProcessingRequired());
         
         serialization.writeInt(part.getFailedMembers().size());
-        
         for (UUID nodeId : part.getFailedMembers())
+            Serializers.writeUUID(serialization, nodeId);
+        
+        serialization.writeInt(part.getLeftMembers().size());
+        for (UUID nodeId : part.getLeftMembers())
             Serializers.writeUUID(serialization, nodeId);
         
         serialization.writeInt(part.getCoordinatorStates().size());
@@ -59,11 +62,16 @@ public final class FlushStateResponseMessagePartSerializer extends AbstractSeria
         IMembership preparedMembership = deserialization.readTypedObject(Membership.class);
         IMembershipDelta preparedMembershipDelta = deserialization.readTypedObject(MembershipDelta.class);
         boolean flushProcessingRequired = deserialization.readBoolean();
+
         int count = deserialization.readInt();
-        
         Set<UUID> failedMembers = new HashSet<UUID>();
         for (int i = 0; i < count; i++)
             failedMembers.add(Serializers.readUUID(deserialization));
+        
+        count = deserialization.readInt();
+        Set<UUID> leftMembers = new HashSet<UUID>();
+        for (int i = 0; i < count; i++)
+            leftMembers.add(Serializers.readUUID(deserialization));
         
         count = deserialization.readInt();
         List<Object> coordinatorStates = new ArrayList<Object>();
@@ -71,6 +79,6 @@ public final class FlushStateResponseMessagePartSerializer extends AbstractSeria
             coordinatorStates.add(deserialization.readObject());
         
         return new FlushStateResponseMessagePart(phase, preparedMembership, preparedMembershipDelta, flushProcessingRequired, 
-            failedMembers, coordinatorStates);
+            failedMembers, leftMembers, coordinatorStates);
     }
 }

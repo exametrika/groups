@@ -139,6 +139,7 @@ public final class StateTransferServerProtocol extends AbstractProtocol implemen
                     deliverPendingMessages();
                 }
             });
+            compartment.execute(stateSaveTask);
         }
         
         if (stateTransfer != null)

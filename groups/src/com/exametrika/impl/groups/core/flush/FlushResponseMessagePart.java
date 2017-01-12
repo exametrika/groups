@@ -25,13 +25,16 @@ public final class FlushResponseMessagePart implements IMessagePart
     private static final IMessages messages = Messages.get(IMessages.class);
     private final boolean flushProcessingRequired;
     private final Set<UUID> failedMembers;
+    private final Set<UUID> leftMembers;
 
-    public FlushResponseMessagePart(boolean flushProcessingRequired, Set<UUID> failedMembers)
+    public FlushResponseMessagePart(boolean flushProcessingRequired, Set<UUID> failedMembers, Set<UUID> leftMembers)
     {
         Assert.notNull(failedMembers);
+        Assert.notNull(leftMembers);
         
         this.flushProcessingRequired = flushProcessingRequired;
         this.failedMembers = Immutables.wrap(failedMembers);
+        this.leftMembers = Immutables.wrap(leftMembers);
     }
     
     public boolean isFlushProcessingRequired()
@@ -44,22 +47,27 @@ public final class FlushResponseMessagePart implements IMessagePart
         return failedMembers;
     }
     
+    public Set<UUID> getLeftMembers()
+    {
+        return leftMembers;
+    }
+    
     @Override
     public int getSize()
     {
-        return failedMembers.size() * 16 + 1;
+        return (failedMembers.size() + leftMembers.size()) * 16 + 1;
     }
     
     @Override 
     public String toString()
     {
-        return messages.toString(flushProcessingRequired, failedMembers).toString();
+        return messages.toString(flushProcessingRequired, failedMembers, leftMembers).toString();
     }
     
     private interface IMessages
     {
-        @DefaultMessage("flush processing required: {0}, failed members: {1}")
-        ILocalizedMessage toString(boolean flushProcessingRequired, Set<UUID> failedMembers);
+        @DefaultMessage("flush processing required: {0}, failed members: {1}, failed members: {2}")
+        ILocalizedMessage toString(boolean flushProcessingRequired, Set<UUID> failedMembers, Set<UUID> leftMembers);
     }
 }
 

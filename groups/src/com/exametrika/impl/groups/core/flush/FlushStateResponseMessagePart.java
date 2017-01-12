@@ -30,14 +30,16 @@ public final class FlushStateResponseMessagePart implements IMessagePart
     private final IMembershipDelta preparedMembershipDelta;
     private final boolean flushProcessingRequired;
     private final Set<UUID> failedMembers;
+    private final Set<UUID> leftMembers;
     private final List<Object> coordinatorStates;
 
     public FlushStateResponseMessagePart(FlushParticipantProtocol.Phase phase, IMembership preparedMembership, 
         IMembershipDelta preparedMembershipDelta, boolean flushProcessingRequired, Set<UUID> failedMembers,
-        List<Object> coordinatorStates)
+        Set<UUID> leftMembers, List<Object> coordinatorStates)
     {
         Assert.notNull(phase);
         Assert.notNull(failedMembers);
+        Assert.notNull(leftMembers);
         Assert.notNull(coordinatorStates);
         
         this.phase = phase;
@@ -45,6 +47,7 @@ public final class FlushStateResponseMessagePart implements IMessagePart
         this.preparedMembershipDelta = preparedMembershipDelta;
         this.flushProcessingRequired = flushProcessingRequired;
         this.failedMembers = Immutables.wrap(failedMembers);
+        this.leftMembers = Immutables.wrap(leftMembers);
         this.coordinatorStates = Immutables.wrap(coordinatorStates);
     }
     
@@ -73,6 +76,11 @@ public final class FlushStateResponseMessagePart implements IMessagePart
         return failedMembers;
     }
     
+    public Set<UUID> getLeftMembers()
+    {
+        return leftMembers;
+    }
+    
     public List<Object> getCoordinatorStates()
     {
         return coordinatorStates;
@@ -89,14 +97,15 @@ public final class FlushStateResponseMessagePart implements IMessagePart
     {
         return messages.toString(phase, (preparedMembership != null ? preparedMembership.toString() : messages.notSet().toString()), 
             (preparedMembershipDelta != null ? preparedMembershipDelta.toString() : messages.notSet().toString()), 
-            flushProcessingRequired, failedMembers, coordinatorStates).toString();
+            flushProcessingRequired, failedMembers, leftMembers, coordinatorStates).toString();
     }
     
     private interface IMessages
     {
-        @DefaultMessage("phase: {0}, prepared membership: {1}, prepared membership delta: {2}, flush processing required: {3}, failed members: {4}, coordinator states: {5}")
+        @DefaultMessage("phase: {0}, prepared membership: {1}, prepared membership delta: {2}, flush processing required: {3}, failed members: {4}, left members: {5}, coordinator states: {6}")
         ILocalizedMessage toString(FlushParticipantProtocol.Phase phase, String preparedMembership, 
-            String preparedMembershipDelta, boolean flushProcessingRequired, Set<UUID> failedMembers, List<Object> coordinatorStates);
+            String preparedMembershipDelta, boolean flushProcessingRequired, Set<UUID> failedMembers, Set<UUID> leftMembers, 
+            List<Object> coordinatorStates);
         @DefaultMessage("(not set)")
         ILocalizedMessage notSet();
     }
