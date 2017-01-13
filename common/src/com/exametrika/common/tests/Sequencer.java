@@ -157,7 +157,7 @@ public final class Sequencer
         
         try
         {
-            while (this.replyCount != replyCount)
+            while (this.replyCount < replyCount)
             {
                 if (timeout > 0 && Times.getCurrentTime() - startTime > timeout)
                     throw new TimeoutException();

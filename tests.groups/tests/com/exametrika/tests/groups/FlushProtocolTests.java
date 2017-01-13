@@ -27,6 +27,7 @@ import com.exametrika.common.messaging.ILiveNodeProvider;
 import com.exametrika.common.messaging.IMessageFactory;
 import com.exametrika.common.messaging.impl.Channel;
 import com.exametrika.common.messaging.impl.ChannelFactory;
+import com.exametrika.common.messaging.impl.ChannelFactory.FactoryParameters;
 import com.exametrika.common.messaging.impl.ChannelFactory.Parameters;
 import com.exametrika.common.messaging.impl.message.MessageFactory;
 import com.exametrika.common.messaging.impl.protocols.AbstractProtocol;
@@ -104,7 +105,7 @@ public class FlushProtocolTests
         failOnFlush(channelFactory);
         createGroup(wellKnownAddresses, channelFactory, Collections.<Integer>asSet());
          
-        sequencer.waitSingle(5000);
+        sequencer.waitAll(COUNT, 5000, 0);
         int coordinatorNodeIndex = findNodeIndex(channelFactory.flushParticipants.get(0).flush.getNewMembership().getGroup().getCoordinator());
         int[] nodes = selectNodes(COUNT, 2, coordinatorNodeIndex);
         FailureDetectionProtocolTests.failChannel(channels[nodes[0]]);
@@ -123,11 +124,11 @@ public class FlushProtocolTests
         failOnFlush(channelFactory);
         createGroup(wellKnownAddresses, channelFactory, Collections.<Integer>asSet());
          
-        sequencer.waitSingle(5000);
+        sequencer.waitAll(COUNT, 5000, 0);
         int coordinatorNodeIndex = findNodeIndex(channelFactory.flushParticipants.get(0).flush.getNewMembership().getGroup().getCoordinator());
-        FailureDetectionProtocolTests.failChannel(channels[coordinatorNodeIndex]);
+        IOs.close(channels[coordinatorNodeIndex]);
         
-        Threads.sleep(3000);
+        Threads.sleep(5000);
          
         checkMembership(channelFactory, Collections.asSet(coordinatorNodeIndex));
     }
@@ -139,7 +140,7 @@ public class FlushProtocolTests
         TestChannelFactory channelFactory = new TestChannelFactory(new WellKnownAddressesDiscoveryStrategy(wellKnownAddresses));
         createGroup(wellKnownAddresses, channelFactory, Collections.<Integer>asSet(0, 1));
          
-        Threads.sleep(3000);
+        Threads.sleep(5000);
          
         checkMembership(channelFactory, Collections.<Integer>asSet(0, 1));
         
@@ -149,7 +150,7 @@ public class FlushProtocolTests
         FailureDetectionProtocolTests.failChannel(channels[COUNT - 1]);
         IOs.close(channels[COUNT - 2]);
         
-        Threads.sleep(3000);
+        Threads.sleep(5000);
         
         checkMembership(channelFactory, Collections.<Integer>asSet(COUNT - 1, COUNT - 2));
     }
@@ -161,7 +162,7 @@ public class FlushProtocolTests
         TestChannelFactory channelFactory = new TestChannelFactory(new WellKnownAddressesDiscoveryStrategy(wellKnownAddresses));
         createGroup(wellKnownAddresses, channelFactory, Collections.<Integer>asSet(0, 1));
          
-        Threads.sleep(3000);
+        Threads.sleep(5000);
          
         checkMembership(channelFactory, Collections.<Integer>asSet(0, 1));
 
@@ -173,13 +174,13 @@ public class FlushProtocolTests
         FailureDetectionProtocolTests.failChannel(channels[COUNT - 1]);
         IOs.close(channels[COUNT - 2]);
         
-        sequencer.waitSingle(5000);
-        int coordinatorNodeIndex = findNodeIndex(channelFactory.flushParticipants.get(0).flush.getNewMembership().getGroup().getCoordinator());
+        sequencer.waitAll(COUNT - 4, 5000, 0);
+        int coordinatorNodeIndex = findNodeIndex(channelFactory.flushParticipants.get(2).flush.getNewMembership().getGroup().getCoordinator());
         int[] nodes = selectNodes(COUNT - 2, 2, coordinatorNodeIndex);
         FailureDetectionProtocolTests.failChannel(channels[nodes[0]]);
         IOs.close(channels[nodes[1]]);
         
-        Threads.sleep(3000);
+        Threads.sleep(5000);
         
         checkMembership(channelFactory, Collections.<Integer>asSet(COUNT - 1, COUNT - 2, nodes[0], nodes[1]));
     }
@@ -191,7 +192,7 @@ public class FlushProtocolTests
         TestChannelFactory channelFactory = new TestChannelFactory(new WellKnownAddressesDiscoveryStrategy(wellKnownAddresses));
         createGroup(wellKnownAddresses, channelFactory, Collections.<Integer>asSet(0, 1));
          
-        Threads.sleep(3000);
+        Threads.sleep(5000);
          
         checkMembership(channelFactory, Collections.<Integer>asSet(0, 1));
 
@@ -203,11 +204,11 @@ public class FlushProtocolTests
         FailureDetectionProtocolTests.failChannel(channels[COUNT - 1]);
         IOs.close(channels[COUNT - 2]);
         
-        sequencer.waitSingle(5000);
-        int coordinatorNodeIndex = findNodeIndex(channelFactory.flushParticipants.get(0).flush.getNewMembership().getGroup().getCoordinator());
+        sequencer.waitAll(COUNT - 3, 5000, 0);
+        int coordinatorNodeIndex = findNodeIndex(channelFactory.flushParticipants.get(2).flush.getNewMembership().getGroup().getCoordinator());
         FailureDetectionProtocolTests.failChannel(channels[coordinatorNodeIndex]);
         
-        Threads.sleep(3000);
+        Threads.sleep(5000);
         
         checkMembership(channelFactory, Collections.<Integer>asSet(COUNT - 1, COUNT - 2, coordinatorNodeIndex));
     }
@@ -343,7 +344,8 @@ public class FlushProtocolTests
         public void startFlush(IFlush flush)
         {
             this.flush = flush;
-            nextFlushTime = Times.getCurrentTime() + 200;
+            clearFlush = false;
+            nextFlushTime = Times.getCurrentTime() + 300;
             if (failOnFlush)
                 sequencer.allowSingle();
         }
@@ -358,7 +360,7 @@ public class FlushProtocolTests
         public void processFlush()
         {
             processFlush = true;
-            nextFlushTime = Times.getCurrentTime() + 200;
+            nextFlushTime = Times.getCurrentTime() + 300;
         }
 
         @Override
@@ -366,7 +368,7 @@ public class FlushProtocolTests
         {
             endFlush = true;
             clearFlush = true;
-            nextFlushTime = Times.getCurrentTime() + 200;
+            nextFlushTime = Times.getCurrentTime() + 300;
         }
 
         @Override
@@ -382,6 +384,18 @@ public class FlushProtocolTests
                 nextFlushTime = 0;
             }
         }
+    }
+    
+    private static FactoryParameters getFactoryParameters()
+    {
+        FactoryParameters factoryParameters = new FactoryParameters(Debug.isDebug());
+        factoryParameters.heartbeatTrackPeriod = 100;
+        factoryParameters.heartbeatPeriod = 100;
+        factoryParameters.heartbeatStartPeriod = 300;
+        factoryParameters.heartbeatFailureDetectionPeriod = 1000;
+        factoryParameters.transportChannelTimeout = 1000;
+        
+        return factoryParameters;
     }
     
     private class TestChannelFactory extends ChannelFactory
@@ -402,10 +416,10 @@ public class FlushProtocolTests
         
         public TestChannelFactory(IDiscoveryStrategy discoveryStrategy)
         {
-            super(new FactoryParameters(Debug.isDebug()));
+            super(getFactoryParameters());
             this.discoveryStrategy = discoveryStrategy;
         }
-        
+
         @Override
         protected INodeTrackingStrategy createNodeTrackingStrategy()
         {
