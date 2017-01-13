@@ -127,10 +127,7 @@ public final class DiscoveryProtocol extends AbstractProtocol implements INodeDi
 
         coordinator = null;
         healthyMembers.clear();
-        if (oldMembership == null)
-            discoveredNodes.clear();
-        else
-            discoveredNodes.removeAll(newMembership.getGroup().getMembers());
+        discoveredNodes.removeAll(newMembership.getGroup().getMembers());
     }
 
     @Override
@@ -288,7 +285,7 @@ public final class DiscoveryProtocol extends AbstractProtocol implements INodeDi
             INode joiningNode = part.getJoiningNode();
             if (membershipService.getLocalNode().equals(failureDetector.getCurrentCoordinator()))
             {
-                if (!discoveredNodes.contains(joiningNode))
+                if (!discoveredNodes.contains(joiningNode) && membership.getGroup().findMember(joiningNode.getId()) == null)
                 {
                     discoveredNodes.add(joiningNode);
                     connectionProvider.connect(joiningNode.getAddress());

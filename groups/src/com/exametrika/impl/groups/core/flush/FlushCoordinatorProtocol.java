@@ -59,6 +59,7 @@ public final class FlushCoordinatorProtocol extends AbstractProtocol implements 
     private IMembership installingMembership;
     private IMembershipDelta installingMembershipDelta;
     private long startWaitTime;
+    private boolean stopped;
     
     public enum Phase
     {
@@ -94,6 +95,7 @@ public final class FlushCoordinatorProtocol extends AbstractProtocol implements 
     {
         Assert.notNull(membership);
         Assert.checkState(phase == Phase.READY);
+        Assert.isTrue(!stopped);
 
         IMembership currentMembership = membershipManager.getMembership();
         
@@ -163,13 +165,19 @@ public final class FlushCoordinatorProtocol extends AbstractProtocol implements 
     @Override
     public boolean requestClose()
     {
-        return !isFlushInProgress();
+        if (!isFlushInProgress())
+        {
+            stopped = true;
+            return true;
+        }
+        else
+            return false;
     }
     
     @Override
     public void onTimer(long currentTime)
     {
-        if (!flushCoordinator)
+        if (!flushCoordinator || stopped)
             return;
         
         Set<UUID> memberIds = null;
@@ -252,6 +260,9 @@ public final class FlushCoordinatorProtocol extends AbstractProtocol implements 
 
     private void onMemberLeft(IAddress member, boolean failed)
     {
+        if (stopped)
+            return;
+        
         if (!flushCoordinator)
         {
             if (!membershipManager.getLocalNode().equals(failureDetector.getCurrentCoordinator()))
@@ -310,6 +321,9 @@ public final class FlushCoordinatorProtocol extends AbstractProtocol implements 
     
     private void proceedWithFlushStateResponses()
     {
+        if (stopped)
+            return;
+        
         buildCoordinatorState();
         
         IMembership installingMembership = null;
@@ -384,6 +398,9 @@ public final class FlushCoordinatorProtocol extends AbstractProtocol implements 
     
     private void proceed()
     {
+        if (stopped)
+            return;
+        
         if (phaseRestartRequired)
         {
             switch (phase)

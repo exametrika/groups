@@ -247,9 +247,6 @@ public class DiscoveryProtocolTests
         }
         
         assertThat(discoveredNodes.size(), is(COUNT - 2));
-        
-        channelFactory.protocols.get(0).onPreparedMembershipChanged(null, membership, null);
-        assertThat(channelFactory.protocols.get(0).getDiscoveredNodes(), is(Collections.<INode>emptySet()));
     }
     
     @Test
@@ -305,9 +302,6 @@ public class DiscoveryProtocolTests
         }
         
         assertThat(discoveredNodes.size(), is(COUNT - 2));
-        
-        channelFactory.protocols.get(0).onPreparedMembershipChanged(null, membership, null);
-        assertThat(channelFactory.protocols.get(0).getDiscoveredNodes(), is(Collections.<INode>emptySet()));
     }
 
     @Test
@@ -374,9 +368,6 @@ public class DiscoveryProtocolTests
         }
         
         assertThat(discoveredNodes.size(), is(COUNT - 2));
-        
-        channelFactory.protocols.get(1).onPreparedMembershipChanged(null, membership, null);
-        assertThat(channelFactory.protocols.get(1).getDiscoveredNodes(), is(Collections.<INode>emptySet()));
     }
     
     @Test

@@ -88,7 +88,7 @@ public final class Memberships
         Assert.notNull(leftMembers);
         Assert.notNull(discoveredNodes);
         
-        if (oldMembership != null && failedMembers.isEmpty() && leftMembers.isEmpty() && discoveredNodes.isEmpty())
+        if (failedMembers.isEmpty() && leftMembers.isEmpty() && discoveredNodes.isEmpty())
             return null;
 
         boolean primaryGroup;
@@ -124,6 +124,9 @@ public final class Memberships
                 joinedMembers.add(node);
             }
         }
+        
+        if (failedMemberIds.isEmpty() && leftMemberIds.isEmpty() && joinedMembers.isEmpty())
+            return null;
         
         IGroup group = new Group(oldMembership.getGroup().getId(), oldMembership.getGroup().getName(), primaryGroup, members);
         

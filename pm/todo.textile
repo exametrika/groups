@@ -1,8 +1,6 @@
 * Доделать flush тесты
- - flush on empty membership change (testMembershipChange)
+ - makegracefullclosestrategy two phase - request and closephase to consustently close protocols or better make close mechanics on protocol stop
  - full membership is not being sent on jouned members on membership change
- - in membership change tests close/fail channels outside of flush based on current membershit, not the last ones
- - block flush protocols before channel close, so they d8n't form new single flush
 * Сделать StateTransfer Тесты
 * [ ] проверить групповые протоколы на потокобезопасность при stop/start
 * LocalSendOptimizationProtocol introduces delays in handling local messages, it is necessary to implement process method in ICompartmentProcessor which is called on each dispatch cycle and move message handling logics into it.

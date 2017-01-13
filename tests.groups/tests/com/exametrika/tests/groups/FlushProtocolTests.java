@@ -107,7 +107,7 @@ public class FlushProtocolTests
          
         sequencer.waitAll(COUNT, 5000, 0);
         int coordinatorNodeIndex = findNodeIndex(channelFactory.flushParticipants.get(0).flush.getNewMembership().getGroup().getCoordinator());
-        int[] nodes = selectNodes(COUNT, 2, coordinatorNodeIndex);
+        int[] nodes = selectNodes(0, COUNT, 2, coordinatorNodeIndex);
         FailureDetectionProtocolTests.failChannel(channels[nodes[0]]);
         IOs.close(channels[nodes[1]]);
         
@@ -164,28 +164,30 @@ public class FlushProtocolTests
         TestChannelFactory channelFactory = new TestChannelFactory(new WellKnownAddressesDiscoveryStrategy(wellKnownAddresses));
         createGroup(wellKnownAddresses, channelFactory, Collections.<Integer>asSet(0, 1));
          
-        Threads.sleep(5000);
+        Threads.sleep(10000);
          
         checkMembership(channelFactory, Collections.<Integer>asSet(0, 1));
 
         failOnFlush(channelFactory);
         int coordinatorNodeIndex = findNodeIndex(channelFactory.flushParticipants.get(2).flush.getNewMembership().getGroup().getCoordinator());
-        int[] nodes = selectNodes(COUNT , 4, coordinatorNodeIndex);
+        int[] nodes = selectNodes(2, COUNT, 4, coordinatorNodeIndex);
         
         channels[0].start();
         channels[1].start();
         
-        FailureDetectionProtocolTests.failChannel(channels[nodes[2]]);
-        IOs.close(channels[nodes[1]]);
-        
-        sequencer.waitAll(COUNT - 4, 5000, 0);
+        Threads.sleep(3000);
         
         FailureDetectionProtocolTests.failChannel(channels[nodes[0]]);
         IOs.close(channels[nodes[1]]);
         
-        Threads.sleep(5000);
+        sequencer.waitAll(COUNT - 6, 5000, 0);
         
-        checkMembership(channelFactory, Collections.<Integer>asSet(COUNT - 1, COUNT - 2, nodes[0], nodes[1]));
+        FailureDetectionProtocolTests.failChannel(channels[nodes[2]]);
+        IOs.close(channels[nodes[3]]);
+        
+        Threads.sleep(10000);
+        
+        checkMembership(channelFactory, Collections.<Integer>asSet(nodes[0], nodes[1], nodes[2], nodes[3]));
     }
     
     @Test
@@ -195,25 +197,28 @@ public class FlushProtocolTests
         TestChannelFactory channelFactory = new TestChannelFactory(new WellKnownAddressesDiscoveryStrategy(wellKnownAddresses));
         createGroup(wellKnownAddresses, channelFactory, Collections.<Integer>asSet(0, 1));
          
-        Threads.sleep(5000);
+        Threads.sleep(10000);
          
         checkMembership(channelFactory, Collections.<Integer>asSet(0, 1));
 
         failOnFlush(channelFactory);
+        int coordinatorNodeIndex = findNodeIndex(channelFactory.flushParticipants.get(2).flush.getNewMembership().getGroup().getCoordinator());
+        int[] nodes = selectNodes(2, COUNT, 2, coordinatorNodeIndex);
         
         channels[0].start();
         channels[1].start();
         
-        FailureDetectionProtocolTests.failChannel(channels[COUNT - 1]);
-        IOs.close(channels[COUNT - 2]);
+        Threads.sleep(3000);
+        
+        FailureDetectionProtocolTests.failChannel(channels[nodes[0]]);
+        IOs.close(channels[nodes[1]]);
         
         sequencer.waitAll(COUNT - 3, 5000, 0);
-        int coordinatorNodeIndex = findNodeIndex(channelFactory.flushParticipants.get(2).flush.getNewMembership().getGroup().getCoordinator());
         FailureDetectionProtocolTests.failChannel(channels[coordinatorNodeIndex]);
         
-        Threads.sleep(5000);
+        Threads.sleep(10000);
         
-        checkMembership(channelFactory, Collections.<Integer>asSet(COUNT - 1, COUNT - 2, coordinatorNodeIndex));
+        checkMembership(channelFactory, Collections.<Integer>asSet(nodes[0], nodes[1], coordinatorNodeIndex));
     }
     
     private void createGroup(Set<String> wellKnownAddresses, TestChannelFactory channelFactory, Set<Integer> skipIndexes)
@@ -278,10 +283,10 @@ public class FlushProtocolTests
         return 0;
     }
     
-    private int[] selectNodes(int count, int selectCount, int coordinator)
+    private int[] selectNodes(int start, int count, int selectCount, int coordinator)
     {
         int[] indexes = new int[selectCount];
-        for (int i = 0; i < count; i++)
+        for (int i = start; i < count; i++)
         {
             if (selectCount == 0)
                 break;
