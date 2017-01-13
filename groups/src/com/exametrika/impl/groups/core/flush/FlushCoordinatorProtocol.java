@@ -558,7 +558,7 @@ public final class FlushCoordinatorProtocol extends AbstractProtocol implements 
         ILocalizedMessage endFlush(String participants);
         @DefaultMessage("Requesting current flush state on participants:\n{0}.")
         ILocalizedMessage requestFlushState(String participants);
-        @DefaultMessage("Flush has been completed.")
+        @DefaultMessage("Flush completed.")
         ILocalizedMessage flushCompleted();
         @DefaultMessage("Current flush phase has been restarted.")
         ILocalizedMessage flushPhaseRestarted();

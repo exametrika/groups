@@ -92,7 +92,7 @@ public class FlushProtocolTests
         TestChannelFactory channelFactory = new TestChannelFactory(new WellKnownAddressesDiscoveryStrategy(wellKnownAddresses));
         createGroup(wellKnownAddresses, channelFactory, Collections.<Integer>asSet());
          
-        Threads.sleep(5000);
+        Threads.sleep(10000);
          
         checkMembership(channelFactory, Collections.<Integer>asSet());
     }
@@ -111,7 +111,7 @@ public class FlushProtocolTests
         FailureDetectionProtocolTests.failChannel(channels[nodes[0]]);
         IOs.close(channels[nodes[1]]);
         
-        Threads.sleep(5000);
+        Threads.sleep(10000);
          
         checkMembership(channelFactory, Collections.asSet(nodes[0], nodes[1]));
     }
@@ -128,7 +128,7 @@ public class FlushProtocolTests
         int coordinatorNodeIndex = findNodeIndex(channelFactory.flushParticipants.get(0).flush.getNewMembership().getGroup().getCoordinator());
         IOs.close(channels[coordinatorNodeIndex]);
         
-        Threads.sleep(5000);
+        Threads.sleep(10000);
          
         checkMembership(channelFactory, Collections.asSet(coordinatorNodeIndex));
     }
@@ -140,17 +140,19 @@ public class FlushProtocolTests
         TestChannelFactory channelFactory = new TestChannelFactory(new WellKnownAddressesDiscoveryStrategy(wellKnownAddresses));
         createGroup(wellKnownAddresses, channelFactory, Collections.<Integer>asSet(0, 1));
          
-        Threads.sleep(5000);
+        Threads.sleep(10000);
          
         checkMembership(channelFactory, Collections.<Integer>asSet(0, 1));
         
         channels[0].start();
         channels[1].start();
         
+        Threads.sleep(3000);
+        
         FailureDetectionProtocolTests.failChannel(channels[COUNT - 1]);
         IOs.close(channels[COUNT - 2]);
         
-        Threads.sleep(5000);
+        Threads.sleep(10000);
         
         checkMembership(channelFactory, Collections.<Integer>asSet(COUNT - 1, COUNT - 2));
     }
@@ -167,16 +169,17 @@ public class FlushProtocolTests
         checkMembership(channelFactory, Collections.<Integer>asSet(0, 1));
 
         failOnFlush(channelFactory);
+        int coordinatorNodeIndex = findNodeIndex(channelFactory.flushParticipants.get(2).flush.getNewMembership().getGroup().getCoordinator());
+        int[] nodes = selectNodes(COUNT , 4, coordinatorNodeIndex);
         
         channels[0].start();
         channels[1].start();
         
-        FailureDetectionProtocolTests.failChannel(channels[COUNT - 1]);
-        IOs.close(channels[COUNT - 2]);
+        FailureDetectionProtocolTests.failChannel(channels[nodes[2]]);
+        IOs.close(channels[nodes[1]]);
         
         sequencer.waitAll(COUNT - 4, 5000, 0);
-        int coordinatorNodeIndex = findNodeIndex(channelFactory.flushParticipants.get(2).flush.getNewMembership().getGroup().getCoordinator());
-        int[] nodes = selectNodes(COUNT - 2, 2, coordinatorNodeIndex);
+        
         FailureDetectionProtocolTests.failChannel(channels[nodes[0]]);
         IOs.close(channels[nodes[1]]);
         
