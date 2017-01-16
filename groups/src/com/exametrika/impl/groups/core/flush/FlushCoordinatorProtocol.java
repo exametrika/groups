@@ -454,7 +454,22 @@ public final class FlushCoordinatorProtocol extends AbstractProtocol implements 
             
             for (IAddress node : respondingMembers)
             {
-                if (installingMembershipDelta == null || installingMembershipDelta.getJoinedMembers().contains(node))
+                boolean joined = false;
+                if (installingMembershipDelta != null)
+                {
+                    for (INode joinedMember : installingMembershipDelta.getJoinedMembers())
+                    {
+                        if (joinedMember.getAddress().equals(node))
+                        {
+                            joined = true;
+                            break;
+                        }
+                    }
+                }
+                else
+                    joined = true;
+                
+                if (joined)
                     send(messageFactory.create(node, flushStartForNew, MessageFlags.HIGH_PRIORITY));
                 else
                     send(messageFactory.create(node, flushStartForOld, MessageFlags.HIGH_PRIORITY));
