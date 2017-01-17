@@ -22,12 +22,19 @@ import com.exametrika.api.groups.core.IMembership;
 import com.exametrika.api.groups.core.IMembershipListener;
 import com.exametrika.api.groups.core.INode;
 import com.exametrika.common.compartment.ICompartment;
-import com.exametrika.common.compartment.ICompartmentProcessor;
+import com.exametrika.common.io.IDeserialization;
+import com.exametrika.common.io.ISerialization;
 import com.exametrika.common.io.ISerializationRegistry;
+import com.exametrika.common.io.impl.AbstractSerializer;
+import com.exametrika.common.l10n.DefaultMessage;
+import com.exametrika.common.l10n.ILocalizedMessage;
+import com.exametrika.common.l10n.Messages;
 import com.exametrika.common.messaging.IChannel;
 import com.exametrika.common.messaging.ILiveNodeProvider;
+import com.exametrika.common.messaging.IMessage;
 import com.exametrika.common.messaging.IMessageFactory;
 import com.exametrika.common.messaging.IMessagePart;
+import com.exametrika.common.messaging.IReceiver;
 import com.exametrika.common.messaging.impl.Channel;
 import com.exametrika.common.messaging.impl.ChannelFactory;
 import com.exametrika.common.messaging.impl.ChannelFactory.FactoryParameters;
@@ -45,12 +52,12 @@ import com.exametrika.common.messaging.impl.transports.tcp.TcpTransport;
 import com.exametrika.common.tests.Sequencer;
 import com.exametrika.common.utils.Assert;
 import com.exametrika.common.utils.ByteArray;
+import com.exametrika.common.utils.Bytes;
 import com.exametrika.common.utils.Collections;
 import com.exametrika.common.utils.Debug;
 import com.exametrika.common.utils.Files;
 import com.exametrika.common.utils.IOs;
 import com.exametrika.common.utils.Threads;
-import com.exametrika.common.utils.Times;
 import com.exametrika.impl.groups.core.channel.GroupChannel;
 import com.exametrika.impl.groups.core.channel.IChannelReconnector;
 import com.exametrika.impl.groups.core.channel.IGracefulCloseStrategy;
@@ -63,21 +70,26 @@ import com.exametrika.impl.groups.core.flush.FlushCoordinatorProtocol;
 import com.exametrika.impl.groups.core.flush.FlushParticipantProtocol;
 import com.exametrika.impl.groups.core.flush.IFlush;
 import com.exametrika.impl.groups.core.flush.IFlushParticipant;
+import com.exametrika.impl.groups.core.membership.GroupAddress;
 import com.exametrika.impl.groups.core.membership.IMembershipManager;
 import com.exametrika.impl.groups.core.membership.IPreparedMembershipListener;
 import com.exametrika.impl.groups.core.membership.MembershipManager;
 import com.exametrika.impl.groups.core.membership.MembershipTracker;
 import com.exametrika.impl.groups.core.membership.Memberships;
 import com.exametrika.impl.groups.core.state.StateTransferClientProtocol;
+import com.exametrika.impl.groups.core.state.StateTransferResponseMessagePart;
 import com.exametrika.impl.groups.core.state.StateTransferServerProtocol;
+import com.exametrika.impl.groups.core.state.StateTransferResponseMessagePart.IMessages;
 import com.exametrika.spi.groups.IDiscoveryStrategy;
 import com.exametrika.spi.groups.IStateStore;
 import com.exametrika.spi.groups.IStateTransferClient;
 import com.exametrika.spi.groups.IStateTransferFactory;
 import com.exametrika.spi.groups.IStateTransferServer;
 import com.exametrika.tests.common.messaging.ReceiverMock;
-import com.exametrika.tests.groups.DiscoveryProtocolTests.GroupJoinStrategyMock;
+import com.exametrika.tests.groups.FlushProtocolTests.FlushParticipantMock;
+import com.exametrika.tests.groups.FlushProtocolTests.TestChannelFactory;
 import com.exametrika.tests.groups.MembershipManagerTests.PropertyProviderMock;
+import com.sun.xml.internal.bind.annotation.OverrideAnnotationOf;
 
 /**
  * The {@link StateTransferProtocolTests} are tests for flush.
@@ -255,6 +267,7 @@ public class StateTransferProtocolTests
     private void checkMembership(TestChannelFactory channelFactory, Set<Integer> skipIndexes)
     {
         IMembership membership = null;
+        ByteArray state = null;
         for (int i = 0; i < COUNT; i++)
         {
             if (skipIndexes.contains(i))
@@ -274,13 +287,13 @@ public class StateTransferProtocolTests
             assertThat(membership.getGroup().findMember(channels[i].getMembershipService().getLocalNode().getId()), 
                 is(channels[i].getMembershipService().getLocalNode()));
             
-            FlushParticipantMock participant = channelFactory.flushParticipants.get(i);
-            assertThat(participant.beforeProcessingFlush, is(true));
-            assertThat(participant.processFlush, is(true));
-            assertThat(participant.endFlush, is(true));
-            assertThat(participant.isCoordinator, is(channels[i].getMembershipService().getLocalNode().equals(
-                membership.getGroup().getCoordinator())));
+            ByteArray nodeState = channelFactory.stateTransferFactories.get(i).state;
+            if (state == null)
+                state = nodeState;
+            else
+                assertThat(nodeState, is(state));
         }
+        
         assertThat(membership.getGroup().getMembers().size(), is(COUNT - skipIndexes.size()));
     }
     
@@ -311,6 +324,13 @@ public class StateTransferProtocolTests
         }
         
         return indexes;
+    }
+    
+    private void failOnFlush(TestChannelFactory factory)
+    {
+        factory.failOnFlush = true;
+        for (FlushParticipantMock participant : factory.flushParticipants)
+            participant.failOnFlush = true;
     }
     
     private ByteArray createBuffer(int base, int length)
@@ -401,6 +421,153 @@ public class StateTransferProtocolTests
         }
     }
     
+    public final class TestBufferMessagePart implements IMessagePart
+    {
+        private final ByteArray buffer;
+
+        public TestBufferMessagePart(ByteArray buffer)
+        {
+            this.buffer = buffer;
+        }
+        
+        public ByteArray getBuffer()
+        {
+            return buffer;
+        }
+        
+        @Override
+        public int getSize()
+        {
+            return 3;
+        }
+    }
+    
+    public final class TestBufferMessagePartSerializer extends AbstractSerializer
+    {
+        public static final UUID ID = UUID.fromString("b9ca8da1-e56d-475f-b59e-220baa7d2d19");
+     
+        public TestBufferMessagePartSerializer()
+        {
+            super(ID, TestBufferMessagePart.class);
+        }
+
+        @Override
+        public void serialize(ISerialization serialization, Object object)
+        {
+            TestBufferMessagePart part = (TestBufferMessagePart)object;
+
+            serialization.writeByteArray(part.getBuffer());
+        }
+        
+        @Override
+        public Object deserialize(IDeserialization deserialization, UUID id)
+        {
+            ByteArray buffer = deserialization.readByteArray();
+            return new TestBufferMessagePart(buffer);
+        }
+    }
+    
+    private class TestMessageSender extends AbstractProtocol implements IFlushParticipant
+    {
+        private final TestStateTransferFactory stateTransferFactory;
+        private boolean coordinator;
+        private IFlush flush;
+        private IMembership membership;
+
+        public TestMessageSender(String channelName, IMessageFactory messageFactory, TestStateTransferFactory stateTransferFactory)
+        {
+            super(channelName, messageFactory);
+            
+            this.stateTransferFactory = stateTransferFactory;
+        }
+        
+        @Override
+        public boolean isFlushProcessingRequired(IFlush flush)
+        {
+            return false;
+        }
+
+        @Override
+        public boolean isCoordinatorStateSupported()
+        {
+            return false;
+        }
+
+        @Override
+        public void setCoordinator()
+        {
+            this.coordinator = true;
+        }
+
+        @Override
+        public Object getCoordinatorState()
+        {
+            return null;
+        }
+
+        @Override
+        public void setCoordinatorState(List<Object> states)
+        {
+        }
+
+        @Override
+        public void startFlush(IFlush flush)
+        {
+            this.flush = flush;
+            this.membership = flush.getNewMembership();
+            flush.grantFlush(this);
+        }
+
+        @Override
+        public void beforeProcessFlush()
+        {
+        }
+
+        @Override
+        public void processFlush()
+        {
+            Assert.error();
+        }
+
+        @Override
+        public void endFlush()
+        {
+            flush = null;
+        }
+        
+        @Override
+        public void onTimer(long currentTime)
+        {
+            if (coordinator && flush == null && membership != null)
+            {
+                ByteArray buffer = stateTransferFactory.state.clone();
+                int counter = Bytes.readInt(buffer.getBuffer(), buffer.getOffset());
+                Bytes.writeInt(buffer.getBuffer(), buffer.getOffset(), counter + 1);
+                
+                for (INode member : membership.getGroup().getMembers())
+                    getSender().send(getMessageFactory().create(member.getAddress(), new TestBufferMessagePart(buffer)));
+            }
+        }
+        
+        @Override
+        public void register(ISerializationRegistry registry)
+        {
+            registry.register(new TestBufferMessagePartSerializer());
+        }
+
+        @Override
+        public void unregister(ISerializationRegistry registry)
+        {
+            registry.unregister(TestBufferMessagePartSerializer.ID);
+        }
+        
+        @Override
+        protected void doReceive(IReceiver receiver, IMessage message)
+        {
+            receiver.receive(message);
+        }
+    }
+    
     private static FactoryParameters getFactoryParameters()
     {
         FactoryParameters factoryParameters = new FactoryParameters(Debug.isDebug());
@@ -434,6 +601,7 @@ public class StateTransferProtocolTests
         private MembershipManager membershipManager;
         private List<IGracefulCloseStrategy> gracefulCloseStrategies = new ArrayList<IGracefulCloseStrategy>();
         private TestStateStore stateStore = new TestStateStore();
+        private List<TestMessageSender> messageSenders = new ArrayList<TestMessageSender>();
         
         public TestChannelFactory(IDiscoveryStrategy discoveryStrategy)
         {
@@ -483,8 +651,12 @@ public class StateTransferProtocolTests
                 saveSnapshotPeriod, transferLogRecordPeriod, transferLogMessagesCount, minLockQueueCapacity);
             protocols.add(stateTransferServerProtocol);
             
+            TestMessageSender testSender = new TestMessageSender(channelName, messageFactory, stateTransferFactory);
+            protocols.add(testSender);
+            messageSenders.add(testSender);
+            
             FlushParticipantProtocol flushParticipantProtocol = new FlushParticipantProtocol(channelName, messageFactory, 
-                Arrays.<IFlushParticipant>asList(stateTransferClientProtocol, stateTransferServerProtocol), membershipManager, failureDetectionProtocol);
+                Arrays.<IFlushParticipant>asList(stateTransferClientProtocol, stateTransferServerProtocol, testSender), membershipManager, failureDetectionProtocol);
             protocols.add(flushParticipantProtocol);
             FlushCoordinatorProtocol flushCoordinatorProtocol = new FlushCoordinatorProtocol(channelName, messageFactory, 
                 membershipManager, failureDetectionProtocol, flushTimeout, flushParticipantProtocol);

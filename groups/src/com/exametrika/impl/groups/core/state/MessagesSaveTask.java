@@ -48,9 +48,6 @@ public final class MessagesSaveTask implements ICompartmentTask<File>
     public void cancel()
     {
         canceled = true;
-        
-        if (file != null)
-            file.delete();
     }
     
     @Override
@@ -86,7 +83,7 @@ public final class MessagesSaveTask implements ICompartmentTask<File>
             completionHandler.onSucceeded(result);
         }
         else
-            file.delete();
+            result.delete();
     }
 
     @Override

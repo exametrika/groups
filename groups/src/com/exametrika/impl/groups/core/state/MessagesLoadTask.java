@@ -31,9 +31,8 @@ public final class MessagesLoadTask implements ICompartmentTask
     private final List<File> files;
     private final ICompletionHandler completionHandler;
     private final ISerializationRegistry serializationRegistry;
-    private volatile boolean canceled;
     private final ICompartment compartment;
-    private volatile RunnableFuture future; 
+    private volatile boolean canceled;
 
     public MessagesLoadTask(IReceiver receiver, List<File> files, ICompartment compartment, ICompletionHandler completionHandler,
         ISerializationRegistry serializationRegistry)
@@ -54,9 +53,6 @@ public final class MessagesLoadTask implements ICompartmentTask
     public void cancel()
     {
         canceled = true;
-        
-        if (future != null)
-            future.cancel(false);
     }
     
     @Override
@@ -72,13 +68,18 @@ public final class MessagesLoadTask implements ICompartmentTask
                 final List<IMessage> messages = new ArrayList<IMessage>();
                 StateTransferMessageLog.load(file, messages, serializationRegistry);
                 
-                future = new FutureTask(new Runnable()
+                RunnableFuture future = new FutureTask(new Runnable()
                 {
                     @Override
                     public void run()
                     {
                         for (IMessage message : messages)
+                        {
+                            if (canceled)
+                                break;
+                            
                             receiver.receive(message);
+                        }
                     }
                 }, null);
 
@@ -97,8 +98,6 @@ public final class MessagesLoadTask implements ICompartmentTask
         {
             for (File file : files)
                 file.delete();
-            
-            future = null;
         }
 
         return null;

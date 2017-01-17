@@ -266,6 +266,7 @@ public final class StateTransferClientProtocol extends AbstractProtocol implemen
                         }
                     }
                 });
+                return;
             }
                 
             if (part.isRejected())
@@ -372,6 +373,8 @@ public final class StateTransferClientProtocol extends AbstractProtocol implemen
         public void loadSnapshot(File snapshotFile, boolean last)
         {
             Assert.checkState(loadSnapshotTask == null && !snapshotLoaded);
+            Assert.checkState(!last || flush != null);
+            
             this.last = last;
             loadSnapshotTask = new SnapshotLoadTask(stateTransferFactory, snapshotFile, this);
             compartment.execute(loadSnapshotTask);
@@ -380,6 +383,8 @@ public final class StateTransferClientProtocol extends AbstractProtocol implemen
         public void addFile(File messagesFile, boolean last)
         {
             Assert.checkState(loadSnapshotTask != null || snapshotLoaded);
+            Assert.checkState(!last || flush != null);
+            
             this.last = last;
             messagesFiles.add(messagesFile);
             
@@ -416,11 +421,12 @@ public final class StateTransferClientProtocol extends AbstractProtocol implemen
 
         public void completed()
         {
+            Assert.checkState(flush != null);
+            
             last = true;
             if (loadSnapshotTask == null && loadMessagesTask == null)
             {
                 Assert.checkState(messagesFiles.isEmpty());
-                Assert.checkState(flush != null);
                 
                 flush.grantFlush(StateTransferClientProtocol.this);
                 
@@ -436,14 +442,14 @@ public final class StateTransferClientProtocol extends AbstractProtocol implemen
             loadMessagesTask = null;
             snapshotLoaded = true;
             
-            if (last)
-                completed();
-            else if (!messagesFiles.isEmpty())
+            if (!messagesFiles.isEmpty())
             {
                 loadMessagesTask = new MessagesLoadTask(getReceiver(), messagesFiles, compartment, this, serializationRegistry);
                 messagesFiles = new ArrayList<File>();
                 compartment.execute(loadMessagesTask);
             }
+            else if (last)
+                completed();
         }
 
         @Override

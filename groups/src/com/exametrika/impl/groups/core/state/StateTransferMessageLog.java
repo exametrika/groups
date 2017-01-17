@@ -42,12 +42,12 @@ public final class StateTransferMessageLog
             
             int length = file.readInt();
             int messageCount = file.readInt();
+            int checkSum = file.readInt();
             
             byte[] buffer = new byte[length];
             file.readFully(buffer);
             
             crc.update(buffer);
-            int checkSum = file.readInt();
             Assert.isTrue(crc.getValue() == checkSum);
             
             ByteInputStream stream = new ByteInputStream(buffer);
