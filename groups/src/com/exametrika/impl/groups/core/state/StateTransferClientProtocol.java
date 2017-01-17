@@ -49,8 +49,8 @@ public final class StateTransferClientProtocol extends AbstractProtocol implemen
     private final IMembershipManager membershipManager;
     private final IStateTransferFactory stateTransferFactory;
     private final IStateStore stateStore;
-    private final ICompartment compartment;
-    private final IChannelReconnector channelReconnector;
+    private ICompartment compartment;
+    private IChannelReconnector channelReconnector;
     private final ISerializationRegistry serializationRegistry;
     private final long maxStateTransferPeriod;
     private final long stateSizeThreshold;
@@ -65,28 +65,39 @@ public final class StateTransferClientProtocol extends AbstractProtocol implemen
 
     public StateTransferClientProtocol(String channelName, IMessageFactory messageFactory, IMembershipManager membershipManager, 
         IStateTransferFactory stateTransferFactory, IStateStore stateStore,
-        ICompartment compartment, IChannelReconnector channelReconnector, ISerializationRegistry serializationRegistry,
-        long maxStateTransferPeriod, long stateSizeThreshold)
+        ISerializationRegistry serializationRegistry, long maxStateTransferPeriod, long stateSizeThreshold)
     {
         super(channelName, messageFactory);
         
         Assert.notNull(membershipManager);
         Assert.notNull(stateTransferFactory);
         Assert.notNull(stateStore);
-        Assert.notNull(compartment);
-        Assert.notNull(channelReconnector);
         Assert.notNull(serializationRegistry);
         
         this.membershipManager = membershipManager;
         this.stateTransferFactory = stateTransferFactory;
         this.stateStore = stateStore;
-        this.compartment = compartment;
-        this.channelReconnector = channelReconnector;
         this.maxStateTransferPeriod = maxStateTransferPeriod;
         this.stateSizeThreshold = stateSizeThreshold;
         this.serializationRegistry = serializationRegistry;
     }
 
+    public void setCompartment(ICompartment compartment)
+    {
+        Assert.notNull(compartment);
+        Assert.isNull(this.compartment);
+        
+        this.compartment = compartment;
+    }
+    
+    public void setChannelReconnector(IChannelReconnector channelReconnector)
+    {
+        Assert.notNull(channelReconnector);
+        Assert.isNull(this.channelReconnector);
+        
+        this.channelReconnector = channelReconnector;
+    }
+    
     @Override
     public void onMemberFailed(INode member)
     {

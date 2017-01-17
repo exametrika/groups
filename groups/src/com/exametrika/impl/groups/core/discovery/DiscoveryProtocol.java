@@ -48,7 +48,7 @@ public final class DiscoveryProtocol extends AbstractProtocol implements INodeDi
     private final ILiveNodeProvider liveNodeProvider;
     private final long discoveryPeriod;
     private final long groupFormationPeriod;
-    private final IGroupJoinStrategy groupJoinStrategy;
+    private IGroupJoinStrategy groupJoinStrategy;
     private IMembership membership;
     private long membershipId;
     private IAddress coordinator;
@@ -61,8 +61,7 @@ public final class DiscoveryProtocol extends AbstractProtocol implements INodeDi
 
     public DiscoveryProtocol(String channelName, IMessageFactory messageFactory, IMembershipService membershipService, 
         IFailureDetector failureDetector, IDiscoveryStrategy discoveryStrategy, 
-        ILiveNodeProvider liveNodeProvider, IGroupJoinStrategy groupJoinStrategy,
-        long discoveryPeriod, long groupFormationPeriod)
+        ILiveNodeProvider liveNodeProvider, long discoveryPeriod, long groupFormationPeriod)
     {
         super(channelName, messageFactory);
 
@@ -70,17 +69,23 @@ public final class DiscoveryProtocol extends AbstractProtocol implements INodeDi
         Assert.notNull(failureDetector);
         Assert.notNull(discoveryStrategy);
         Assert.notNull(liveNodeProvider);
-        Assert.notNull(groupJoinStrategy);
 
         this.membershipService = membershipService;
         this.failureDetector = failureDetector;
         this.discoveryStrategy = discoveryStrategy;
         this.liveNodeProvider = liveNodeProvider;
-        this.groupJoinStrategy = groupJoinStrategy;
         this.discoveryPeriod = discoveryPeriod;
         this.groupFormationPeriod = groupFormationPeriod;
     }
 
+    public void setGroupJoinStrategy(IGroupJoinStrategy groupJoinStrategy)
+    {
+        Assert.notNull(groupJoinStrategy);
+        Assert.isNull(this.groupJoinStrategy);
+        
+        this.groupJoinStrategy = groupJoinStrategy;
+    }
+    
     @Override
     public void stop()
     {

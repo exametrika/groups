@@ -448,20 +448,7 @@ public class FlushProtocolTests
             FailureDetectionProtocol failureDetectionProtocol = new FailureDetectionProtocol(channelName, messageFactory, membershipManager, 
                 failureDetectionListeners, failureUpdatePeriod, failureHistoryPeriod, maxShunCount);
             preparedMembershipListeners.add(failureDetectionProtocol);
-            protocols.add(failureDetectionProtocol);
             failureObservers.add(failureDetectionProtocol);
-            
-            GroupJoinStrategyMock joinStrategy = new GroupJoinStrategyMock(); 
-            DiscoveryProtocol discoveryProtocol = new DiscoveryProtocol(channelName, messageFactory, membershipManager, 
-                failureDetectionProtocol, discoveryStrategy, liveNodeProvider, joinStrategy, discoveryPeriod, 
-                groupFormationPeriod);
-            preparedMembershipListeners.add(discoveryProtocol);
-            protocols.add(discoveryProtocol);
-            membershipManager.setNodeDiscoverer(discoveryProtocol);
-            
-            joinStrategy.protocol = discoveryProtocol;
-            joinStrategy.membershipService = membershipManager;
-            joinStrategy.messageFactory = messageFactory;
             
             FlushParticipantMock flushParticipant = new FlushParticipantMock();
             flushParticipant.failOnFlush = failOnFlush;
@@ -473,6 +460,21 @@ public class FlushProtocolTests
                 membershipManager, failureDetectionProtocol, flushTimeout, flushParticipantProtocol);
             failureDetectionListeners.add(flushCoordinatorProtocol);
             protocols.add(flushCoordinatorProtocol);
+
+            GroupJoinStrategyMock joinStrategy = new GroupJoinStrategyMock(); 
+            DiscoveryProtocol discoveryProtocol = new DiscoveryProtocol(channelName, messageFactory, membershipManager, 
+                failureDetectionProtocol, discoveryStrategy, liveNodeProvider, discoveryPeriod, 
+                groupFormationPeriod);
+            discoveryProtocol.setGroupJoinStrategy(joinStrategy);
+            preparedMembershipListeners.add(discoveryProtocol);
+            protocols.add(discoveryProtocol);
+            membershipManager.setNodeDiscoverer(discoveryProtocol);
+            
+            joinStrategy.protocol = discoveryProtocol;
+            joinStrategy.membershipService = membershipManager;
+            joinStrategy.messageFactory = messageFactory;
+            
+            protocols.add(failureDetectionProtocol);
 
             membershipTracker = new MembershipTracker(1000, membershipManager, discoveryProtocol, 
                 failureDetectionProtocol, flushCoordinatorProtocol);

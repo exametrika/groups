@@ -582,8 +582,9 @@ public class DiscoveryProtocolTests
             failureDetectors.add(failureDetector);
             
             DiscoveryProtocol discoveryProtocol = new DiscoveryProtocol(channelName, messageFactory, membershipService, 
-                failureDetector, discoveryStrategy, liveNodeProvider, joinStrategy, discoveryPeriod, groupFormationPeriod);
+                failureDetector, discoveryStrategy, liveNodeProvider, discoveryPeriod, groupFormationPeriod);
             protocols.add(discoveryProtocol);
+            discoveryProtocol.setGroupJoinStrategy(joinStrategy);
             
             this.protocols.add(discoveryProtocol);
             

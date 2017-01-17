@@ -26,8 +26,8 @@ import com.exametrika.common.utils.Assert;
  */
 public final class Memberships
 {
-    private static final UUID CORE_GROUP_ID = UUID.fromString("d2ea2d73-c7ee-492b-a532-7a81fc74fe8c");
-    private static final String CORE_GROUP_NAME = "core"; 
+    public static final UUID CORE_GROUP_ID = UUID.fromString("d2ea2d73-c7ee-492b-a532-7a81fc74fe8c");
+    public static final String CORE_GROUP_NAME = "core"; 
     
     public static class MembershipDeltaInfo
     {

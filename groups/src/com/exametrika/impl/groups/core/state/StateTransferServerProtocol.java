@@ -46,11 +46,11 @@ public final class StateTransferServerProtocol extends AbstractProtocol implemen
     private final IMembershipManager membershipManager;
     private final IFailureDetector failureDetector;
     private final IStateStore stateStore;
-    private final ICompartment compartment;
+    private ICompartment compartment;
     private final ISerializationRegistry serializationRegistry;
     private final long saveSnapshotPeriod;
     private final int minLockQueueCapacity;
-    private final IFlowController<IAddress> flowController;
+    private IFlowController<IAddress> flowController;
     private StateTransfer stateTransfer;
     private StoreStateSaveTask stateSaveTask;
     private long lastSaveSnapshotTime;
@@ -68,9 +68,8 @@ public final class StateTransferServerProtocol extends AbstractProtocol implemen
 
     public StateTransferServerProtocol(String channelName, IMessageFactory messageFactory, IMembershipManager membershipManager, 
         IFailureDetector failureDetector, IStateTransferFactory stateTransferFactory, IStateStore stateStore,
-        ICompartment compartment, ISerializationRegistry serializationRegistry,
-        long saveSnapshotPeriod, long transferLogRecordPeriod, int transferLogMessagesCount,  
-        int minLockQueueCapacity, IFlowController<IAddress> flowController)
+        ISerializationRegistry serializationRegistry,
+        long saveSnapshotPeriod, long transferLogRecordPeriod, int transferLogMessagesCount, int minLockQueueCapacity)
     {
         super(channelName, messageFactory);
         
@@ -78,23 +77,36 @@ public final class StateTransferServerProtocol extends AbstractProtocol implemen
         Assert.notNull(failureDetector);
         Assert.notNull(stateTransferFactory);
         Assert.notNull(stateStore);
-        Assert.notNull(compartment);
         Assert.notNull(serializationRegistry);
         
         this.membershipManager = membershipManager;
         this.failureDetector = failureDetector;
         this.stateStore = stateStore;
-        this.compartment = compartment;
         this.saveSnapshotPeriod = saveSnapshotPeriod;
         this.lastSaveSnapshotTime = timeService.getCurrentTime();
         this.transferLogRecordPeriod = transferLogRecordPeriod;
         this.transferLogMessagesCount = transferLogMessagesCount;
         this.serializationRegistry = serializationRegistry;
         this.minLockQueueCapacity = minLockQueueCapacity;
-        this.flowController = flowController;
         this.server = stateTransferFactory.createServer();
     }
 
+    public void setCompartment(ICompartment compartment)
+    {
+        Assert.notNull(compartment);
+        Assert.isNull(this.compartment);
+        
+        this.compartment = compartment;
+    }
+    
+    public void setFlowController(IFlowController<IAddress> flowController)
+    {
+        Assert.notNull(flowController);
+        Assert.isNull(this.flowController);
+        
+        this.flowController = flowController;
+    }
+    
     @Override
     public void onTimer(long currentTime)
     {

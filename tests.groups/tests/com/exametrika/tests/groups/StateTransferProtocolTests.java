@@ -44,8 +44,10 @@ import com.exametrika.common.messaging.impl.transports.ConnectionManager;
 import com.exametrika.common.messaging.impl.transports.tcp.TcpTransport;
 import com.exametrika.common.tests.Sequencer;
 import com.exametrika.common.utils.Assert;
+import com.exametrika.common.utils.ByteArray;
 import com.exametrika.common.utils.Collections;
 import com.exametrika.common.utils.Debug;
+import com.exametrika.common.utils.Files;
 import com.exametrika.common.utils.IOs;
 import com.exametrika.common.utils.Threads;
 import com.exametrika.common.utils.Times;
@@ -65,7 +67,9 @@ import com.exametrika.impl.groups.core.membership.IMembershipManager;
 import com.exametrika.impl.groups.core.membership.IPreparedMembershipListener;
 import com.exametrika.impl.groups.core.membership.MembershipManager;
 import com.exametrika.impl.groups.core.membership.MembershipTracker;
+import com.exametrika.impl.groups.core.membership.Memberships;
 import com.exametrika.impl.groups.core.state.StateTransferClientProtocol;
+import com.exametrika.impl.groups.core.state.StateTransferServerProtocol;
 import com.exametrika.spi.groups.IDiscoveryStrategy;
 import com.exametrika.spi.groups.IStateStore;
 import com.exametrika.spi.groups.IStateTransferClient;
@@ -309,81 +313,91 @@ public class StateTransferProtocolTests
         return indexes;
     }
     
-    private void failOnFlush(TestChannelFactory factory)
+    private ByteArray createBuffer(int base, int length)
     {
-        factory.failOnFlush = true;
-        for (FlushParticipantMock participant : factory.flushParticipants)
-            participant.failOnFlush = true;
+        byte[] buffer = new byte[length];
+        for (int i = 0; i < length; i++)
+            buffer[i] = (byte)(base + i);
+        
+        return new ByteArray(buffer);
     }
 
     private class TestStateTransferServer implements IStateTransferServer
     {
+        TestStateTransferFactory factory;
+        
+        public TestStateTransferServer(TestStateTransferFactory factory)
+        {
+            this.factory = factory;
+        }
+        
         @Override
         public boolean isModifyingMessage(IMessagePart part)
         {
-            // TODO Auto-generated method stub
-            return false;
+            return true;
         }
 
         @Override
         public void saveSnapshot(File file)
         {
-            // TODO Auto-generated method stub
-            
+            Files.writeBytes(file, factory.state);
         }
-        
     }
     
     private class TestStateTransferClient implements IStateTransferClient
     {
+        TestStateTransferFactory factory;
+        
+        public TestStateTransferClient(TestStateTransferFactory factory)
+        {
+            this.factory = factory;
+        }
+        
         @Override
         public void loadSnapshot(File file)
         {
-            // TODO Auto-generated method stub
-            
+            factory.state = Files.readBytes(file);
         }
     }
     
     private class TestStateTransferFactory implements IStateTransferFactory
     {
-        private TestChannelFactory channelFactory;
-
-        public TestStateTransferFactory(TestChannelFactory channelFactory)
-        {
-            this.channelFactory = channelFactory;
-        }
+        ByteArray state;
         
         @Override
         public IStateTransferServer createServer()
         {
-            TestStateTransferServer server = new TestStateTransferServer();
-            channelFactory.servers.add(server);
-            return server;
+            return new TestStateTransferServer(this);
         }
 
         @Override
         public IStateTransferClient createClient()
         {
-            TestStateTransferClient client = new TestStateTransferClient();
-            channelFactory.clients.add(client);
-            return client;
+            return new TestStateTransferClient(this);
         }
     }
     
     private class TestStateStore implements IStateStore
     {
+        private ByteArray buffer = createBuffer(17, 1000000);
+        private ByteArray savedBuffer;
+        
         @Override
         public void load(UUID id, File state)
         {
-            // TODO Auto-generated method stub
-            
+            if (id.equals(Memberships.CORE_GROUP_ID))
+                Files.writeBytes(state, buffer);
+            else
+                Assert.error();
         }
 
         @Override
         public void save(UUID id, File state)
         {
-            // TODO Auto-generated method stub
-            
+            if (id.equals(Memberships.CORE_GROUP_ID))
+                savedBuffer = Files.readBytes(state);
+            else
+                Assert.error();
         }
     }
     
@@ -409,13 +423,16 @@ public class StateTransferProtocolTests
         private  int maxShunCount = 3;
         private long flushTimeout = 10000;
         private long gracefulCloseTimeout = 10000;
-        private List<TestStateTransferClient> clients = new ArrayList<TestStateTransferClient>();
-        private List<TestStateTransferServer> servers = new ArrayList<TestStateTransferServer>();
+        private long maxStateTransferPeriod = Integer.MAX_VALUE;
+        private long stateSizeThreshold = 1000000;
+        private long saveSnapshotPeriod = 1000;
+        private long transferLogRecordPeriod = 1000;
+        private int transferLogMessagesCount = 100;
+        private int minLockQueueCapacity = 10000000;
+        private List<TestStateTransferFactory> stateTransferFactories = new ArrayList<TestStateTransferFactory>();
         private MembershipTracker membershipTracker;
         private MembershipManager membershipManager;
         private List<IGracefulCloseStrategy> gracefulCloseStrategies = new ArrayList<IGracefulCloseStrategy>();
-        private boolean failOnFlush;
-        private TestStateTransferFactory stateTransferFactory = new TestStateTransferFactory(this);
         private TestStateStore stateStore = new TestStateStore();
         
         public TestChannelFactory(IDiscoveryStrategy discoveryStrategy)
@@ -444,35 +461,39 @@ public class StateTransferProtocolTests
             FailureDetectionProtocol failureDetectionProtocol = new FailureDetectionProtocol(channelName, messageFactory, membershipManager, 
                 failureDetectionListeners, failureUpdatePeriod, failureHistoryPeriod, maxShunCount);
             preparedMembershipListeners.add(failureDetectionProtocol);
-            protocols.add(failureDetectionProtocol);
             failureObservers.add(failureDetectionProtocol);
             
-            GroupJoinStrategyMock joinStrategy = new GroupJoinStrategyMock(); 
             DiscoveryProtocol discoveryProtocol = new DiscoveryProtocol(channelName, messageFactory, membershipManager, 
-                failureDetectionProtocol, discoveryStrategy, liveNodeProvider, joinStrategy, discoveryPeriod, 
+                failureDetectionProtocol, discoveryStrategy, liveNodeProvider, discoveryPeriod, 
                 groupFormationPeriod);
             preparedMembershipListeners.add(discoveryProtocol);
-            protocols.add(discoveryProtocol);
             membershipManager.setNodeDiscoverer(discoveryProtocol);
             
-            joinStrategy.protocol = discoveryProtocol;
-            joinStrategy.membershipService = membershipManager;
-            joinStrategy.messageFactory = messageFactory;
-            
+            TestStateTransferFactory stateTransferFactory = new TestStateTransferFactory();
+            stateTransferFactories.add(stateTransferFactory);
             StateTransferClientProtocol stateTransferClientProtocol = new StateTransferClientProtocol(channelName,
-                messageFactory, membershipManager, stateTransferFactory, stateStore, compartment, channelReconnector,
-                serializationRegistry, maxStateTransferPeriod, stateSizeThreshold);
-            FlushParticipantMock flushParticipant = new FlushParticipantMock();
-            flushParticipant.failOnFlush = failOnFlush;
-            flushParticipants.add(flushParticipant);
+                messageFactory, membershipManager, stateTransferFactory, stateStore, serializationRegistry, 
+                maxStateTransferPeriod, stateSizeThreshold);
+            protocols.add(stateTransferClientProtocol);
+            discoveryProtocol.setGroupJoinStrategy(stateTransferClientProtocol);
+            failureDetectionListeners.add(stateTransferClientProtocol);
+            
+            StateTransferServerProtocol stateTransferServerProtocol = new StateTransferServerProtocol(channelName, 
+                messageFactory, membershipManager, failureDetectionProtocol, stateTransferFactory, stateStore, serializationRegistry, 
+                saveSnapshotPeriod, transferLogRecordPeriod, transferLogMessagesCount, minLockQueueCapacity);
+            protocols.add(stateTransferServerProtocol);
+            
             FlushParticipantProtocol flushParticipantProtocol = new FlushParticipantProtocol(channelName, messageFactory, 
-                Arrays.<IFlushParticipant>asList(flushParticipant), membershipManager, failureDetectionProtocol);
+                Arrays.<IFlushParticipant>asList(stateTransferClientProtocol, stateTransferServerProtocol), membershipManager, failureDetectionProtocol);
             protocols.add(flushParticipantProtocol);
             FlushCoordinatorProtocol flushCoordinatorProtocol = new FlushCoordinatorProtocol(channelName, messageFactory, 
                 membershipManager, failureDetectionProtocol, flushTimeout, flushParticipantProtocol);
             failureDetectionListeners.add(flushCoordinatorProtocol);
             protocols.add(flushCoordinatorProtocol);
 
+            protocols.add(discoveryProtocol);
+            protocols.add(failureDetectionProtocol);
+            
             membershipTracker = new MembershipTracker(1000, membershipManager, discoveryProtocol, 
                 failureDetectionProtocol, flushCoordinatorProtocol);
             
@@ -493,8 +514,13 @@ public class StateTransferProtocolTests
             strategy.setFailureDetector(failureDetectionProtocol);
             strategy.setMembershipManager((IMembershipManager)failureDetectionProtocol.getMembersipService());
             
-            StateTransferClientProtocol stateTransferClientProtocol = protocolStack.find(StateTransferClientProtocol.class)
-            channel.getCompartment().addProcessor(flushParticipants.get(flushParticipants.size() - 1));
+            StateTransferClientProtocol stateTransferClientProtocol = protocolStack.find(StateTransferClientProtocol.class);
+            stateTransferClientProtocol.setChannelReconnector((IChannelReconnector)channel);
+            stateTransferClientProtocol.setCompartment(channel.getCompartment());
+            
+            StateTransferServerProtocol stateTransferServerProtocol = protocolStack.find(StateTransferServerProtocol.class);
+            stateTransferServerProtocol.setCompartment(channel.getCompartment());
+            stateTransferServerProtocol.setFlowController(transport);
         }
         
         @Override

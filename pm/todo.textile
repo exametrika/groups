@@ -1,10 +1,13 @@
-* Доделать flush тесты
- - makegracefullclosestrategy two phase - request and closephase to consustently close protocols or better make close mechanics on protocol stop
- - full membership is not being sent on jouned members on membership change
 * Сделать StateTransfer Тесты
+  - сделать TestMessagingProtocol - посылает сообщения группе вне flush по таймеру из текущего координатора группы. Сообщения меняют текущее состояние узла (инкрементируют первые четыре байта, как int)
+  - доделать все тесты
+  - code review
 * [ ] проверить групповые протоколы на потокобезопасность при stop/start
-* LocalSendOptimizationProtocol introduces delays in handling local messages, it is necessary to implement process method in ICompartmentProcessor which is called on each dispatch cycle and move message handling logics into it.
+* LocalSendOptimizationProtocol introduces delays in handling local messages, it is necessary to implement process method in ICompartmentProcessor which is called on each dispatch iteration and move message handling logics into it. How to do it performantly, so only exactly this only protocol gets called, not others
+* make GracefullCloseStrategy two phase - request and close phase to consistently close protocols or better make close protocol mechanics based on protocol stop (now some protocols use stop, some - GracefullCloseStrategy, we need single approach)
 * прогнать все тесты группы, чтобы работали
+* DataExchangeProtocol - сделать простой обмен координатор-группа
+* FailureAtomicProtocol - учесть, что StateTransfer Должен быть выше по стеку чем данный протокол
 --------------
 Groups Core:
 * сделать тесты groups
