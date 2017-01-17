@@ -390,7 +390,8 @@ public final class FlushCoordinatorProtocol extends AbstractProtocol implements 
         phaseRestartRequired = false;
 
         if (logger.isLogEnabled(LogLevel.DEBUG))
-            logger.log(LogLevel.DEBUG, marker, messages.flushStateDetected(Strings.wrap(installingMembership.toString(), 4, 120), 
+            logger.log(LogLevel.DEBUG, marker, messages.flushStateDetected(installingMembership != null ? 
+                Strings.wrap(installingMembership.toString(), 4, 120) : "(not set)", 
                 coordinatorPhase));
         
         proceed();

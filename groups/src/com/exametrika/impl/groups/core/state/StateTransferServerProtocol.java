@@ -15,7 +15,6 @@ import com.exametrika.common.l10n.ILocalizedMessage;
 import com.exametrika.common.l10n.Messages;
 import com.exametrika.common.log.LogLevel;
 import com.exametrika.common.messaging.IAddress;
-import com.exametrika.common.messaging.IDeliveryHandler;
 import com.exametrika.common.messaging.ILiveNodeProvider;
 import com.exametrika.common.messaging.IMessage;
 import com.exametrika.common.messaging.IMessageFactory;
@@ -69,7 +68,7 @@ public final class StateTransferServerProtocol extends AbstractProtocol implemen
 
     public StateTransferServerProtocol(String channelName, IMessageFactory messageFactory, IMembershipManager membershipManager, 
         IFailureDetector failureDetector, IStateTransferFactory stateTransferFactory, IStateStore stateStore,
-        ICompartment compartment, IDeliveryHandler deliveryHandler, ISerializationRegistry serializationRegistry,
+        ICompartment compartment, ISerializationRegistry serializationRegistry,
         long saveSnapshotPeriod, long transferLogRecordPeriod, int transferLogMessagesCount,  
         int minLockQueueCapacity, IFlowController<IAddress> flowController)
     {
@@ -80,7 +79,6 @@ public final class StateTransferServerProtocol extends AbstractProtocol implemen
         Assert.notNull(stateTransferFactory);
         Assert.notNull(stateStore);
         Assert.notNull(compartment);
-        Assert.notNull(deliveryHandler);
         Assert.notNull(serializationRegistry);
         
         this.membershipManager = membershipManager;

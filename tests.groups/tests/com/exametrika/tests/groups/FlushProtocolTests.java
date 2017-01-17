@@ -106,7 +106,7 @@ public class FlushProtocolTests
         createGroup(wellKnownAddresses, channelFactory, Collections.<Integer>asSet());
          
         sequencer.waitAll(COUNT, 5000, 0);
-        int coordinatorNodeIndex = findNodeIndex(channelFactory.flushParticipants.get(0).flush.getNewMembership().getGroup().getCoordinator());
+        int coordinatorNodeIndex = findNodeIndex(0, channelFactory.flushParticipants.get(0).flush.getNewMembership().getGroup().getCoordinator());
         int[] nodes = selectNodes(0, COUNT, 2, coordinatorNodeIndex);
         FailureDetectionProtocolTests.failChannel(channels[nodes[0]]);
         IOs.close(channels[nodes[1]]);
@@ -125,7 +125,7 @@ public class FlushProtocolTests
         createGroup(wellKnownAddresses, channelFactory, Collections.<Integer>asSet());
          
         sequencer.waitAll(COUNT, 5000, 0);
-        int coordinatorNodeIndex = findNodeIndex(channelFactory.flushParticipants.get(0).flush.getNewMembership().getGroup().getCoordinator());
+        int coordinatorNodeIndex = findNodeIndex(0, channelFactory.flushParticipants.get(0).flush.getNewMembership().getGroup().getCoordinator());
         IOs.close(channels[coordinatorNodeIndex]);
         
         Threads.sleep(10000);
@@ -169,7 +169,7 @@ public class FlushProtocolTests
         checkMembership(channelFactory, Collections.<Integer>asSet(0, 1));
 
         failOnFlush(channelFactory);
-        int coordinatorNodeIndex = findNodeIndex(channelFactory.flushParticipants.get(2).flush.getNewMembership().getGroup().getCoordinator());
+        int coordinatorNodeIndex = findNodeIndex(2, channels[2].getMembershipService().getMembership().getGroup().getCoordinator());
         int[] nodes = selectNodes(2, COUNT, 4, coordinatorNodeIndex);
         
         channels[0].start();
@@ -202,7 +202,7 @@ public class FlushProtocolTests
         checkMembership(channelFactory, Collections.<Integer>asSet(0, 1));
 
         failOnFlush(channelFactory);
-        int coordinatorNodeIndex = findNodeIndex(channelFactory.flushParticipants.get(2).flush.getNewMembership().getGroup().getCoordinator());
+        int coordinatorNodeIndex = findNodeIndex(2, channels[2].getMembershipService().getMembership().getGroup().getCoordinator());
         int[] nodes = selectNodes(2, COUNT, 2, coordinatorNodeIndex);
         
         channels[0].start();
@@ -272,9 +272,9 @@ public class FlushProtocolTests
         assertThat(membership.getGroup().getMembers().size(), is(COUNT - skipIndexes.size()));
     }
     
-    private int findNodeIndex(INode node)
+    private int findNodeIndex(int startWith, INode node)
     {
-        for (int i = 0; i < COUNT; i++)
+        for (int i = startWith; i < COUNT; i++)
         {
             if (channels[i].getMembershipService().getLocalNode().equals(node))
                 return i;
