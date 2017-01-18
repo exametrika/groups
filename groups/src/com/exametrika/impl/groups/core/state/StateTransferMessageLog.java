@@ -17,8 +17,8 @@ import com.exametrika.common.io.impl.Serialization;
 import com.exametrika.common.messaging.IMessage;
 import com.exametrika.common.messaging.impl.message.Message;
 import com.exametrika.common.messaging.impl.message.MessageSerializers;
-import com.exametrika.common.rawdb.RawDatabaseException;
 import com.exametrika.common.utils.Assert;
+import com.exametrika.common.utils.Exceptions;
 import com.exametrika.common.utils.IOs;
 
 
@@ -61,7 +61,7 @@ public final class StateTransferMessageLog
         }
         catch (IOException e)
         {
-            throw new RawDatabaseException(e);
+            Exceptions.wrapAndThrow(e);
         }
         finally
         {
@@ -92,7 +92,7 @@ public final class StateTransferMessageLog
         }
         catch (IOException e)
         {
-            throw new RawDatabaseException(e);
+            Exceptions.wrapAndThrow(e);
         }
         finally
         {

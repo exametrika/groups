@@ -256,7 +256,7 @@ public final class StateTransferServerProtocol extends AbstractProtocol implemen
         }
         else if ((stateSaveTask != null || (stateTransfer != null && stateTransfer.saveSnapshotTask != null)))
         {
-            if (message.getDestination() instanceof GroupAddress && server.isModifyingMessage(message.getPart()))
+            if (server.classifyMessage(message.getPart()) != IStateTransferServer.MessageType.NON_STATE)
             {
                 if (pendingMessages == null)
                     pendingMessages = new ArrayList<IMessage>();
@@ -281,7 +281,8 @@ public final class StateTransferServerProtocol extends AbstractProtocol implemen
         }
         else
         {
-            if (message.getDestination() instanceof GroupAddress && server.isModifyingMessage(message.getPart()))
+            if (message.getDestination() instanceof GroupAddress && 
+                server.classifyMessage(message.getPart()) == IStateTransferServer.MessageType.STATE_WRITE)
             {
                 if (stateTransfer != null)
                     stateTransfer.addMessage(message);

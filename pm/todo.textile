@@ -1,8 +1,8 @@
+* переделать StateStransferMessageLog в объектно-ориентированный с состоянием RandomAccessFile, позволяет дописать в файл или позиционироваться в начало и прочитать пачками по несколько сообщений в порядке записи. Также имеет операцию close (наследуется от Closeable). Использовать его (однократно) при записи/чтении сообщения передачи состояния, и многократно при сохранении/чтении pending сообщений при записи снимка
+* в случае больших снимков в StateTransferServerProtocol вместо ограничения по flowControl лучше сделать запись pending сообщений в файл с последующим проигрыванием их, если их количество превысило заданный порог. Просто накапливаем сообщения и если суммарный размер сообщений больше заданного, аппендим в MessagesLog и чистим массив pendingMessages. Перед проигрыванием дописываем хвост сообщений в конец файла, очищаем массив, позиционируемся на начало файла и проигрываем пачками заданного размера. FlowControl убираем
+
 * Сделать StateTransfer Тесты
-  - сделать TestMessagingProtocol - посылает сообщения группе вне flush по таймеру из текущего координатора группы. Сообщения меняют текущее состояние узла (инкрементируют первые четыре байта, как int)
-  - доделать все тесты
-  - code review
-* [ ] проверить групповые протоколы на потокобезопасность при stop/start
+* проверить групповые протоколы на потокобезопасность при stop/start. Можно сделать закрытие channel через compartment, чтобы не требовалась синхронизация. По аналогии с gracefull вызывается stop в контексте compartment, проверка на stopped и присваивание stopped = true выполняется до вызова и под синхронизатором, остальные без синхронизации
 * LocalSendOptimizationProtocol introduces delays in handling local messages, it is necessary to implement process method in ICompartmentProcessor which is called on each dispatch iteration and move message handling logics into it. How to do it performantly, so only exactly this only protocol gets called, not others
 * make GracefullCloseStrategy two phase - request and close phase to consistently close protocols or better make close protocol mechanics based on protocol stop (now some protocols use stop, some - GracefullCloseStrategy, we need single approach)
 * прогнать все тесты группы, чтобы работали

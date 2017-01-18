@@ -352,9 +352,12 @@ public class StateTransferProtocolTests
         }
         
         @Override
-        public boolean isModifyingMessage(IMessagePart part)
+        public MessageType classifyMessage(IMessagePart part)
         {
-            return true;
+            if (part instanceof TestBufferMessagePart)
+                return MessageType.STATE_WRITE;
+            else
+                return MessageType.NON_STATE;
         }
 
         @Override
@@ -399,7 +402,7 @@ public class StateTransferProtocolTests
     
     private class TestStateStore implements IStateStore
     {
-        private ByteArray buffer = createBuffer(17, 1000000);
+        private ByteArray buffer = createBuffer(17, 100000);
         private ByteArray savedBuffer;
         
         @Override
@@ -591,10 +594,10 @@ public class StateTransferProtocolTests
         private long flushTimeout = 10000;
         private long gracefulCloseTimeout = 10000;
         private long maxStateTransferPeriod = Integer.MAX_VALUE;
-        private long stateSizeThreshold = 1000000;
+        private long stateSizeThreshold = 100000;
         private long saveSnapshotPeriod = 1000;
         private long transferLogRecordPeriod = 1000;
-        private int transferLogMessagesCount = 100;
+        private int transferLogMessagesCount = 2;
         private int minLockQueueCapacity = 10000000;
         private List<TestStateTransferFactory> stateTransferFactories = new ArrayList<TestStateTransferFactory>();
         private MembershipTracker membershipTracker;

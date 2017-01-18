@@ -18,12 +18,24 @@ import com.exametrika.common.messaging.IMessagePart;
 public interface IStateTransferServer
 {
     /**
-     * Does specified message part modify replicated group state.
-     *
-     * @param part message part
-     * @return true if specified message part modifies replicated group state
+     * Type of message received by server.
      */
-    boolean isModifyingMessage(IMessagePart part);
+    enum MessageType
+    {
+        /** Message which is not involved in replicated read/write operations.*/
+        NON_STATE,
+        /** Message which is used to read replicated state.*/
+        STATE_READ,
+        /** Message which is used to write replicated state.*/
+        STATE_WRITE
+    }
+    /**
+     * Classifies incoming message to segregate state read/write messages.
+     *
+     * @param part message part to classify
+     * @return message type
+     */
+    MessageType classifyMessage(IMessagePart part);
     
     /**
      * Saves snapshot of group state into the specified file.
