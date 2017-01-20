@@ -3,6 +3,7 @@
  */
 package com.exametrika.impl.groups.core.state;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -60,8 +61,7 @@ public final class StateTransferServerProtocol extends AbstractProtocol implemen
     private List<IMessage> pendingMessages;
     private final long transferLogRecordPeriod;
     private final int transferLogMessagesCount;
-    private boolean flushGranted;
-    private IStateTransferServer server;
+    private final IStateTransferServer server;
     private boolean snapshotRequest;
     private int queueCapacity;
     private boolean flowLocked;
@@ -199,13 +199,11 @@ public final class StateTransferServerProtocol extends AbstractProtocol implemen
     public void startFlush(IFlush flush)
     {
         this.flush = flush;
-        flushGranted = false;
         
         if ((stateSaveTask == null && (stateTransfer == null || stateTransfer.saveSnapshotTask == null)))
         {
             Assert.checkState(pendingMessages == null);
             flush.grantFlush(this);
-            flushGranted = true;
         }
     }
 
@@ -218,7 +216,14 @@ public final class StateTransferServerProtocol extends AbstractProtocol implemen
     public void processFlush()
     {
         if (snapshotRequest)
+        {
+            Assert.notNull(stateTransfer);
+            
+            snapshotRequest = false;
             stateTransfer.saveSnapshot();
+        }
+        else if (stateTransfer != null)
+            stateTransfer.tryMakeBundle();
         
         flush.grantFlush(this);
         processing = true;
@@ -257,25 +262,7 @@ public final class StateTransferServerProtocol extends AbstractProtocol implemen
         else if ((stateSaveTask != null || (stateTransfer != null && stateTransfer.saveSnapshotTask != null)))
         {
             if (server.classifyMessage(message.getPart()) != IStateTransferServer.MessageType.NON_STATE)
-            {
-                if (pendingMessages == null)
-                    pendingMessages = new ArrayList<IMessage>();
-                
-                pendingMessages.add(message);
-                
-                queueCapacity += message.getSize();
-                if (!flowLocked && queueCapacity >= minLockQueueCapacity)
-                {
-                    flowLocked = true;
-                    flowController.lockFlow(message.getSource());
-                }
-                
-                if (flush != null && flushGranted)
-                {
-                    flush.revokeFlush(this);
-                    flushGranted = false;
-                }
-            }
+                addPendingMessage(message);
             else
                 receiver.receive(message);
         }
@@ -291,6 +278,21 @@ public final class StateTransferServerProtocol extends AbstractProtocol implemen
             }
             
             receiver.receive(message);
+        }
+    }
+
+    private void addPendingMessage(IMessage message)
+    {
+        if (pendingMessages == null)
+            pendingMessages = new ArrayList<IMessage>();
+        
+        pendingMessages.add(message);
+        
+        queueCapacity += message.getSize();
+        if (!flowLocked && queueCapacity >= minLockQueueCapacity)
+        {
+            flowLocked = true;
+            flowController.lockFlow(message.getSource());
         }
     }
 
@@ -314,11 +316,7 @@ public final class StateTransferServerProtocol extends AbstractProtocol implemen
         }
         
         if (flush != null && !processing)
-        {
-            Assert.checkState(!flushGranted);
-            
             flush.grantFlush(this);
-        }
     }
     
     private class StateTransfer implements ICompletionHandler
@@ -360,6 +358,7 @@ public final class StateTransferServerProtocol extends AbstractProtocol implemen
             if (saveSnapshotTask != null)
             {
                 saveSnapshotTask.cancel();
+                saveSnapshotTask = null;
                 deliverPendingMessages();
                 
                 if (logger.isLogEnabled(LogLevel.DEBUG))
@@ -382,7 +381,7 @@ public final class StateTransferServerProtocol extends AbstractProtocol implemen
             if (saveSnapshotTask != null)
             {
                 send(messageFactory.create(client, new StateTransferResponseMessagePart(true, last, false), 
-                    MessageFlags.LOW_PRIORITY, Collections.singletonList(saveSnapshotTask.getFile())));
+                    MessageFlags.LOW_PRIORITY, Collections.singletonList((File)value)));
                 
                 saveSnapshotTask = null;
                 snapshotSaved = true;
@@ -393,7 +392,7 @@ public final class StateTransferServerProtocol extends AbstractProtocol implemen
             if (saveMessagesTask != null)
             {
                 send(messageFactory.create(client, new StateTransferResponseMessagePart(false, last, false), 
-                    MessageFlags.LOW_PRIORITY, Collections.singletonList(saveMessagesTask.getFile())));
+                    MessageFlags.LOW_PRIORITY, Collections.singletonList((File)value)));
                 
                 saveMessagesTask = null;
             }

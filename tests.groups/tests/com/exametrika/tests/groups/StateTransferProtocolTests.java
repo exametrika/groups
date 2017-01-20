@@ -18,6 +18,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.junit.After;
 import org.junit.Test;
 
+import com.exametrika.api.groups.core.IGroup;
 import com.exametrika.api.groups.core.IMembership;
 import com.exametrika.api.groups.core.IMembershipListener;
 import com.exametrika.api.groups.core.INode;
@@ -26,9 +27,7 @@ import com.exametrika.common.io.IDeserialization;
 import com.exametrika.common.io.ISerialization;
 import com.exametrika.common.io.ISerializationRegistry;
 import com.exametrika.common.io.impl.AbstractSerializer;
-import com.exametrika.common.l10n.DefaultMessage;
-import com.exametrika.common.l10n.ILocalizedMessage;
-import com.exametrika.common.l10n.Messages;
+import com.exametrika.common.messaging.IAddress;
 import com.exametrika.common.messaging.IChannel;
 import com.exametrika.common.messaging.ILiveNodeProvider;
 import com.exametrika.common.messaging.IMessage;
@@ -50,6 +49,7 @@ import com.exametrika.common.messaging.impl.protocols.failuredetection.LiveNodeM
 import com.exametrika.common.messaging.impl.transports.ConnectionManager;
 import com.exametrika.common.messaging.impl.transports.tcp.TcpTransport;
 import com.exametrika.common.tests.Sequencer;
+import com.exametrika.common.tests.Tests;
 import com.exametrika.common.utils.Assert;
 import com.exametrika.common.utils.ByteArray;
 import com.exametrika.common.utils.Bytes;
@@ -70,26 +70,20 @@ import com.exametrika.impl.groups.core.flush.FlushCoordinatorProtocol;
 import com.exametrika.impl.groups.core.flush.FlushParticipantProtocol;
 import com.exametrika.impl.groups.core.flush.IFlush;
 import com.exametrika.impl.groups.core.flush.IFlushParticipant;
-import com.exametrika.impl.groups.core.membership.GroupAddress;
 import com.exametrika.impl.groups.core.membership.IMembershipManager;
 import com.exametrika.impl.groups.core.membership.IPreparedMembershipListener;
 import com.exametrika.impl.groups.core.membership.MembershipManager;
 import com.exametrika.impl.groups.core.membership.MembershipTracker;
 import com.exametrika.impl.groups.core.membership.Memberships;
 import com.exametrika.impl.groups.core.state.StateTransferClientProtocol;
-import com.exametrika.impl.groups.core.state.StateTransferResponseMessagePart;
 import com.exametrika.impl.groups.core.state.StateTransferServerProtocol;
-import com.exametrika.impl.groups.core.state.StateTransferResponseMessagePart.IMessages;
 import com.exametrika.spi.groups.IDiscoveryStrategy;
 import com.exametrika.spi.groups.IStateStore;
 import com.exametrika.spi.groups.IStateTransferClient;
 import com.exametrika.spi.groups.IStateTransferFactory;
 import com.exametrika.spi.groups.IStateTransferServer;
 import com.exametrika.tests.common.messaging.ReceiverMock;
-import com.exametrika.tests.groups.FlushProtocolTests.FlushParticipantMock;
-import com.exametrika.tests.groups.FlushProtocolTests.TestChannelFactory;
 import com.exametrika.tests.groups.MembershipManagerTests.PropertyProviderMock;
-import com.sun.xml.internal.bind.annotation.OverrideAnnotationOf;
 
 /**
  * The {@link StateTransferProtocolTests} are tests for flush.
@@ -100,7 +94,8 @@ public class StateTransferProtocolTests
 {
     private static final int COUNT = 10;
     private GroupChannel[] channels = new GroupChannel[COUNT];
-    private Sequencer sequencer = new Sequencer();
+    private Sequencer flushSequencer = new Sequencer();
+    private Sequencer snapshotSequencer = new Sequencer();
     
     @After
     public void tearDown()
@@ -126,11 +121,10 @@ public class StateTransferProtocolTests
     {
         Set<String> wellKnownAddresses = new ConcurrentHashMap<String, String>().keySet("");
         TestChannelFactory channelFactory = new TestChannelFactory(new WellKnownAddressesDiscoveryStrategy(wellKnownAddresses));
-        failOnFlush(channelFactory);
         createGroup(wellKnownAddresses, channelFactory, Collections.<Integer>asSet());
          
-        sequencer.waitAll(COUNT, 5000, 0);
-        int coordinatorNodeIndex = findNodeIndex(0, channelFactory.flushParticipants.get(0).flush.getNewMembership().getGroup().getCoordinator());
+        flushSequencer.waitAll(COUNT, 5000, 0);
+        int coordinatorNodeIndex = findNodeIndex(0, channelFactory.messageSenders.get(0).flush.getNewMembership().getGroup().getCoordinator());
         int[] nodes = selectNodes(0, COUNT, 2, coordinatorNodeIndex);
         FailureDetectionProtocolTests.failChannel(channels[nodes[0]]);
         IOs.close(channels[nodes[1]]);
@@ -145,11 +139,10 @@ public class StateTransferProtocolTests
     {
         Set<String> wellKnownAddresses = new ConcurrentHashMap<String, String>().keySet("");
         TestChannelFactory channelFactory = new TestChannelFactory(new WellKnownAddressesDiscoveryStrategy(wellKnownAddresses));
-        failOnFlush(channelFactory);
         createGroup(wellKnownAddresses, channelFactory, Collections.<Integer>asSet());
          
-        sequencer.waitAll(COUNT, 5000, 0);
-        int coordinatorNodeIndex = findNodeIndex(0, channelFactory.flushParticipants.get(0).flush.getNewMembership().getGroup().getCoordinator());
+        flushSequencer.waitAll(COUNT, 5000, 0);
+        int coordinatorNodeIndex = findNodeIndex(0, channelFactory.messageSenders.get(0).flush.getNewMembership().getGroup().getCoordinator());
         IOs.close(channels[coordinatorNodeIndex]);
         
         Threads.sleep(10000);
@@ -158,7 +151,7 @@ public class StateTransferProtocolTests
     }
 
     @Test
-    public void testChangeMembership() throws Exception
+    public void testStateTransfer() throws Exception
     {
         Set<String> wellKnownAddresses = new ConcurrentHashMap<String, String>().keySet("");
         TestChannelFactory channelFactory = new TestChannelFactory(new WellKnownAddressesDiscoveryStrategy(wellKnownAddresses));
@@ -171,18 +164,36 @@ public class StateTransferProtocolTests
         channels[0].start();
         channels[1].start();
         
-        Threads.sleep(3000);
-        
-        FailureDetectionProtocolTests.failChannel(channels[COUNT - 1]);
-        IOs.close(channels[COUNT - 2]);
-        
         Threads.sleep(10000);
         
-        checkMembership(channelFactory, Collections.<Integer>asSet(COUNT - 1, COUNT - 2));
+        checkMembership(channelFactory, Collections.<Integer>asSet());
     }
     
     @Test
-    public void testChangeMembershipNonCoordinatorFailureOnFlush() throws Exception
+    public void testClientFailureBeforeFlush() throws Exception
+    {
+        Set<String> wellKnownAddresses = new ConcurrentHashMap<String, String>().keySet("");
+        TestChannelFactory channelFactory = new TestChannelFactory(new WellKnownAddressesDiscoveryStrategy(wellKnownAddresses));
+        createGroup(wellKnownAddresses, channelFactory, Collections.<Integer>asSet(0, 1));
+         
+        Threads.sleep(10000);
+         
+        checkMembership(channelFactory, Collections.<Integer>asSet(0, 1));
+
+        channels[0].start();
+        channels[1].start();
+        
+        snapshotSequencer.waitAll(2, 5000, 0);
+        
+        IOs.close(channels[0]);
+        
+        Threads.sleep(10000);
+        
+        checkMembership(channelFactory, Collections.<Integer>asSet(0));
+    }
+    
+    @Test
+    public void testClientFailureAfterFlush() throws Exception
     {
         Set<String> wellKnownAddresses = new ConcurrentHashMap<String, String>().keySet("");
         TestChannelFactory channelFactory = new TestChannelFactory(new WellKnownAddressesDiscoveryStrategy(wellKnownAddresses));
@@ -193,29 +204,45 @@ public class StateTransferProtocolTests
         checkMembership(channelFactory, Collections.<Integer>asSet(0, 1));
 
         failOnFlush(channelFactory);
-        int coordinatorNodeIndex = findNodeIndex(2, channels[2].getMembershipService().getMembership().getGroup().getCoordinator());
-        int[] nodes = selectNodes(2, COUNT, 4, coordinatorNodeIndex);
         
         channels[0].start();
         channels[1].start();
         
-        Threads.sleep(3000);
+        flushSequencer.waitAll(COUNT - 2, 5000, 0);
         
-        FailureDetectionProtocolTests.failChannel(channels[nodes[0]]);
-        IOs.close(channels[nodes[1]]);
-        
-        sequencer.waitAll(COUNT - 6, 5000, 0);
-        
-        FailureDetectionProtocolTests.failChannel(channels[nodes[2]]);
-        IOs.close(channels[nodes[3]]);
+        IOs.close(channels[0]);
         
         Threads.sleep(10000);
         
-        checkMembership(channelFactory, Collections.<Integer>asSet(nodes[0], nodes[1], nodes[2], nodes[3]));
+        checkMembership(channelFactory, Collections.<Integer>asSet(0));
     }
     
     @Test
-    public void testChangeMembershipCoordinatorFailureOnFlush() throws Exception
+    public void testServerFailureBeforeFlush() throws Exception
+    {
+        Set<String> wellKnownAddresses = new ConcurrentHashMap<String, String>().keySet("");
+        TestChannelFactory channelFactory = new TestChannelFactory(new WellKnownAddressesDiscoveryStrategy(wellKnownAddresses));
+        createGroup(wellKnownAddresses, channelFactory, Collections.<Integer>asSet(0, 1));
+         
+        Threads.sleep(10000);
+         
+        checkMembership(channelFactory, Collections.<Integer>asSet(0, 1));
+
+        channels[0].start();
+        channels[1].start();
+        
+        snapshotSequencer.waitAll(2, 5000, 0);
+        int index = getStateTransferServer(0, channelFactory);
+        
+        IOs.close(channels[index]);
+        
+        Threads.sleep(10000);
+        
+        checkMembership(channelFactory, Collections.<Integer>asSet(index));
+    }
+    
+    @Test
+    public void testServerFailureAfterFlush() throws Exception
     {
         Set<String> wellKnownAddresses = new ConcurrentHashMap<String, String>().keySet("");
         TestChannelFactory channelFactory = new TestChannelFactory(new WellKnownAddressesDiscoveryStrategy(wellKnownAddresses));
@@ -226,23 +253,144 @@ public class StateTransferProtocolTests
         checkMembership(channelFactory, Collections.<Integer>asSet(0, 1));
 
         failOnFlush(channelFactory);
-        int coordinatorNodeIndex = findNodeIndex(2, channels[2].getMembershipService().getMembership().getGroup().getCoordinator());
-        int[] nodes = selectNodes(2, COUNT, 2, coordinatorNodeIndex);
         
         channels[0].start();
         channels[1].start();
         
-        Threads.sleep(3000);
+        flushSequencer.waitAll(COUNT - 2, 5000, 0);
+        int index = getStateTransferServer(0, channelFactory);
         
-        FailureDetectionProtocolTests.failChannel(channels[nodes[0]]);
-        IOs.close(channels[nodes[1]]);
-        
-        sequencer.waitAll(COUNT - 3, 5000, 0);
-        FailureDetectionProtocolTests.failChannel(channels[coordinatorNodeIndex]);
+        IOs.close(channels[index]);
         
         Threads.sleep(10000);
         
-        checkMembership(channelFactory, Collections.<Integer>asSet(nodes[0], nodes[1], coordinatorNodeIndex));
+        checkMembership(channelFactory, Collections.<Integer>asSet(index));
+    }
+    
+    @Test
+    public void testCoordinatorFailureBeforeFlush() throws Exception
+    {
+        Set<String> wellKnownAddresses = new ConcurrentHashMap<String, String>().keySet("");
+        TestChannelFactory channelFactory = new TestChannelFactory(new WellKnownAddressesDiscoveryStrategy(wellKnownAddresses));
+        createGroup(wellKnownAddresses, channelFactory, Collections.<Integer>asSet(0, 1));
+         
+        Threads.sleep(10000);
+         
+        checkMembership(channelFactory, Collections.<Integer>asSet(0, 1));
+
+        channels[0].start();
+        channels[1].start();
+        
+        snapshotSequencer.waitAll(2, 5000, 0);
+        IGroup group = channelFactory.messageSenders.get(2).membership.getGroup();
+        int index = group.getMembers().indexOf(group.getCoordinator());
+        
+        IOs.close(channels[index]);
+        
+        Threads.sleep(10000);
+        
+        checkMembership(channelFactory, Collections.<Integer>asSet(index));
+    }
+    
+    @Test
+    public void testCoordinatorFailureAfterFlush() throws Exception
+    {
+        Set<String> wellKnownAddresses = new ConcurrentHashMap<String, String>().keySet("");
+        TestChannelFactory channelFactory = new TestChannelFactory(new WellKnownAddressesDiscoveryStrategy(wellKnownAddresses));
+        createGroup(wellKnownAddresses, channelFactory, Collections.<Integer>asSet(0, 1));
+         
+        Threads.sleep(10000);
+         
+        checkMembership(channelFactory, Collections.<Integer>asSet(0, 1));
+
+        failOnFlush(channelFactory);
+        
+        channels[0].start();
+        channels[1].start();
+        
+        flushSequencer.waitAll(COUNT - 2, 5000, 0);
+        IGroup group = channelFactory.messageSenders.get(2).membership.getGroup();
+        int index = group.getMembers().indexOf(group.getCoordinator());
+        
+        IOs.close(channels[index]);
+        
+        Threads.sleep(10000);
+        
+        checkMembership(channelFactory, Collections.<Integer>asSet(index));
+    }
+    
+    @Test
+    public void testGroupFailureBeforeFlush() throws Exception
+    {
+        Set<String> wellKnownAddresses = new ConcurrentHashMap<String, String>().keySet("");
+        TestChannelFactory channelFactory = new TestChannelFactory(new WellKnownAddressesDiscoveryStrategy(wellKnownAddresses));
+        createGroup(wellKnownAddresses, channelFactory, Collections.<Integer>asSet(0, 1));
+         
+        Threads.sleep(10000);
+         
+        checkMembership(channelFactory, Collections.<Integer>asSet(0, 1));
+
+        channels[0].start();
+        channels[1].start();
+        
+        snapshotSequencer.waitAll(2, 5000, 0);
+        Set<Integer> skipIndexes = new HashSet<Integer>();
+        for (int i = 2; i < COUNT; i++)
+        {
+            IOs.close(channels[i]);
+            skipIndexes.add(i);
+        }
+        
+        Threads.sleep(10000);
+        
+        checkMembership(channelFactory, skipIndexes);
+    }
+    
+    @Test
+    public void testGroupFailureAfterFlush() throws Exception
+    {
+        Set<String> wellKnownAddresses = new ConcurrentHashMap<String, String>().keySet("");
+        TestChannelFactory channelFactory = new TestChannelFactory(new WellKnownAddressesDiscoveryStrategy(wellKnownAddresses));
+        createGroup(wellKnownAddresses, channelFactory, Collections.<Integer>asSet(0, 1));
+         
+        Threads.sleep(10000);
+         
+        checkMembership(channelFactory, Collections.<Integer>asSet(0, 1));
+
+        failOnFlush(channelFactory);
+        
+        channels[0].start();
+        channels[1].start();
+        
+        flushSequencer.waitAll(COUNT - 2, 5000, 0);
+        Set<Integer> skipIndexes = new HashSet<Integer>();
+        for (int i = 2; i < COUNT; i++)
+        {
+            IOs.close(channels[i]);
+            skipIndexes.add(i);
+        }
+        
+        Threads.sleep(10000);
+        
+        checkMembership(channelFactory, skipIndexes);
+    }
+    
+    @Test
+    public void testSaveStateInExternalStore() throws Exception
+    {
+        Set<String> wellKnownAddresses = new ConcurrentHashMap<String, String>().keySet("");
+        TestChannelFactory channelFactory = new TestChannelFactory(new WellKnownAddressesDiscoveryStrategy(wellKnownAddresses));
+        createGroup(wellKnownAddresses, channelFactory, Collections.<Integer>asSet());
+         
+        Threads.sleep(5000);
+         
+        checkMembership(channelFactory, Collections.<Integer>asSet());
+        
+        disableSend(channelFactory);
+        
+        Threads.sleep(5000);
+        
+        assertThat(channelFactory.stateTransferFactories.get(0).state, is(channelFactory.stateStore.savedBuffer));
     }
     
     private void createGroup(Set<String> wellKnownAddresses, TestChannelFactory channelFactory, Set<Integer> skipIndexes)
@@ -326,13 +474,6 @@ public class StateTransferProtocolTests
         return indexes;
     }
     
-    private void failOnFlush(TestChannelFactory factory)
-    {
-        factory.failOnFlush = true;
-        for (FlushParticipantMock participant : factory.flushParticipants)
-            participant.failOnFlush = true;
-    }
-    
     private ByteArray createBuffer(int base, int length)
     {
         byte[] buffer = new byte[length];
@@ -340,6 +481,38 @@ public class StateTransferProtocolTests
             buffer[i] = (byte)(base + i);
         
         return new ByteArray(buffer);
+    }
+    
+    private void failOnFlush(TestChannelFactory channelFactory)
+    {
+        for (TestMessageSender sender : channelFactory.messageSenders)
+            sender.failOnFlush = true;
+    }
+    
+    private void disableSend(TestChannelFactory channelFactory)
+    {
+        for (TestMessageSender sender : channelFactory.messageSenders)
+            sender.disableSend = true;
+    }
+    
+    private int getStateTransferServer(int clientIndex, TestChannelFactory channelFactory)
+    {
+        try
+        {
+            IAddress server = Tests.get(Tests.get(channelFactory.clientProtocols.get(clientIndex), "stateTransfer"), "server");
+            for (int i = 0; i < COUNT; i++)
+            {
+                IChannel channel = channels[i];
+                if (channel.getLiveNodeProvider().getLocalNode().equals(server))
+                    return i;
+            }
+            
+            return -1;
+        }
+        catch (Exception e)
+        {
+            throw new RuntimeException(e);
+        }
     }
 
     private class TestStateTransferServer implements IStateTransferServer
@@ -380,6 +553,7 @@ public class StateTransferProtocolTests
         public void loadSnapshot(File file)
         {
             factory.state = Files.readBytes(file);
+            snapshotSequencer.allowSingle();
         }
     }
     
@@ -424,7 +598,7 @@ public class StateTransferProtocolTests
         }
     }
     
-    public final class TestBufferMessagePart implements IMessagePart
+    private static final class TestBufferMessagePart implements IMessagePart
     {
         private final ByteArray buffer;
 
@@ -445,7 +619,7 @@ public class StateTransferProtocolTests
         }
     }
     
-    public final class TestBufferMessagePartSerializer extends AbstractSerializer
+    private static final class TestBufferMessagePartSerializer extends AbstractSerializer
     {
         public static final UUID ID = UUID.fromString("b9ca8da1-e56d-475f-b59e-220baa7d2d19");
      
@@ -472,10 +646,12 @@ public class StateTransferProtocolTests
     
     private class TestMessageSender extends AbstractProtocol implements IFlushParticipant
     {
+        public boolean failOnFlush;
         private final TestStateTransferFactory stateTransferFactory;
         private boolean coordinator;
         private IFlush flush;
         private IMembership membership;
+        private boolean disableSend;
 
         public TestMessageSender(String channelName, IMessageFactory messageFactory, TestStateTransferFactory stateTransferFactory)
         {
@@ -519,6 +695,8 @@ public class StateTransferProtocolTests
             this.flush = flush;
             this.membership = flush.getNewMembership();
             flush.grantFlush(this);
+            if (failOnFlush)
+                flushSequencer.allowSingle();
         }
 
         @Override
@@ -541,7 +719,7 @@ public class StateTransferProtocolTests
         @Override
         public void onTimer(long currentTime)
         {
-            if (coordinator && flush == null && membership != null)
+            if (coordinator && flush == null && membership != null && !disableSend)
             {
                 ByteArray buffer = stateTransferFactory.state.clone();
                 int counter = Bytes.readInt(buffer.getBuffer(), buffer.getOffset());
@@ -605,6 +783,7 @@ public class StateTransferProtocolTests
         private List<IGracefulCloseStrategy> gracefulCloseStrategies = new ArrayList<IGracefulCloseStrategy>();
         private TestStateStore stateStore = new TestStateStore();
         private List<TestMessageSender> messageSenders = new ArrayList<TestMessageSender>();
+        private List<StateTransferClientProtocol> clientProtocols = new ArrayList<StateTransferClientProtocol>();
         
         public TestChannelFactory(IDiscoveryStrategy discoveryStrategy)
         {
@@ -648,6 +827,7 @@ public class StateTransferProtocolTests
             protocols.add(stateTransferClientProtocol);
             discoveryProtocol.setGroupJoinStrategy(stateTransferClientProtocol);
             failureDetectionListeners.add(stateTransferClientProtocol);
+            clientProtocols.add(stateTransferClientProtocol);
             
             StateTransferServerProtocol stateTransferServerProtocol = new StateTransferServerProtocol(channelName, 
                 messageFactory, membershipManager, failureDetectionProtocol, stateTransferFactory, stateStore, serializationRegistry, 

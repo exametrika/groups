@@ -63,10 +63,6 @@ public final class StoreStateLoadTask implements ICompartmentTask
         {
             throw new ChannelException(e);
         }
-        catch (Exception e)
-        {
-            throw new ChannelException(e);
-        }
         finally
         {
             if (file != null)

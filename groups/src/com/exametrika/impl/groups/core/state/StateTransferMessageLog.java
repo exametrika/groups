@@ -3,7 +3,9 @@
  */
 package com.exametrika.impl.groups.core.state;
 
+import java.io.Closeable;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.util.List;
@@ -28,17 +30,54 @@ import com.exametrika.common.utils.IOs;
  * @threadsafety This class and its methods are thread safe.
  * @author Medvedev-A
  */
-public final class StateTransferMessageLog
+public final class StateTransferMessageLog implements Closeable
 {
-    public static void load(File path, List<IMessage> messages, ISerializationRegistry serializationRegistry)
+    private static final int MAGIC = 0x1717;
+    private final RandomAccessFile file;
+    
+    public StateTransferMessageLog(File path, boolean read)
     {
         RandomAccessFile file = null;
         try
         {
-            file = new RandomAccessFile(path, "r");
+            file = new RandomAccessFile(path, read ? "r" : "rw");
+        }
+        catch (FileNotFoundException e)
+        {
+            Exceptions.wrapAndThrow(e);
+        }
+        
+        this.file = file;
+    }
+    
+    @Override
+    public void close()
+    {
+        IOs.close(file);
+    }
+    
+    public void rewind()
+    {
+        try
+        {
+            file.seek(0);
+        }
+        catch (IOException e)
+        {
+            Exceptions.wrapAndThrow(e);
+        }
+    }
+    
+    public void load(List<IMessage> messages, ISerializationRegistry serializationRegistry)
+    {
+        try
+        {
+            if (file.getFilePointer() >= file.length())
+                return;
+            
             CRC32 crc = new CRC32();
             
-            Assert.isTrue(file.readShort() == 0x1717);
+            Assert.isTrue(file.readShort() == MAGIC);
             
             int length = file.readInt();
             int messageCount = file.readInt();
@@ -63,18 +102,12 @@ public final class StateTransferMessageLog
         {
             Exceptions.wrapAndThrow(e);
         }
-        finally
-        {
-            IOs.close(file);
-        }
     }
     
-    public static void save(List<IMessage> messages, File path, ISerializationRegistry serializationRegistry)
+    public void save(List<IMessage> messages, ISerializationRegistry serializationRegistry)
     {
-        RandomAccessFile file = null;
         try
         {
-            file = new RandomAccessFile(path, "rw");
             CRC32 crc = new CRC32();
             ByteOutputStream stream = new ByteOutputStream();
             Serialization serialization = new Serialization(serializationRegistry, true, stream);
@@ -84,7 +117,7 @@ public final class StateTransferMessageLog
             
             crc.update(stream.getBuffer(), 0, stream.getLength());
             
-            file.writeShort(0x1717);
+            file.writeShort(MAGIC);
             file.writeInt(stream.getLength());
             file.writeInt(messages.size());
             file.writeInt((int)crc.getValue());
@@ -94,13 +127,5 @@ public final class StateTransferMessageLog
         {
             Exceptions.wrapAndThrow(e);
         }
-        finally
-        {
-            IOs.close(file);
-        }
-    }
-    
-    private StateTransferMessageLog()
-    {
     }
 }

@@ -4,7 +4,6 @@
 package com.exametrika.impl.groups.core.state;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.List;
 
 import com.exametrika.common.compartment.ICompartmentTask;
@@ -12,8 +11,8 @@ import com.exametrika.common.io.ISerializationRegistry;
 import com.exametrika.common.messaging.ChannelException;
 import com.exametrika.common.messaging.IMessage;
 import com.exametrika.common.utils.Assert;
-import com.exametrika.common.utils.Exceptions;
 import com.exametrika.common.utils.ICompletionHandler;
+import com.exametrika.common.utils.IOs;
 
 /**
  * The {@link MessagesSaveTask} is task which saves messages to specified file.
@@ -27,7 +26,6 @@ public final class MessagesSaveTask implements ICompartmentTask<File>
     private final ICompletionHandler completionHandler;
     private final ISerializationRegistry serializationRegistry;
     private boolean canceled;
-    private File file;
 
     public MessagesSaveTask(List<IMessage> messages, ICompletionHandler completionHandler, ISerializationRegistry serializationRegistry)
     {
@@ -40,11 +38,6 @@ public final class MessagesSaveTask implements ICompartmentTask<File>
         this.serializationRegistry = serializationRegistry;
     }
     
-    public File getFile()
-    {
-        return file;
-    }
-    
     public void cancel()
     {
         canceled = true;
@@ -54,23 +47,25 @@ public final class MessagesSaveTask implements ICompartmentTask<File>
     public File execute()
     {
         File file = null;
+        StateTransferMessageLog log = null;
         try
         {
             file = File.createTempFile("groups-state", null);
-            StateTransferMessageLog.save(messages, file, serializationRegistry);
+            log = new StateTransferMessageLog(file, false);
+            log.save(messages, serializationRegistry);
             
             return file;
-        }
-        catch (IOException e)
-        {
-            throw new ChannelException(e);
         }
         catch (Exception e)
         {
             if (file != null)
                 file.delete();
             
-            return Exceptions.wrapAndThrow(e);
+            throw new ChannelException(e);
+        }
+        finally
+        {
+            IOs.close(log);
         }
     }
 
@@ -78,10 +73,7 @@ public final class MessagesSaveTask implements ICompartmentTask<File>
     public void onSucceeded(File result)
     {
         if (!canceled)
-        {
-            file = result;
             completionHandler.onSucceeded(result);
-        }
         else
             result.delete();
     }

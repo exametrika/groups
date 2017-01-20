@@ -50,13 +50,4 @@ public interface IFlush
      * @param participant which grants flush
      */
     void grantFlush(IFlushParticipant participant);
-    
-    /**
-     * Revokes previous granting of flush protocol. Called by flush participant, when it has previously granted
-     * flush, but new conditions require delaying flush protocol. Must be called before all participants granted flush, i.e.
-     * at least one participant must not grant flush protocol.
-     *
-     * @param participant which revokes granting of flush protocol
-     */
-    void revokeFlush(IFlushParticipant participant);
 }

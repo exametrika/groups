@@ -18,6 +18,7 @@ import com.exametrika.common.messaging.IMessage;
 import com.exametrika.common.messaging.IReceiver;
 import com.exametrika.common.utils.Assert;
 import com.exametrika.common.utils.ICompletionHandler;
+import com.exametrika.common.utils.IOs;
 
 /**
  * The {@link MessagesLoadTask} is task which loads messages from specified file.
@@ -66,7 +67,16 @@ public final class MessagesLoadTask implements ICompartmentTask
                     break;
                 
                 final List<IMessage> messages = new ArrayList<IMessage>();
-                StateTransferMessageLog.load(file, messages, serializationRegistry);
+                StateTransferMessageLog log = null;
+                try
+                {
+                    log = new StateTransferMessageLog(file, true);
+                    log.load(messages, serializationRegistry);
+                }
+                finally
+                {
+                    IOs.close(log);
+                }
                 
                 RunnableFuture future = new FutureTask(new Runnable()
                 {

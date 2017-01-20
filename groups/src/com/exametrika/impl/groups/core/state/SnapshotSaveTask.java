@@ -4,12 +4,10 @@
 package com.exametrika.impl.groups.core.state;
 
 import java.io.File;
-import java.io.IOException;
 
 import com.exametrika.common.compartment.ICompartmentTask;
 import com.exametrika.common.messaging.ChannelException;
 import com.exametrika.common.utils.Assert;
-import com.exametrika.common.utils.Exceptions;
 import com.exametrika.common.utils.ICompletionHandler;
 import com.exametrika.spi.groups.IStateTransferServer;
 
@@ -24,7 +22,6 @@ public final class SnapshotSaveTask implements ICompartmentTask<File>
     private final IStateTransferServer stateTransferServer;
     private final ICompletionHandler completionHandler;
     private boolean canceled;
-    private File file;
 
     public SnapshotSaveTask(IStateTransferServer stateTransferServer, ICompletionHandler completionHandler)
     {
@@ -33,11 +30,6 @@ public final class SnapshotSaveTask implements ICompartmentTask<File>
         
         this.stateTransferServer = stateTransferServer;
         this.completionHandler = completionHandler;
-    }
-    
-    public File getFile()
-    {
-        return file;
     }
     
     public void cancel()
@@ -56,16 +48,12 @@ public final class SnapshotSaveTask implements ICompartmentTask<File>
             
             return file;
         }
-        catch (IOException e)
-        {
-            throw new ChannelException(e);
-        }
         catch (Exception e)
         {
             if (file != null)
                 file.delete();
             
-            return Exceptions.wrapAndThrow(e);
+            throw new ChannelException(e);
         }
     }
 
@@ -73,10 +61,7 @@ public final class SnapshotSaveTask implements ICompartmentTask<File>
     public void onSucceeded(File result)
     {
         if (!canceled)
-        {
-            file = result;
             completionHandler.onSucceeded(result);
-        }
         else
             result.delete();
     }

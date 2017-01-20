@@ -261,13 +261,6 @@ public final class FlushParticipantProtocol extends AbstractProtocol implements 
             grantFlush();
     }
     
-    private void revokeFlush(IFlushParticipant participant)
-    {
-        Assert.checkState(!notGrantedParticipants.isEmpty());
-
-        notGrantedParticipants.add(participant);
-    }
-    
     private void grantFlush()
     {
         notGrantedParticipants = null;
@@ -341,13 +334,6 @@ public final class FlushParticipantProtocol extends AbstractProtocol implements 
         {
             if (!closed)
                 FlushParticipantProtocol.this.grantFlush(participant);
-        }
-        
-        @Override
-        public void revokeFlush(IFlushParticipant participant)
-        {
-            if (!closed)
-                FlushParticipantProtocol.this.revokeFlush(participant);
         }
         
         @Override
