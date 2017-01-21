@@ -143,9 +143,6 @@ public final class FlushParticipantProtocol extends AbstractProtocol implements 
 
             for (IFlushParticipant participant : participants)
                 participant.startFlush(flush);
-            
-            if (notGrantedParticipants.isEmpty())
-                grantFlush();
         }
         else if (message.getPart() instanceof FlushMessagePart && 
             ((FlushMessagePart)message.getPart()).getType() == FlushMessagePart.Type.PROCESS)
@@ -165,13 +162,16 @@ public final class FlushParticipantProtocol extends AbstractProtocol implements 
                 logger.log(LogLevel.DEBUG, marker, messages.processFlush());
 
             for (IFlushParticipant participant : participants)
-                participant.beforeProcessFlush();
+            {
+                if (participant.isFlushProcessingRequired(flush))
+                    participant.beforeProcessFlush();
+            }
             
             for (IFlushParticipant participant : participants)
-                participant.processFlush();
-            
-            if (notGrantedParticipants.isEmpty())
-                grantFlush();
+            {
+                if (participant.isFlushProcessingRequired(flush))
+                    participant.processFlush();
+            }
         }
         else if (message.getPart() instanceof FlushMessagePart && 
             ((FlushMessagePart)message.getPart()).getType() == FlushMessagePart.Type.END)

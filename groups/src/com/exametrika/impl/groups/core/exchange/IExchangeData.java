@@ -15,6 +15,13 @@ package com.exametrika.impl.groups.core.exchange;
 public interface IExchangeData
 {
     /**
+     * Returns unique identifier of exchanged data.
+     *
+     * @return unique identifier of exchanged data
+     */
+    long getId();
+    
+    /**
      * Returns estimated size of data.
      *
      * @return estimated size of data

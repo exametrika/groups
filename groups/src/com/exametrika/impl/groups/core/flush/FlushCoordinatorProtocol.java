@@ -315,7 +315,8 @@ public final class FlushCoordinatorProtocol extends AbstractProtocol implements 
             for (FlushStateResponseMessagePart response : flushStateResponses.values())
                 states.add(response.getCoordinatorStates().get(i));
             
-            participant.setCoordinatorState(states);
+            if (participant.isCoordinatorStateSupported())
+                participant.setCoordinatorState(states);
         }
     }
     

@@ -38,10 +38,4 @@ public interface IDataExchangeProvider
      * @param data data for exchange
      */
     void setData(INode source, IExchangeData data);
-    
-    /**
-     * Called when token has made complete cycle relative to local node, i.e. data send by {@link #getData()} received back
-     * from neighbour node.
-     */
-    void onCycleCompleted();
 }

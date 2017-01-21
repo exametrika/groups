@@ -40,11 +40,10 @@ public final class DataExchangeMessagePartSerializer extends AbstractSerializer
             ProviderExchangeData data = providerEntry.getValue();
             serialization.writeInt(data.getNodeExchanges().size());
             
-            for (Map.Entry<UUID, NodeExchangeData> nodeEntry : data.getNodeExchanges().entrySet())
+            for (Map.Entry<UUID, IExchangeData> nodeEntry : data.getNodeExchanges().entrySet())
             {
                 Serializers.writeUUID(serialization, nodeEntry.getKey());
-                serialization.writeLong(nodeEntry.getValue().getId());
-                serialization.writeObject(nodeEntry.getValue().getData());
+                serialization.writeObject(nodeEntry.getValue());
             }
         }
     }
@@ -60,14 +59,13 @@ public final class DataExchangeMessagePartSerializer extends AbstractSerializer
             UUID providerId = Serializers.readUUID(deserialization);
             int nodeCount = deserialization.readInt();
             
-            Map<UUID, NodeExchangeData> nodeExchanges = new HashMap<UUID, NodeExchangeData>();
+            Map<UUID, IExchangeData> nodeExchanges = new HashMap<UUID, IExchangeData>();
             for (int k = 0; k < nodeCount; k++)
             {
                 UUID nodeId = Serializers.readUUID(deserialization);
-                long exchangeId = deserialization.readLong();
                 IExchangeData data = deserialization.readObject();
                 
-                nodeExchanges.put(nodeId, new NodeExchangeData(exchangeId, data));
+                nodeExchanges.put(nodeId, data);
             }
             
             providerExchanges.put(providerId, new ProviderExchangeData(nodeExchanges));

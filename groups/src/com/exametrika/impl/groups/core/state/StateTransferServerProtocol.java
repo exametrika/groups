@@ -83,7 +83,6 @@ public final class StateTransferServerProtocol extends AbstractProtocol implemen
         this.failureDetector = failureDetector;
         this.stateStore = stateStore;
         this.saveSnapshotPeriod = saveSnapshotPeriod;
-        this.lastSaveSnapshotTime = timeService.getCurrentTime();
         this.transferLogRecordPeriod = transferLogRecordPeriod;
         this.transferLogMessagesCount = transferLogMessagesCount;
         this.serializationRegistry = serializationRegistry;
@@ -105,6 +104,13 @@ public final class StateTransferServerProtocol extends AbstractProtocol implemen
         Assert.isNull(this.flowController);
         
         this.flowController = flowController;
+    }
+    
+    @Override
+    public void start()
+    {
+        this.lastSaveSnapshotTime = timeService.getCurrentTime();
+        super.start();
     }
     
     @Override

@@ -17,23 +17,23 @@ import com.exametrika.common.utils.Immutables;
  */
 public final class ProviderExchangeData
 {
-    private final Map<UUID, NodeExchangeData> nodeExchanges;
+    private final Map<UUID, IExchangeData> nodeExchanges;
     private final int size;
 
-    public ProviderExchangeData(Map<UUID, NodeExchangeData> nodeExchanges)
+    public ProviderExchangeData(Map<UUID, IExchangeData> nodeExchanges)
     {
         Assert.notNull(nodeExchanges);
         
         this.nodeExchanges = Immutables.wrap(nodeExchanges);
         
         int size = 0;
-        for (NodeExchangeData exchange : nodeExchanges.values())
-            size += exchange.getData().getSize();
+        for (IExchangeData exchange : nodeExchanges.values())
+            size += exchange.getSize();
         
         this.size = size;
     }
 
-    public Map<UUID, NodeExchangeData> getNodeExchanges()
+    public Map<UUID, IExchangeData> getNodeExchanges()
     {
         return nodeExchanges;
     }
