@@ -4,13 +4,11 @@
 package com.exametrika.impl.groups.core.exchange;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
 import java.util.UUID;
 
 import com.exametrika.api.groups.core.IMembership;
@@ -46,45 +44,30 @@ public final class DataExchangeProtocol extends AbstractProtocol implements IMem
     private static final IMessages messages = Messages.get(IMessages.class);
     private final IMembershipManager membershipManager;
     private final IFailureDetector failureDetector;
-    private final long minDataExchangePeriod;
-    private final long maxDataExchangePeriod;
-    private final List<IDataExchangeProvider> dataExchangeProviders;
-    private final Random random = new Random();
+    private final long dataExchangePeriod;
     private final Map<UUID, ProviderExchangeInfo> providerExchanges = new HashMap<UUID, ProviderExchangeInfo>();
     private INode coordinator;
     private List<INode> healthyMembers;
-    private long nextDataExchangeTime;
+    private long lastDataExchangeTime;
     private boolean fullExchange;
 
     public DataExchangeProtocol(String channelName, IMessageFactory messageFactory, IMembershipManager membershipManager, 
-        IFailureDetector failureDetector, List<IDataExchangeProvider> dataExchangeProviders,
-        long minDataExchangePeriod, long maxDataExchangePeriod)
+        IFailureDetector failureDetector, List<IDataExchangeProvider> dataExchangeProviders, long dataExchangePeriod)
     {
         super(channelName, messageFactory);
         
         Assert.notNull(membershipManager);
         Assert.notNull(failureDetector);
         Assert.notNull(dataExchangeProviders);
-        Assert.isTrue(minDataExchangePeriod >= 0 && minDataExchangePeriod <= maxDataExchangePeriod 
-            && maxDataExchangePeriod <= Integer.MAX_VALUE);
         
         this.membershipManager = membershipManager;
         this.failureDetector = failureDetector;
-        this.minDataExchangePeriod = minDataExchangePeriod;
-        this.maxDataExchangePeriod = maxDataExchangePeriod;
-        this.dataExchangeProviders = dataExchangeProviders;
+        this.dataExchangePeriod = dataExchangePeriod;
+        
+        for (IDataExchangeProvider provider : dataExchangeProviders)
+            Assert.isNull(providerExchanges.put(provider.getId(), new ProviderExchangeInfo(provider)));
     }
 
-    @Override
-    public void start()
-    {
-        super.start();
-        
-        IAddress localAddress = membershipManager.getLocalNode().getAddress();
-        for (IDataExchangeProvider provider : dataExchangeProviders)
-            Assert.isNull(providerExchanges.put(provider.getId(), new ProviderExchangeInfo(provider, localAddress)));
-    }
-    
     @Override
     public void onMemberFailed(INode member)
     {
@@ -117,107 +100,102 @@ public final class DataExchangeProtocol extends AbstractProtocol implements IMem
     @Override
     public void onTimer(long currentTime)
     {
-        if (!fullExchange && currentTime < nextDataExchangeTime)
+        if (coordinator == null && healthyMembers == null)
+            return;
+        
+        if (!fullExchange && currentTime < lastDataExchangeTime + dataExchangePeriod)
             return;
 
-        Map<UUID, ProviderExchangeData> exchangeData = null;
-        for (Map.Entry<UUID, ProviderExchangeInfo> providerEntry : providerExchanges.entrySet())
-        {
-            ProviderExchangeInfo info = providerEntry.getValue();
-            IExchangeData data = info.provider.getData();
-            if (data != null && info.localExchangeInfo.data != null && data.getId() == info.localExchangeInfo.data.getId())
-                continue;
-            
-            if (data != null)
-            {
-                info.localExchangeInfo.data = data;
-                
-                if (coordinator != null)
-                {
-                    if (exchangeData == null)
-                        exchangeData = new HashMap<UUID, ProviderExchangeData>();
-                    
-                    ProviderExchangeData providerExchangeData = new ProviderExchangeData(Collections.singletonMap(
-                        info.localExchangeInfo.address.getId(), data));
-                    
-                    exchangeData.put(providerEntry.getKey(), providerExchangeData);
-                }
-                else
-                    info.localExchangeInfo.modified = true;
-            }
-        }
-        
-        if (exchangeData != null)
-            send(messageFactory.create(coordinator.getAddress(), new DataExchangeMessagePart(exchangeData), MessageFlags.HIGH_PRIORITY));
-        
-        if (healthyMembers)
-        {
-            for (INode member : healthyMembers)
-            {
-                
-            }
-        }
         for (Map.Entry<UUID, ProviderExchangeInfo> providerEntry : providerExchanges.entrySet())
         {
             ProviderExchangeInfo providerInfo = providerEntry.getValue();
-            if (!providerInfo.localExchangeLocked)
-            {
-                IExchangeData data = providerInfo.provider.getData();
-                if (data != null)
-                {
-                    providerInfo.localExchangeLocked = true;
-                    providerInfo.localExchangeInfo.id++;
-                    providerInfo.localExchangeInfo.data = data;
-                    providerInfo.localExchangeInfo.modified = true;
-                    providerInfo.modified = true;
-                    providerInfo.localSendTime = currentTime;
-                }
-            }
-            else if (currentTime > providerInfo.localSendTime + maxDataExchangePeriod * 
-                membershipManager.getMembership().getGroup().getMembers().size())
-            {
-                providerInfo.localExchangeInfo.modified = true;
-                providerInfo.modified = true;
-                providerInfo.localSendTime = currentTime;
-            }
-            
-            if (!fullExchange && !providerInfo.modified)
+            IExchangeData data = providerInfo.provider.getData();
+            if (data == null)
                 continue;
-
-            if (groupData == null)
-                groupData = new HashMap<UUID, ProviderExchangeData>();
             
-            Map<UUID, NodeExchangeData> nodeExchanges = new HashMap<UUID, NodeExchangeData>();
-            ProviderExchangeData providerData = new ProviderExchangeData(nodeExchanges);
-            groupData.put(providerEntry.getKey(), providerData);
+            if (providerInfo.localExchangeInfo.data != null && data.getId() <= providerInfo.localExchangeInfo.data.getId())
+                continue;
             
-            if (fullExchange || providerInfo.localExchangeInfo.modified)
+            providerInfo.localExchangeInfo.data = data;
+            providerInfo.localExchangeInfo.modified = true;
+        }
+        
+        if (coordinator != null)
+        {
+            Map<UUID, ProviderExchangeData> exchangeData = null;
+            for (Map.Entry<UUID, ProviderExchangeInfo> providerEntry : providerExchanges.entrySet())
             {
-                nodeExchanges.put(membershipManager.getLocalNode().getId(), new NodeExchangeData(providerInfo.localExchangeInfo.id, 
-                    providerInfo.localExchangeInfo.data));
+                ProviderExchangeInfo providerInfo = providerEntry.getValue();
+                if (!fullExchange && !providerInfo.localExchangeInfo.modified)
+                    continue;
+                
+                if (exchangeData == null)
+                    exchangeData = new HashMap<UUID, ProviderExchangeData>();
+                
+                ProviderExchangeData providerExchangeData = new ProviderExchangeData(Collections.singletonMap(
+                    membershipManager.getLocalNode().getId(), providerInfo.localExchangeInfo.data));
+                
+                exchangeData.put(providerEntry.getKey(), providerExchangeData);
                 providerInfo.localExchangeInfo.modified = false;
             }
             
-            for (Map.Entry<UUID, NodeExchangeInfo> nodeEntry : providerInfo.nodeExchanges.entrySet())
-            {
-                NodeExchangeInfo nodeInfo = nodeEntry.getValue();
-                if (fullExchange || nodeInfo.modified)
-                {
-                    nodeExchanges.put(nodeEntry.getKey(), new NodeExchangeData(nodeInfo.id, nodeInfo.data));
-                    nodeInfo.modified = false;
-                }
-            }
+            if (exchangeData != null)
+                send(messageFactory.create(coordinator.getAddress(), new DataExchangeMessagePart(exchangeData), MessageFlags.HIGH_PRIORITY));
+        }
+        else
+        {
+            Assert.checkState(healthyMembers != null);
             
-            providerInfo.modified = false;
+            for (INode member : healthyMembers)
+            {
+                if (member.equals(membershipManager.getLocalNode()))
+                    continue;
+                
+                Map<UUID, ProviderExchangeData> exchangeData = null;
+                for (Map.Entry<UUID, ProviderExchangeInfo> providerEntry : providerExchanges.entrySet())
+                {
+                    ProviderExchangeInfo providerInfo = providerEntry.getValue();
+                    Map<UUID, IExchangeData> nodeExchanges = null;
+                    for (Map.Entry<UUID, NodeExchangeInfo> nodeEntry : providerInfo.nodeExchanges.entrySet())
+                    {
+                        if (nodeEntry.getKey().equals(member.getId()))
+                            continue;
+                        
+                        NodeExchangeInfo nodeInfo = nodeEntry.getValue();
+                        nodeExchanges = addExchangeInfo(nodeExchanges, nodeEntry.getKey(), nodeInfo);
+                    }
+                    
+                    nodeExchanges = addExchangeInfo(nodeExchanges, membershipManager.getLocalNode().getId(), providerInfo.localExchangeInfo);
+                    
+                    if (nodeExchanges != null)
+                    {
+                        if (exchangeData == null)
+                            exchangeData = new HashMap<UUID, ProviderExchangeData>();
+                        
+                        exchangeData.put(providerEntry.getKey(), new ProviderExchangeData(nodeExchanges));
+                    }
+                } 
+                
+                if (exchangeData != null)
+                    send(messageFactory.create(member.getAddress(), new DataExchangeMessagePart(exchangeData), MessageFlags.HIGH_PRIORITY));
+            }
         }
         
         fullExchange = false;
+        lastDataExchangeTime = currentTime;
+    }
+
+    private Map<UUID, IExchangeData> addExchangeInfo(Map<UUID, IExchangeData> nodeExchanges, UUID nodeId, NodeExchangeInfo nodeInfo)
+    {
+        if (!fullExchange && !nodeInfo.modified)
+            return nodeExchanges;
         
-        if (groupData != null)
-            send(messageFactory.create(nextNode.getAddress(), new DataExchangeMessagePart(groupData), MessageFlags.HIGH_PRIORITY));
+        if (nodeExchanges == null)
+            nodeExchanges = new HashMap<UUID, IExchangeData>();
         
-        nextDataExchangeTime = timeService.getCurrentTime() + minDataExchangePeriod + 
-            random.nextInt((int)(maxDataExchangePeriod - minDataExchangePeriod));
+        nodeExchanges.put(nodeId, nodeInfo.data);
+        nodeInfo.modified = false;
+        return nodeExchanges;
     }
 
     @Override
@@ -267,20 +245,25 @@ public final class DataExchangeProtocol extends AbstractProtocol implements IMem
                 for (Map.Entry<UUID, IExchangeData> nodeEntry : providerData.getNodeExchanges().entrySet())
                 {
                     IExchangeData nodeData = nodeEntry.getValue();
+                    INode member = membership.getGroup().findMember(nodeEntry.getKey());
+                    if (member == null)
+                        continue;
+
+                    boolean update = false;
                     NodeExchangeInfo nodeInfo = providerInfo.nodeExchanges.get(nodeEntry.getKey());
                     if (nodeInfo == null)
                     {
-                        nodeInfo = new NodeExchangeInfo(nodeData);
+                        nodeInfo = new NodeExchangeInfo();
+                        nodeInfo.address = member.getAddress();
                         providerInfo.nodeExchanges.put(nodeEntry.getKey(), nodeInfo);
-                        providerInfo.provider.setData(membershipManager.getPreparedMembership().getGroup().findMember(nodeEntry.getKey()), 
-                            nodeData);
+                        update = true;
                     }
-                    else if (nodeData.getId() > nodeInfo.data.getId())
+
+                    if (update || nodeData.getId() > nodeInfo.data.getId())
                     {
                         nodeInfo.data = nodeData;
                         nodeInfo.modified = true;
-                        providerInfo.provider.setData(membershipManager.getPreparedMembership().getGroup().findMember(nodeEntry.getKey()), 
-                            nodeData);
+                        providerInfo.provider.setData(member, nodeData);
                     }
                 }
             }
@@ -323,35 +306,27 @@ public final class DataExchangeProtocol extends AbstractProtocol implements IMem
         }
         
         fullExchange = true;
-        nextDataExchangeTime = timeService.getCurrentTime() + minDataExchangePeriod + 
-            random.nextInt((int)(maxDataExchangePeriod - minDataExchangePeriod));
+        lastDataExchangeTime = timeService.getCurrentTime();
     }
 
     private static class NodeExchangeInfo
     {
-        private final IAddress address;
+        private IAddress address;
         private IExchangeData data;
-        private boolean modified = true;
-        
-        public NodeExchangeInfo(IAddress address)
-        {
-            Assert.notNull(address);
-            this.address = address;
-        }
+        private boolean modified;
     }
     
     private static class ProviderExchangeInfo
     {
         private final IDataExchangeProvider provider;
-        private final NodeExchangeInfo localExchangeInfo;
+        private final NodeExchangeInfo localExchangeInfo = new NodeExchangeInfo();
         private final Map<UUID, NodeExchangeInfo> nodeExchanges = new HashMap<UUID, NodeExchangeInfo>();
         
-        public ProviderExchangeInfo(IDataExchangeProvider provider, IAddress address)
+        public ProviderExchangeInfo(IDataExchangeProvider provider)
         {
             Assert.notNull(provider);
             
             this.provider = provider;
-            this.localExchangeInfo = new NodeExchangeInfo(address);
         }
     }
     

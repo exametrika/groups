@@ -53,13 +53,13 @@ public final class DataExchangeMessagePartSerializer extends AbstractSerializer
     {
         int providerCount = deserialization.readInt();
         
-        Map<UUID, ProviderExchangeData> providerExchanges = new HashMap<UUID, ProviderExchangeData>();
+        Map<UUID, ProviderExchangeData> providerExchanges = new HashMap<UUID, ProviderExchangeData>(providerCount);
         for (int i = 0; i < providerCount; i++)
         {
             UUID providerId = Serializers.readUUID(deserialization);
             int nodeCount = deserialization.readInt();
             
-            Map<UUID, IExchangeData> nodeExchanges = new HashMap<UUID, IExchangeData>();
+            Map<UUID, IExchangeData> nodeExchanges = new HashMap<UUID, IExchangeData>(nodeCount);
             for (int k = 0; k < nodeCount; k++)
             {
                 UUID nodeId = Serializers.readUUID(deserialization);

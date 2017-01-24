@@ -17,7 +17,7 @@ public interface IExchangeData
     /**
      * Returns unique identifier of exchanged data.
      *
-     * @return unique identifier of exchanged data
+     * @return unique identifier of exchanged data monotonically increasing in case of changes
      */
     long getId();
     
