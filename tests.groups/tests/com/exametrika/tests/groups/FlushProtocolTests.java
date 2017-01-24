@@ -467,6 +467,7 @@ public class FlushProtocolTests
                 groupFormationPeriod);
             discoveryProtocol.setGroupJoinStrategy(joinStrategy);
             preparedMembershipListeners.add(discoveryProtocol);
+            membershipListeners.add(discoveryProtocol);
             protocols.add(discoveryProtocol);
             membershipManager.setNodeDiscoverer(discoveryProtocol);
             

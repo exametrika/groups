@@ -62,6 +62,8 @@ public final class StateTransferClientProtocol extends AbstractProtocol implemen
     private StateTransfer stateTransfer;
     private List<IAddress> healthyMembers;
     private long startTransferTime;
+    private boolean transferred;
+    private boolean discovered;
 
     public StateTransferClientProtocol(String channelName, IMessageFactory messageFactory, IMembershipManager membershipManager, 
         IStateTransferFactory stateTransferFactory, IStateStore stateStore,
@@ -127,6 +129,7 @@ public final class StateTransferClientProtocol extends AbstractProtocol implemen
         Assert.checkState(!joined);
         
         this.healthyMembers = healthyMembers;
+        discovered = true;
         
         updateStateTransfer();
         
@@ -140,6 +143,7 @@ public final class StateTransferClientProtocol extends AbstractProtocol implemen
         Assert.checkState(!joined);
         
         healthyMembers = null;
+        discovered = false;
         updateStateTransfer();
     }
     
@@ -212,13 +216,17 @@ public final class StateTransferClientProtocol extends AbstractProtocol implemen
                     channelReconnector.reconnect();
                 }
             });
+            compartment.execute(stateLoadTask);
         }
+        else if (transferred)
+            flush.grantFlush(this);
     }
 
     @Override
     public void endFlush()
     {
         flush = null;
+        transferred = true;
     }
 
     @Override
@@ -274,7 +282,8 @@ public final class StateTransferClientProtocol extends AbstractProtocol implemen
                 if (logger.isLogEnabled(LogLevel.DEBUG))
                     logger.log(LogLevel.DEBUG, marker, messages.stateTransferRejected(stateTransfer.server));
                 
-                healthyMembers.add(stateTransfer.server);
+                if (discovered)
+                    healthyMembers.add(stateTransfer.server);
                 stateTransfer.cancel();
                 stateTransfer = null;
                 updateStateTransfer();

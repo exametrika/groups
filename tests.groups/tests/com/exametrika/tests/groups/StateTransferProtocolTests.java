@@ -123,6 +123,7 @@ public class StateTransferProtocolTests
         TestChannelFactory channelFactory = new TestChannelFactory(new WellKnownAddressesDiscoveryStrategy(wellKnownAddresses));
         createGroup(wellKnownAddresses, channelFactory, Collections.<Integer>asSet());
          
+        failOnFlush(channelFactory);
         flushSequencer.waitAll(COUNT, 5000, 0);
         int coordinatorNodeIndex = findNodeIndex(0, channelFactory.messageSenders.get(0).flush.getNewMembership().getGroup().getCoordinator());
         int[] nodes = selectNodes(0, COUNT, 2, coordinatorNodeIndex);
@@ -141,6 +142,7 @@ public class StateTransferProtocolTests
         TestChannelFactory channelFactory = new TestChannelFactory(new WellKnownAddressesDiscoveryStrategy(wellKnownAddresses));
         createGroup(wellKnownAddresses, channelFactory, Collections.<Integer>asSet());
          
+        failOnFlush(channelFactory);
         flushSequencer.waitAll(COUNT, 5000, 0);
         int coordinatorNodeIndex = findNodeIndex(0, channelFactory.messageSenders.get(0).flush.getNewMembership().getGroup().getCoordinator());
         IOs.close(channels[coordinatorNodeIndex]);
@@ -536,7 +538,8 @@ public class StateTransferProtocolTests
         @Override
         public void saveSnapshot(File file)
         {
-            Files.writeBytes(file, factory.state);
+            if (factory.state != null)
+                Files.writeBytes(file, factory.state);
         }
     }
     
@@ -817,6 +820,7 @@ public class StateTransferProtocolTests
                 failureDetectionProtocol, discoveryStrategy, liveNodeProvider, discoveryPeriod, 
                 groupFormationPeriod);
             preparedMembershipListeners.add(discoveryProtocol);
+            membershipListeners.add(discoveryProtocol);
             membershipManager.setNodeDiscoverer(discoveryProtocol);
             
             TestStateTransferFactory stateTransferFactory = new TestStateTransferFactory();

@@ -12,8 +12,10 @@ import java.util.TreeSet;
 
 import com.exametrika.api.groups.core.IMembership;
 import com.exametrika.api.groups.core.IMembershipChange;
+import com.exametrika.api.groups.core.IMembershipListener;
 import com.exametrika.api.groups.core.IMembershipService;
 import com.exametrika.api.groups.core.INode;
+import com.exametrika.api.groups.core.MembershipEvent;
 import com.exametrika.common.io.ISerializationRegistry;
 import com.exametrika.common.l10n.DefaultMessage;
 import com.exametrika.common.l10n.ILocalizedMessage;
@@ -39,7 +41,8 @@ import com.exametrika.spi.groups.IDiscoveryStrategy;
  * @threadsafety This class and its methods are not thread safe.
  * @author Medvedev-A
  */
-public final class DiscoveryProtocol extends AbstractProtocol implements INodeDiscoverer, IPreparedMembershipListener
+public final class DiscoveryProtocol extends AbstractProtocol implements INodeDiscoverer, IPreparedMembershipListener,
+    IMembershipListener
 {
     private static final IMessages messages = Messages.get(IMessages.class);
     private final IMembershipService membershipService;
@@ -58,6 +61,7 @@ public final class DiscoveryProtocol extends AbstractProtocol implements INodeDi
     private long lastDiscoveryTime;
     private boolean started;
     private boolean stopped;
+    private boolean joined;
 
     public DiscoveryProtocol(String channelName, IMessageFactory messageFactory, IMembershipService membershipService, 
         IFailureDetector failureDetector, IDiscoveryStrategy discoveryStrategy, 
@@ -135,6 +139,22 @@ public final class DiscoveryProtocol extends AbstractProtocol implements INodeDi
         discoveredNodes.removeAll(newMembership.getGroup().getMembers());
     }
 
+    @Override
+    public void onJoined()
+    {
+        joined = true;
+    }
+
+    @Override
+    public void onLeft(LeaveReason reason)
+    {
+    }
+
+    @Override
+    public void onMembershipChanged(MembershipEvent event)
+    {
+    }
+    
     @Override
     public void onTimer(long currentTime)
     {
@@ -264,7 +284,7 @@ public final class DiscoveryProtocol extends AbstractProtocol implements INodeDi
                             logger.log(LogLevel.DEBUG, marker, messages.nodeDiscovered(node));
                     }
                 }
-                else
+                else if (joined)
                 {
                     send(messageFactory.create(node.getAddress(), new MembershipResponseMessagePart(membership.getId(),
                         getNodeAddresses(failureDetector.getHealthyMembers()))));
@@ -283,7 +303,7 @@ public final class DiscoveryProtocol extends AbstractProtocol implements INodeDi
         }
         else if (message.getPart() instanceof GroupJoinMessagePart)
         {
-            if (membership == null)
+            if (membership == null || !joined)
                 return;
             
             GroupJoinMessagePart part = message.getPart();

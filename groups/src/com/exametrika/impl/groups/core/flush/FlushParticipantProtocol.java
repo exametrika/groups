@@ -171,6 +171,8 @@ public final class FlushParticipantProtocol extends AbstractProtocol implements 
             {
                 if (participant.isFlushProcessingRequired(flush))
                     participant.processFlush();
+                else
+                    grantFlush(participant);
             }
         }
         else if (message.getPart() instanceof FlushMessagePart && 

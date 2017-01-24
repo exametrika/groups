@@ -429,7 +429,11 @@ public final class FailureDetectionProtocol extends AbstractProtocol implements 
             logger.log(LogLevel.TRACE, marker, messages.healthyMembersUpdated(healthyMembers));
         
         if (currentCoordinator == null)
+        {
+            Assert.checkState(healthyMembers.isEmpty());
+            currentCoordinator = membershipService.getLocalNode();
             return;
+        }
         
         if (membershipService.getLocalNode().equals(currentCoordinator))
         {
