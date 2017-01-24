@@ -29,7 +29,6 @@ import com.exametrika.impl.groups.MessageFlags;
 import com.exametrika.impl.groups.core.failuredetection.IFailureDetector;
 import com.exametrika.impl.groups.core.flush.IFlush;
 import com.exametrika.impl.groups.core.flush.IFlushParticipant;
-import com.exametrika.impl.groups.core.membership.GroupAddress;
 import com.exametrika.impl.groups.core.membership.IMembershipManager;
 import com.exametrika.spi.groups.IStateStore;
 import com.exametrika.spi.groups.IStateTransferFactory;
@@ -274,8 +273,7 @@ public final class StateTransferServerProtocol extends AbstractProtocol implemen
         }
         else
         {
-            if (message.getDestination() instanceof GroupAddress && 
-                server.classifyMessage(message.getPart()) == IStateTransferServer.MessageType.STATE_WRITE)
+            if (!snapshotRequest && server.classifyMessage(message.getPart()) == IStateTransferServer.MessageType.STATE_WRITE)
             {
                 if (stateTransfer != null)
                     stateTransfer.addMessage(message);
@@ -412,6 +410,9 @@ public final class StateTransferServerProtocol extends AbstractProtocol implemen
         @Override
         public void onFailed(Throwable error)
         {
+            if (logger.isLogEnabled(LogLevel.ERROR))
+                logger.log(LogLevel.ERROR, marker, error);
+            
             send(messageFactory.create(client, new StateTransferResponseMessagePart(false, false, true)));
             cancel();
             stateTransfer = null;

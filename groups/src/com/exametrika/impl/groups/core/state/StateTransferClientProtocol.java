@@ -464,6 +464,9 @@ public final class StateTransferClientProtocol extends AbstractProtocol implemen
         @Override
         public void onFailed(Throwable error)
         {
+            if (logger.isLogEnabled(LogLevel.ERROR))
+                logger.log(LogLevel.ERROR, marker, error);
+            
             loadSnapshotTask = null;
             loadMessagesTask = null;
             cancel();

@@ -81,7 +81,7 @@ public final class StateTransferMessageLog implements Closeable
             
             int length = file.readInt();
             int messageCount = file.readInt();
-            int checkSum = file.readInt();
+            long checkSum = file.readLong();
             
             byte[] buffer = new byte[length];
             file.readFully(buffer);
@@ -120,7 +120,7 @@ public final class StateTransferMessageLog implements Closeable
             file.writeShort(MAGIC);
             file.writeInt(stream.getLength());
             file.writeInt(messages.size());
-            file.writeInt((int)crc.getValue());
+            file.writeLong(crc.getValue());
             file.write(stream.getBuffer(), 0, stream.getLength());
         }
         catch (IOException e)

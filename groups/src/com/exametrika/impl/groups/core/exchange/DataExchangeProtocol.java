@@ -332,9 +332,9 @@ public final class DataExchangeProtocol extends AbstractProtocol implements IMem
     
     private interface IMessages
     {
-        @DefaultMessage("Healthy members have changed to ''{0}''.")
+        @DefaultMessage("Healthy members have been changed to ''{0}''.")
         ILocalizedMessage healthyMembersChanged(List<INode> nodes);  
-        @DefaultMessage("Coordinator has changed to ''{0}''.")
+        @DefaultMessage("Coordinator has been changed to ''{0}''.")
         ILocalizedMessage coordinatorChanged(INode node);  
     }
 }

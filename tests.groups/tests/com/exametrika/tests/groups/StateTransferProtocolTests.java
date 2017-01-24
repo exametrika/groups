@@ -16,6 +16,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.junit.After;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import com.exametrika.api.groups.core.IGroup;
@@ -182,11 +183,13 @@ public class StateTransferProtocolTests
          
         checkMembership(channelFactory, Collections.<Integer>asSet(0, 1));
 
+        trackSnapshot(channelFactory);
         channels[0].start();
         channels[1].start();
         
         snapshotSequencer.waitAll(2, 5000, 0);
         
+        Threads.sleep(1000);
         IOs.close(channels[0]);
         
         Threads.sleep(10000);
@@ -230,12 +233,14 @@ public class StateTransferProtocolTests
          
         checkMembership(channelFactory, Collections.<Integer>asSet(0, 1));
 
+        trackSnapshot(channelFactory);
         channels[0].start();
         channels[1].start();
         
         snapshotSequencer.waitAll(2, 5000, 0);
         int index = getStateTransferServer(0, channelFactory);
         
+        Threads.sleep(1000);
         IOs.close(channels[index]);
         
         Threads.sleep(10000);
@@ -280,13 +285,14 @@ public class StateTransferProtocolTests
          
         checkMembership(channelFactory, Collections.<Integer>asSet(0, 1));
 
+        trackSnapshot(channelFactory);
         channels[0].start();
         channels[1].start();
         
         snapshotSequencer.waitAll(2, 5000, 0);
         IGroup group = channelFactory.messageSenders.get(2).membership.getGroup();
         int index = group.getMembers().indexOf(group.getCoordinator());
-        
+        Threads.sleep(1000);
         IOs.close(channels[index]);
         
         Threads.sleep(10000);
@@ -321,7 +327,7 @@ public class StateTransferProtocolTests
         checkMembership(channelFactory, Collections.<Integer>asSet(index));
     }
     
-    @Test
+    @Test @Ignore
     public void testGroupFailureBeforeFlush() throws Exception
     {
         Set<String> wellKnownAddresses = new ConcurrentHashMap<String, String>().keySet("");
@@ -332,6 +338,7 @@ public class StateTransferProtocolTests
          
         checkMembership(channelFactory, Collections.<Integer>asSet(0, 1));
 
+        trackSnapshot(channelFactory);
         channels[0].start();
         channels[1].start();
         
@@ -348,7 +355,7 @@ public class StateTransferProtocolTests
         checkMembership(channelFactory, skipIndexes);
     }
     
-    @Test
+    @Test @Ignore
     public void testGroupFailureAfterFlush() throws Exception
     {
         Set<String> wellKnownAddresses = new ConcurrentHashMap<String, String>().keySet("");
@@ -384,15 +391,16 @@ public class StateTransferProtocolTests
         TestChannelFactory channelFactory = new TestChannelFactory(new WellKnownAddressesDiscoveryStrategy(wellKnownAddresses));
         createGroup(wellKnownAddresses, channelFactory, Collections.<Integer>asSet());
          
-        Threads.sleep(5000);
+        Threads.sleep(10000);
          
         checkMembership(channelFactory, Collections.<Integer>asSet());
         
+        Threads.sleep(1000);
         disableSend(channelFactory);
         
         Threads.sleep(5000);
         
-        assertThat(channelFactory.stateTransferFactories.get(0).state, is(channelFactory.stateStore.savedBuffer));
+        assertThat(channelFactory.stateStore.savedBuffer, is(channelFactory.stateTransferFactories.get(0).state));
     }
     
     private void createGroup(Set<String> wellKnownAddresses, TestChannelFactory channelFactory, Set<Integer> skipIndexes)
@@ -497,6 +505,12 @@ public class StateTransferProtocolTests
             sender.disableSend = true;
     }
     
+    private void trackSnapshot(TestChannelFactory channelFactory)
+    {
+        for (TestStateTransferFactory factory : channelFactory.stateTransferFactories)
+            factory.trackSnapshot = true;    
+    }
+    
     private int getStateTransferServer(int clientIndex, TestChannelFactory channelFactory)
     {
         try
@@ -556,13 +570,15 @@ public class StateTransferProtocolTests
         public void loadSnapshot(File file)
         {
             factory.state = Files.readBytes(file);
-            snapshotSequencer.allowSingle();
+            if (factory.trackSnapshot)
+                snapshotSequencer.allowSingle();
         }
     }
     
     private class TestStateTransferFactory implements IStateTransferFactory
     {
-        ByteArray state;
+        private boolean trackSnapshot;
+        private ByteArray state;
         
         @Override
         public IStateTransferServer createServer()

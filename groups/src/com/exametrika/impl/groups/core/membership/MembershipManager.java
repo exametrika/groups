@@ -183,7 +183,8 @@ public final class MembershipManager implements IMembershipManager, ILifecycle
     @Override
     public void uninstallMembership(LeaveReason reason)
     {
-        Assert.checkState(membership != null);
+        if (membership == null)
+            return;
         
         membership = null;
         preparedMembership = null;
