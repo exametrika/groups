@@ -396,12 +396,17 @@ public class FlushProtocolTests
     
     private static FactoryParameters getFactoryParameters()
     {
-        FactoryParameters factoryParameters = new FactoryParameters(Debug.isDebug());
-        factoryParameters.heartbeatTrackPeriod = 100;
-        factoryParameters.heartbeatPeriod = 100;
-        factoryParameters.heartbeatStartPeriod = 300;
-        factoryParameters.heartbeatFailureDetectionPeriod = 1000;
-        factoryParameters.transportChannelTimeout = 1000;
+        boolean debug = Debug.isDebug();
+        
+        FactoryParameters factoryParameters = new FactoryParameters(debug);
+        if (!debug)
+        {
+            factoryParameters.heartbeatTrackPeriod = 100;
+            factoryParameters.heartbeatPeriod = 100;
+            factoryParameters.heartbeatStartPeriod = 300;
+            factoryParameters.heartbeatFailureDetectionPeriod = 1000;
+            factoryParameters.transportChannelTimeout = 1000;
+        }
         
         return factoryParameters;
     }
@@ -412,8 +417,8 @@ public class FlushProtocolTests
         private final long discoveryPeriod = 200;
         private final long groupFormationPeriod = 2000;
         private long failureUpdatePeriod = 500;
-        private  long failureHistoryPeriod = 10000;
-        private  int maxShunCount = 3;
+        private long failureHistoryPeriod = 10000;
+        private int maxShunCount = 3;
         private long flushTimeout = 10000;
         private long gracefulCloseTimeout = 10000;
         private List<FlushParticipantMock> flushParticipants = new ArrayList<FlushParticipantMock>();
@@ -426,6 +431,11 @@ public class FlushProtocolTests
         {
             super(getFactoryParameters());
             this.discoveryStrategy = discoveryStrategy;
+            
+            boolean debug = Debug.isDebug();
+            int timeMultiplier = !debug ? 1 : 1000;
+            flushTimeout *= timeMultiplier;
+            gracefulCloseTimeout *= timeMultiplier;
         }
 
         @Override

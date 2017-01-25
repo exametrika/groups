@@ -179,23 +179,20 @@ public final class DataExchangeProtocol extends AbstractProtocol implements IMem
                 if (exchangeData != null)
                     send(messageFactory.create(member.getAddress(), new DataExchangeMessagePart(exchangeData), MessageFlags.HIGH_PRIORITY));
             }
+            
+            for (Map.Entry<UUID, ProviderExchangeInfo> providerEntry : providerExchanges.entrySet())
+            {
+                ProviderExchangeInfo providerInfo = providerEntry.getValue();
+                for (Map.Entry<UUID, NodeExchangeInfo> nodeEntry : providerInfo.nodeExchanges.entrySet())
+                {
+                    NodeExchangeInfo nodeInfo = nodeEntry.getValue();
+                    nodeInfo.modified = false;
+                }
+            }
         }
         
         fullExchange = false;
         lastDataExchangeTime = currentTime;
-    }
-
-    private Map<UUID, IExchangeData> addExchangeInfo(Map<UUID, IExchangeData> nodeExchanges, UUID nodeId, NodeExchangeInfo nodeInfo)
-    {
-        if (!fullExchange && !nodeInfo.modified)
-            return nodeExchanges;
-        
-        if (nodeExchanges == null)
-            nodeExchanges = new HashMap<UUID, IExchangeData>();
-        
-        nodeExchanges.put(nodeId, nodeInfo.data);
-        nodeInfo.modified = false;
-        return nodeExchanges;
     }
 
     @Override
@@ -231,9 +228,11 @@ public final class DataExchangeProtocol extends AbstractProtocol implements IMem
         {
             DataExchangeMessagePart part = message.getPart();
             
-            IMembership membership = membershipManager.getMembership();
-            if (membership == null)
+            IMembership preparedMembership = membershipManager.getPreparedMembership();
+            if (preparedMembership == null)
                 return;
+            
+            IMembership membership = membershipManager.getMembership();
             
             for (Map.Entry<UUID, ProviderExchangeData> providerEntry : part.getProviderExchanges().entrySet())
             {
@@ -245,9 +244,15 @@ public final class DataExchangeProtocol extends AbstractProtocol implements IMem
                 for (Map.Entry<UUID, IExchangeData> nodeEntry : providerData.getNodeExchanges().entrySet())
                 {
                     IExchangeData nodeData = nodeEntry.getValue();
-                    INode member = membership.getGroup().findMember(nodeEntry.getKey());
+                    INode member = preparedMembership.getGroup().findMember(nodeEntry.getKey());
                     if (member == null)
-                        continue;
+                    {
+                        if (membership != null)
+                            member = membership.getGroup().findMember(nodeEntry.getKey());
+                        
+                        if (member == null)
+                            continue;
+                    }
 
                     boolean update = false;
                     NodeExchangeInfo nodeInfo = providerInfo.nodeExchanges.get(nodeEntry.getKey());
@@ -307,6 +312,18 @@ public final class DataExchangeProtocol extends AbstractProtocol implements IMem
         
         fullExchange = true;
         lastDataExchangeTime = timeService.getCurrentTime();
+    }
+
+    private Map<UUID, IExchangeData> addExchangeInfo(Map<UUID, IExchangeData> nodeExchanges, UUID nodeId, NodeExchangeInfo nodeInfo)
+    {
+        if (!fullExchange && !nodeInfo.modified)
+            return nodeExchanges;
+        
+        if (nodeExchanges == null)
+            nodeExchanges = new HashMap<UUID, IExchangeData>();
+        
+        nodeExchanges.put(nodeId, nodeInfo.data);
+        return nodeExchanges;
     }
 
     private static class NodeExchangeInfo
