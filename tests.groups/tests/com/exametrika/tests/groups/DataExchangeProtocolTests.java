@@ -419,6 +419,12 @@ public class DataExchangeProtocolTests
         {
             return 8;
         }
+        
+        @Override
+        public String toString()
+        {
+            return Long.toString(id);
+        }
     }
     
     private static class TestDataExchangeProvider implements IDataExchangeProvider
@@ -439,7 +445,7 @@ public class DataExchangeProtocolTests
         {
             if (localData == null || changeData)
             {
-                localData = new TestExchangeData(localData != null ? 1 : 0);
+                localData = new TestExchangeData(changeData ? 1 : 0);
                 changeData = false;
             }
             return localData;
