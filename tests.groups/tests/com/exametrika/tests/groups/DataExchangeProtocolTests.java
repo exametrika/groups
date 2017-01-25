@@ -232,13 +232,13 @@ public class DataExchangeProtocolTests
             assertThat(participant.isCoordinator, is(channels[i].getMembershipService().getLocalNode().equals(
                 membership.getGroup().getCoordinator())));
             
-            checkDataExchange(channelFactory, membership, i, exchangeId);
+            checkDataExchange(channelFactory, membership, i, exchangeId, skipIndexes);
         }
         assertThat(membership.getGroup().getMembers().size(), is(COUNT - skipIndexes.size()));
     }
     
     private void checkDataExchange(TestChannelFactory channelFactory, IMembership membership,
-        int index, long exchangeId)
+        int index, long exchangeId, Set<Integer> skipIndexes)
     {
         TestDataExchangeProvider exchangeProvider = channelFactory.exchangeProviders.get(index);
         for (INode node : membership.getGroup().getMembers())
@@ -252,9 +252,6 @@ public class DataExchangeProtocolTests
                 assertTrue(exchangeData.getId() == exchangeId);
             }
         }
-        
-        for (INode node : exchangeProvider.remoteData.keySet())
-            assertTrue(membership.getGroup().findMember(node.getId()) != null);
     }
     
     private int findNodeIndex(int startWith, INode node)
@@ -442,7 +439,7 @@ public class DataExchangeProtocolTests
         {
             if (localData == null || changeData)
             {
-                localData = new TestExchangeData(localData != null ? localData.id + 1 : 0);
+                localData = new TestExchangeData(localData != null ? 1 : 0);
                 changeData = false;
             }
             return localData;
