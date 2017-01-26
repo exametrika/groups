@@ -21,13 +21,21 @@ import com.exametrika.impl.groups.core.exchange.IExchangeData;
 public final class FailureAtomicExchangeData implements IExchangeData
 {
     private static final IMessages messages = Messages.get(IMessages.class);
+    private final long id;
     private final List<MissingMessageInfo> missingMessageInfos;
 
-    public FailureAtomicExchangeData(List<MissingMessageInfo> missingMessageInfos)
+    public FailureAtomicExchangeData(long id, List<MissingMessageInfo> missingMessageInfos)
     {
         Assert.notNull(missingMessageInfos);
         
+        this.id = id;
         this.missingMessageInfos = Immutables.wrap(missingMessageInfos);
+    }
+    
+    @Override
+    public long getId()
+    {
+        return id;
     }
     
     public List<MissingMessageInfo> getMissingMessageInfos()
@@ -38,19 +46,19 @@ public final class FailureAtomicExchangeData implements IExchangeData
     @Override
     public int getSize()
     {
-        return missingMessageInfos.size() * 24;
+        return 8 + missingMessageInfos.size() * 24;
     }
     
     @Override 
     public String toString()
     {
-        return messages.toString(missingMessageInfos).toString();
+        return messages.toString(id, missingMessageInfos).toString();
     }
     
     private interface IMessages
     {
-        @DefaultMessage("missing message infos: {0}")
-        ILocalizedMessage toString(List<MissingMessageInfo> missingMessageInfos);
+        @DefaultMessage("id: {0}, missing message infos: {1}")
+        ILocalizedMessage toString(long id, List<MissingMessageInfo> missingMessageInfos);
     }
 }
 

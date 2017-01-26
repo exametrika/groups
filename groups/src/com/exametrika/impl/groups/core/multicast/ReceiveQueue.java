@@ -54,7 +54,7 @@ public final class ReceiveQueue
         this.durable = durable;
         this.ordered = ordered;
         this.startMessageId = startMessageId;
-        lastAcknowlegedMessageId = startMessageId - 1;
+        this.lastAcknowlegedMessageId = startMessageId - 1;
         this.maxUnlockQueueCapacity = maxUnlockQueueCapacity;
         this.minLockQueueCapacity = minLockQueueCapacity;
         this.flowController = flowController;
@@ -143,7 +143,6 @@ public final class ReceiveQueue
             info.message = message;
             info.order = order;
             deque.offer(info);
-            lastReceiveTime = currentTime;
         }
         else
         {
@@ -160,8 +159,8 @@ public final class ReceiveQueue
                 
                 if (order != 0)
                 {
+                    Assert.isTrue(info.order == 0);
                     info.order = order;
-                    Assert.isTrue(order == 0);    
                 }
             }
             else
@@ -172,9 +171,9 @@ public final class ReceiveQueue
                 
                 deque.set(pos, info);
             }
-            
-            lastReceiveTime = currentTime;
         }
+        
+        lastReceiveTime = currentTime;
         
         if (message != null)
         {

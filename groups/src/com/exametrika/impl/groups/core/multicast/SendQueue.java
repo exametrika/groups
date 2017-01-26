@@ -163,7 +163,9 @@ public final class SendQueue
     
     public void acknowledge(IAddress address, long lastReceivedMessageId)
     {
-        Assert.isTrue(acknowledgedMessageIds.put(address, lastReceivedMessageId) < lastReceivedMessageId);
+        long prevReceivedMessageId = acknowledgedMessageIds.put(address, lastReceivedMessageId);
+        Assert.isTrue(prevReceivedMessageId < lastReceivedMessageId);
+        
         setCompletionRequired();
     }
     
@@ -173,7 +175,7 @@ public final class SendQueue
             return 0;
         
         long minCompletedMessageId = Long.MAX_VALUE;
-        for (Long value : acknowledgedMessageIds.values())
+        for (long value : acknowledgedMessageIds.values())
         {
             if (minCompletedMessageId > value)
                 minCompletedMessageId = value;

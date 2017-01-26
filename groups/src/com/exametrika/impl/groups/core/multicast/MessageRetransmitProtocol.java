@@ -63,6 +63,7 @@ public final class MessageRetransmitProtocol
     private Map<Pair<UUID, UUID>, RetransmitNodeInfo> retransmits;
     private int unacknowledgedRetransmitCount;
     private long flushId;
+    private long exchangeId;
 
     public MessageRetransmitProtocol(IFlushParticipant flushParticipant, IMembershipManager membershipManager, ILogger logger, 
         IMessageFactory messageFactory, IReceiver receiver, ISender sender, ITimeService timeService, boolean durable, boolean ordered,
@@ -108,6 +109,7 @@ public final class MessageRetransmitProtocol
         this.flush = flush;
         flushId++;
         stabilizationPhase = true;
+        exchangeDataSent = false;
     }
     
     public void beforeProcessFlush()
@@ -141,7 +143,7 @@ public final class MessageRetransmitProtocol
             addMissingMessageInfo(node, missingMessageInfos);
 
         exchangeDataSent = true;
-        FailureAtomicExchangeData data = new FailureAtomicExchangeData(missingMessageInfos);
+        FailureAtomicExchangeData data = new FailureAtomicExchangeData(exchangeId++, missingMessageInfos);
         
         if (exchangeData == null)
             exchangeData = new HashMap<INode, FailureAtomicExchangeData>();
