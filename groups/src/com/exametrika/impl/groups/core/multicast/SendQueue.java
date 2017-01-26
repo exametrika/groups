@@ -135,7 +135,7 @@ public final class SendQueue
     
     public List<IMessage> createBundle()
     {
-        int pos = (int)(lastSendMessageId - startMessageId);
+        int pos = (int)(lastSendMessageId - startMessageId + 1);
         if (pos >= deque.size())
             return null;
         
