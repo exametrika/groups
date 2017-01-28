@@ -45,7 +45,7 @@ public final class TotalOrderProtocol
     private final int maxBundlingMessageCount;
     private final int maxUnlockQueueCapacity;
     private final int minLockQueueCapacity;
-    private final IFlowController<IAddress> flowController;
+    private IFlowController<IAddress> flowController;
     private final SimpleList<ReceiveQueue> orderingQueues = new SimpleList<ReceiveQueue>();
     private boolean coordinator;
     private long nextOrder = 1;
@@ -56,7 +56,7 @@ public final class TotalOrderProtocol
     public TotalOrderProtocol(IMembershipService membershipService, IMessageFactory messageFactory,
         IReceiver receiver, ISender sender, ITimeService timeService, boolean durable, Map<IAddress, ReceiveQueue> receiveQueues,
         OrderedQueue orderedQueue, long maxBundlingPeriod, int maxBundlingMessageCount,
-        int maxUnlockQueueCapacity, int minLockQueueCapacity, IFlowController<IAddress> flowController)
+        int maxUnlockQueueCapacity, int minLockQueueCapacity)
     {
         Assert.notNull(membershipService);
         Assert.notNull(messageFactory);
@@ -65,7 +65,6 @@ public final class TotalOrderProtocol
         Assert.notNull(timeService);
         Assert.notNull(receiveQueues);
         Assert.notNull(orderedQueue);
-        Assert.notNull(flowController);
         
         this.membershipService = membershipService;
         this.messageFactory = messageFactory;
@@ -79,6 +78,13 @@ public final class TotalOrderProtocol
         this.maxBundlingMessageCount = maxBundlingMessageCount;
         this.maxUnlockQueueCapacity = maxUnlockQueueCapacity;
         this.minLockQueueCapacity = minLockQueueCapacity;
+    }
+    
+    public void setFlowController(IFlowController<IAddress> flowController)
+    {
+        Assert.notNull(flowController);
+        Assert.isNull(this.flowController);
+        
         this.flowController = flowController;
     }
     

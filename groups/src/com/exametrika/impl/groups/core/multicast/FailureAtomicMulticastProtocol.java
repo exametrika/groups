@@ -63,7 +63,7 @@ public final class FailureAtomicMulticastProtocol extends AbstractProtocol imple
     private final boolean durable;
     private final int maxUnlockQueueCapacity;
     private final int minLockQueueCapacity;
-    private final IFlowController<IAddress> flowController;
+    private IFlowController<IAddress> flowController;
     private final ISerializationRegistry serializationRegistry;
     private final Map<IAddress, ReceiveQueue> receiveQueues = new TreeMap<IAddress, ReceiveQueue>();
     private final SendQueue sendQueue;
@@ -81,14 +81,12 @@ public final class FailureAtomicMulticastProtocol extends AbstractProtocol imple
         int maxBundlingMessageSize, long maxBundlingPeriod, int maxBundleSize, int maxTotalOrderBundlingMessageCount,
         long maxUnacknowledgedPeriod, int maxUnacknowledgedMessageCount, long maxIdleReceiveQueuePeriod, 
         IDeliveryHandler senderDeliveryHandler, boolean durable, boolean ordered, 
-        int maxUnlockQueueCapacity, int minLockQueueCapacity, IFlowController<IAddress> flowController,
-        ISerializationRegistry serializationRegistry)
+        int maxUnlockQueueCapacity, int minLockQueueCapacity, ISerializationRegistry serializationRegistry)
     {
         super(channelName, messageFactory);
         
         Assert.notNull(membershipManager);
         Assert.notNull(failureDetector);
-        Assert.notNull(flowController);
         Assert.notNull(serializationRegistry);
 
         this.membershipManager = membershipManager;
@@ -102,21 +100,20 @@ public final class FailureAtomicMulticastProtocol extends AbstractProtocol imple
         this.durable = durable;
         this.maxUnlockQueueCapacity = maxUnlockQueueCapacity;
         this.minLockQueueCapacity = minLockQueueCapacity;
-        this.flowController = flowController;
         this.serializationRegistry = serializationRegistry;
 
         if (durable)
             ordered = true;
         
         this.sendQueue = new SendQueue(failureDetector, timeService, senderDeliveryHandler, durable, maxUnlockQueueCapacity, 
-            minLockQueueCapacity, flowController);
+            minLockQueueCapacity);
         
         if (ordered)
         {
-            orderedQueue = new OrderedQueue(this, maxUnlockQueueCapacity, minLockQueueCapacity, flowController);
+            orderedQueue = new OrderedQueue(this, maxUnlockQueueCapacity, minLockQueueCapacity);
             totalOrderProtocol = new TotalOrderProtocol(membershipManager, messageFactory, this, this, 
                 timeService, durable, receiveQueues, orderedQueue, maxBundlingPeriod, maxTotalOrderBundlingMessageCount,
-                maxUnlockQueueCapacity, minLockQueueCapacity, flowController);
+                maxUnlockQueueCapacity, minLockQueueCapacity);
         }
         else
         {
@@ -125,22 +122,22 @@ public final class FailureAtomicMulticastProtocol extends AbstractProtocol imple
         }
         
         this.retransmitProtocol = new MessageRetransmitProtocol(this, membershipManager, logger, messageFactory, this, this, 
-            timeService, durable, ordered, receiveQueues, this, orderedQueue, maxUnlockQueueCapacity, minLockQueueCapacity, flowController);
+            timeService, durable, ordered, receiveQueues, this, orderedQueue, maxUnlockQueueCapacity, minLockQueueCapacity);
     }
 
-    public IMembershipManager getMembershipManager()
+    public void setFlowController(IFlowController<IAddress> flowController)
     {
-        return membershipManager;
-    }
-    
-    public IFailureDetector getFailureDetector()
-    {
-        return failureDetector;
-    }
-    
-    public boolean isDurable()
-    {
-        return false;
+        Assert.notNull(flowController);
+        Assert.isNull(this.flowController);
+        
+        this.flowController = flowController;
+        this.sendQueue.setFlowController(flowController);
+        this.retransmitProtocol.setFlowController(flowController);
+        if (orderedQueue != null)
+        {
+            orderedQueue.setFlowController(flowController);
+            totalOrderProtocol.setFlowController(flowController);
+        }
     }
     
     public void tryGrantFlush()

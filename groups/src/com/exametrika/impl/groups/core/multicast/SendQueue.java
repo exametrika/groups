@@ -36,7 +36,7 @@ public final class SendQueue
     private final boolean durable;
     private final int maxUnlockQueueCapacity;
     private final int minLockQueueCapacity;
-    private final IFlowController<IAddress> flowController;
+    private IFlowController<IAddress> flowController;
     private final SimpleDeque<IMessage> deque = new SimpleDeque<IMessage>();
     private final Map<IAddress, Long> acknowledgedMessageIds = new HashMap<IAddress, Long>();
     private boolean completionRequired;
@@ -51,7 +51,7 @@ public final class SendQueue
     private boolean flowLocked;
     
     public SendQueue(IFailureDetector failureDetector, ITimeService timeService, IDeliveryHandler deliveryHandler, 
-        boolean durable, int maxUnlockQueueCapacity, int minLockQueueCapacity, IFlowController<IAddress> flowController)
+        boolean durable, int maxUnlockQueueCapacity, int minLockQueueCapacity)
     {
         Assert.notNull(failureDetector);
         Assert.notNull(timeService);
@@ -63,6 +63,13 @@ public final class SendQueue
         this.durable = durable;
         this.maxUnlockQueueCapacity = maxUnlockQueueCapacity;
         this.minLockQueueCapacity = minLockQueueCapacity;
+    }
+    
+    public void setFlowController(IFlowController<IAddress> flowController)
+    {
+        Assert.notNull(flowController);
+        Assert.isNull(this.flowController);
+        
         this.flowController = flowController;
     }
     

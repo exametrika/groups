@@ -52,7 +52,7 @@ public final class MessageRetransmitProtocol
     private final boolean ordered;
     private final int maxUnlockQueueCapacity;
     private final int minLockQueueCapacity;
-    private final IFlowController<IAddress> flowController;
+    private IFlowController<IAddress> flowController;
     private final Map<IAddress, ReceiveQueue> receiveQueues;
     private final FailureAtomicMulticastProtocol parent;
     private final OrderedQueue orderedQueue;
@@ -68,7 +68,7 @@ public final class MessageRetransmitProtocol
     public MessageRetransmitProtocol(IFlushParticipant flushParticipant, IMembershipManager membershipManager, ILogger logger, 
         IMessageFactory messageFactory, IReceiver receiver, ISender sender, ITimeService timeService, boolean durable, boolean ordered,
         Map<IAddress, ReceiveQueue> receiveQueues, FailureAtomicMulticastProtocol parent, OrderedQueue orderedQueue,
-        int maxUnlockQueueCapacity, int minLockQueueCapacity, IFlowController<IAddress> flowController)
+        int maxUnlockQueueCapacity, int minLockQueueCapacity)
     {
         Assert.notNull(flushParticipant);
         Assert.notNull(membershipManager);
@@ -80,7 +80,6 @@ public final class MessageRetransmitProtocol
         Assert.notNull(receiveQueues);
         Assert.notNull(parent);
         Assert.isTrue(ordered == (orderedQueue != null));
-        Assert.notNull(flowController);
         
         this.flushParticipant = flushParticipant;
         this.membershipManager = membershipManager;
@@ -96,6 +95,13 @@ public final class MessageRetransmitProtocol
         this.orderedQueue = orderedQueue;
         this.maxUnlockQueueCapacity = maxUnlockQueueCapacity;
         this.minLockQueueCapacity = minLockQueueCapacity;
+    }
+    
+    public void setFlowController(IFlowController<IAddress> flowController)
+    {
+        Assert.notNull(flowController);
+        Assert.isNull(this.flowController);
+        
         this.flowController = flowController;
     }
     

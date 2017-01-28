@@ -22,20 +22,26 @@ public final class OrderedQueue
     private final IReceiver receiver;
     private final int maxUnlockQueueCapacity;
     private final int minLockQueueCapacity;
-    private final IFlowController<IAddress> flowController;
+    private IFlowController<IAddress> flowController;
     private final SimpleDeque<IMessage> deque = new SimpleDeque<IMessage>();
     private long startOrder;
     private int queueCapacity;
     private boolean flowLocked;
     
-    public OrderedQueue(IReceiver receiver, int maxUnlockQueueCapacity, int minLockQueueCapacity, 
-        IFlowController<IAddress> flowController)
+    public OrderedQueue(IReceiver receiver, int maxUnlockQueueCapacity, int minLockQueueCapacity)
     {
         Assert.notNull(receiver);
         
         this.receiver = receiver;
         this.maxUnlockQueueCapacity = maxUnlockQueueCapacity;
         this.minLockQueueCapacity = minLockQueueCapacity;
+    }
+    
+    public void setFlowController(IFlowController<IAddress> flowController)
+    {
+        Assert.notNull(flowController);
+        Assert.isNull(this.flowController);
+        
         this.flowController = flowController;
     }
     
