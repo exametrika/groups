@@ -11,6 +11,7 @@ import com.exametrika.common.io.IDeserialization;
 import com.exametrika.common.io.ISerialization;
 import com.exametrika.common.io.impl.AbstractSerializer;
 import com.exametrika.common.utils.Serializers;
+import com.exametrika.impl.groups.core.exchange.IExchangeData;
 
 /**
  * The {@link FlushResponseMessagePartSerializer} is a serializer for {@link FlushResponseMessagePart}.
@@ -42,6 +43,8 @@ public final class FlushResponseMessagePartSerializer extends AbstractSerializer
         
         for (UUID nodeId : part.getLeftMembers())
             Serializers.writeUUID(serialization, nodeId);
+        
+        serialization.writeObject(part.getaExchangeData());
     }
     
     @Override
@@ -59,6 +62,7 @@ public final class FlushResponseMessagePartSerializer extends AbstractSerializer
         for (int i = 0; i < count; i++)
             leftMembers.add(Serializers.readUUID(deserialization));
         
-        return new FlushResponseMessagePart(flushProcessingRequired, failedMembers, leftMembers);
+        IExchangeData exchangeData = deserialization.readObject();
+        return new FlushResponseMessagePart(flushProcessingRequired, failedMembers, leftMembers, exchangeData);
     }
 }

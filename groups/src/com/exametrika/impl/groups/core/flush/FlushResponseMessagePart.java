@@ -12,6 +12,7 @@ import com.exametrika.common.l10n.Messages;
 import com.exametrika.common.messaging.IMessagePart;
 import com.exametrika.common.utils.Assert;
 import com.exametrika.common.utils.Immutables;
+import com.exametrika.impl.groups.core.exchange.IExchangeData;
 
 /**
  * The {@link FlushResponseMessagePart} is a flush response message part.
@@ -26,8 +27,10 @@ public final class FlushResponseMessagePart implements IMessagePart
     private final boolean flushProcessingRequired;
     private final Set<UUID> failedMembers;
     private final Set<UUID> leftMembers;
+    private final IExchangeData exchangeData;
 
-    public FlushResponseMessagePart(boolean flushProcessingRequired, Set<UUID> failedMembers, Set<UUID> leftMembers)
+    public FlushResponseMessagePart(boolean flushProcessingRequired, Set<UUID> failedMembers, Set<UUID> leftMembers,
+        IExchangeData exchangeData)
     {
         Assert.notNull(failedMembers);
         Assert.notNull(leftMembers);
@@ -35,6 +38,7 @@ public final class FlushResponseMessagePart implements IMessagePart
         this.flushProcessingRequired = flushProcessingRequired;
         this.failedMembers = Immutables.wrap(failedMembers);
         this.leftMembers = Immutables.wrap(leftMembers);
+        this.exchangeData = exchangeData;
     }
     
     public boolean isFlushProcessingRequired()
@@ -52,22 +56,28 @@ public final class FlushResponseMessagePart implements IMessagePart
         return leftMembers;
     }
     
+    public IExchangeData getaExchangeData()
+    {
+        return exchangeData;
+    }
+    
     @Override
     public int getSize()
     {
-        return (failedMembers.size() + leftMembers.size()) * 16 + 1;
+        return (failedMembers.size() + leftMembers.size()) * 16 + 1 + (exchangeData != null ? exchangeData.getSize() : 0);
     }
     
     @Override 
     public String toString()
     {
-        return messages.toString(flushProcessingRequired, failedMembers, leftMembers).toString();
+        return messages.toString(flushProcessingRequired, failedMembers, leftMembers, exchangeData).toString();
     }
     
     private interface IMessages
     {
-        @DefaultMessage("flush processing required: {0}, failed members: {1}, failed members: {2}")
-        ILocalizedMessage toString(boolean flushProcessingRequired, Set<UUID> failedMembers, Set<UUID> leftMembers);
+        @DefaultMessage("flush processing required: {0}, failed members: {1}, failed members: {2}, exchange data: [{3}]")
+        ILocalizedMessage toString(boolean flushProcessingRequired, Set<UUID> failedMembers, Set<UUID> leftMembers,
+            IExchangeData exchangeData);
     }
 }
 

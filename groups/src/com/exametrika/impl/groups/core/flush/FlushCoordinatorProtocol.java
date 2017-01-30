@@ -150,6 +150,7 @@ public final class FlushCoordinatorProtocol extends AbstractProtocol implements 
         registry.register(new FlushMessagePartSerializer());
         registry.register(new FlushStateResponseMessagePartSerializer());
         registry.register(new MembershipSerializationRegistrar());
+        registry.register(new FlushDataExchangeMessagePartSerializer());
     }
     
     @Override
@@ -160,6 +161,7 @@ public final class FlushCoordinatorProtocol extends AbstractProtocol implements 
         registry.unregister(FlushMessagePartSerializer.ID);
         registry.unregister(FlushStateResponseMessagePartSerializer.ID);
         registry.unregister(new MembershipSerializationRegistrar());
+        registry.unregister(FlushDataExchangeMessagePartSerializer.ID);
     }
 
     @Override
@@ -315,8 +317,9 @@ public final class FlushCoordinatorProtocol extends AbstractProtocol implements 
             for (FlushStateResponseMessagePart response : flushStateResponses.values())
                 states.add(response.getCoordinatorStates().get(i));
             
-            if (participant.isCoordinatorStateSupported())
-                participant.setCoordinatorState(states);
+            if (participant instanceof IFlushParticipantWithCoordinatorState &&
+                ((IFlushParticipantWithCoordinatorState)participant).isCoordinatorStateSupported())
+                ((IFlushParticipantWithCoordinatorState)participant).setCoordinatorState(states);
         }
     }
     

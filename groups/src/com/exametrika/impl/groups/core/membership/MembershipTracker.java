@@ -10,6 +10,7 @@ import com.exametrika.common.utils.Assert;
 import com.exametrika.impl.groups.core.channel.IGracefulCloseStrategy;
 import com.exametrika.impl.groups.core.discovery.INodeDiscoverer;
 import com.exametrika.impl.groups.core.failuredetection.IFailureDetector;
+import com.exametrika.impl.groups.core.flush.IFlushCondition;
 import com.exametrika.impl.groups.core.flush.IFlushManager;
 import com.exametrika.impl.groups.core.membership.Memberships.MembershipDeltaInfo;
 
@@ -26,11 +27,12 @@ public final class MembershipTracker implements ICompartmentProcessor, IGraceful
     private final INodeDiscoverer nodeDiscoverer;
     private final IFailureDetector failureDetector;
     private final IFlushManager flushManager;
+    private final IFlushCondition flushCondition;
     private long lastTrackTime;
     private boolean stopped;
 
     public MembershipTracker(long trackPeriod, IMembershipManager membershipManager, INodeDiscoverer nodeDiscoverer, 
-        IFailureDetector failureDetector, IFlushManager flushManager)
+        IFailureDetector failureDetector, IFlushManager flushManager, IFlushCondition flushCondition)
     {
         Assert.notNull(membershipManager);
         Assert.notNull(nodeDiscoverer);
@@ -42,6 +44,7 @@ public final class MembershipTracker implements ICompartmentProcessor, IGraceful
         this.nodeDiscoverer = nodeDiscoverer;
         this.failureDetector = failureDetector;
         this.flushManager = flushManager;
+        this.flushCondition = flushCondition;
     }
 
     @Override
@@ -71,6 +74,9 @@ public final class MembershipTracker implements ICompartmentProcessor, IGraceful
         if (currentCoordinator != null && !currentCoordinator.equals(membershipManager.getLocalNode()))
             return;
 
+        if (flushCondition != null && !flushCondition.canStartFlush())
+            return;
+        
         IMembership oldMembership = membershipManager.getMembership();
         
         if (oldMembership == null)

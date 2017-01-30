@@ -123,7 +123,7 @@ public final class FlushParticipantProtocol extends AbstractProtocol implements 
             flushProcessingRequired = false;
             for (IFlushParticipant participant : participants)
             {
-                if (participant.isFlushProcessingRequired(flush))
+                if (participant.isFlushProcessingRequired())
                 {
                     flushProcessingRequired = true;
                     break;
@@ -163,13 +163,13 @@ public final class FlushParticipantProtocol extends AbstractProtocol implements 
 
             for (IFlushParticipant participant : participants)
             {
-                if (participant.isFlushProcessingRequired(flush))
+                if (participant.isFlushProcessingRequired())
                     participant.beforeProcessFlush();
             }
             
             for (IFlushParticipant participant : participants)
             {
-                if (participant.isFlushProcessingRequired(flush))
+                if (participant.isFlushProcessingRequired())
                     participant.processFlush();
                 else
                     grantFlush(participant);
@@ -183,7 +183,7 @@ public final class FlushParticipantProtocol extends AbstractProtocol implements 
             if (flush == null)
             {
                 send(messageFactory.create(message.getSource(), new FlushResponseMessagePart(flushProcessingRequired, 
-                    getNodesIds(failureDetector.getFailedMembers()), getNodesIds(failureDetector.getLeftMembers())), 
+                    getNodesIds(failureDetector.getFailedMembers()), getNodesIds(failureDetector.getLeftMembers()), null), 
                     MessageFlags.HIGH_PRIORITY));
                 return;
             }
@@ -209,7 +209,7 @@ public final class FlushParticipantProtocol extends AbstractProtocol implements 
                 logger.log(LogLevel.DEBUG, marker, messages.completeFlush());
 
             send(messageFactory.create(message.getSource(), new FlushResponseMessagePart(flushProcessingRequired, 
-                getNodesIds(failureDetector.getFailedMembers()), getNodesIds(failureDetector.getLeftMembers())), 
+                getNodesIds(failureDetector.getFailedMembers()), getNodesIds(failureDetector.getLeftMembers()), null), 
                 MessageFlags.HIGH_PRIORITY));
         }
         else if (message.getPart() instanceof FlushMessagePart &&
@@ -246,8 +246,9 @@ public final class FlushParticipantProtocol extends AbstractProtocol implements 
         for (int i = 0; i < participants.size(); i++)
         {
             IFlushParticipant participant = participants.get(i);
-            if (participant.isCoordinatorStateSupported())
-                coordinatorStates.add(participant.getCoordinatorState());
+            if (participant instanceof IFlushParticipantWithCoordinatorState &&
+                ((IFlushParticipantWithCoordinatorState)participant).isCoordinatorStateSupported())
+                coordinatorStates.add(((IFlushParticipantWithCoordinatorState)participant).getCoordinatorState());
             else
                 coordinatorStates.add(null);
         }
