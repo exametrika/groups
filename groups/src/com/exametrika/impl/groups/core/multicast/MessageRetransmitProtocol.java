@@ -63,7 +63,6 @@ public final class MessageRetransmitProtocol
     private Map<Pair<UUID, UUID>, RetransmitNodeInfo> retransmits;
     private int unacknowledgedRetransmitCount;
     private long flushId;
-    private long exchangeId;
 
     public MessageRetransmitProtocol(IFlushParticipant flushParticipant, IMembershipManager membershipManager, ILogger logger, 
         IMessageFactory messageFactory, IReceiver receiver, ISender sender, ITimeService timeService, boolean durable, boolean ordered,
@@ -116,6 +115,7 @@ public final class MessageRetransmitProtocol
         flushId++;
         stabilizationPhase = true;
         exchangeDataSent = false;
+        exchangeData = null;
     }
     
     public void beforeProcessFlush()
@@ -127,6 +127,7 @@ public final class MessageRetransmitProtocol
     public void endFlush()
     {
         flush = null;
+        exchangeData = null;
     }
     
     public void onMemberFailed(INode member)
@@ -149,7 +150,7 @@ public final class MessageRetransmitProtocol
             addMissingMessageInfo(node, missingMessageInfos);
 
         exchangeDataSent = true;
-        FailureAtomicExchangeData data = new FailureAtomicExchangeData(exchangeId++, missingMessageInfos);
+        FailureAtomicExchangeData data = new FailureAtomicExchangeData(flushId, missingMessageInfos);
         
         if (exchangeData == null)
             exchangeData = new HashMap<INode, FailureAtomicExchangeData>();
@@ -169,6 +170,7 @@ public final class MessageRetransmitProtocol
     
     public void onCycleCompleted()
     {
+        //TODO: как реализовать событие завершения цикла обмена
         if (stabilizationPhase && exchangeDataSent)
         {
             IMembership membership = membershipManager.getMembership();
@@ -204,7 +206,7 @@ public final class MessageRetransmitProtocol
         if (message.getPart() instanceof RetransmitMessagePart)
         {
             RetransmitMessagePart part = message.getPart();
-            if (part.getFlushId() != flushId)
+            if (!stabilizationPhase || part.getFlushId() != flushId)
                 return true;
             
             IMembership membership = membershipManager.getMembership();
@@ -236,7 +238,7 @@ public final class MessageRetransmitProtocol
         else if (message.getPart() instanceof AcknowledgeRetransmitMessagePart)
         {
             AcknowledgeRetransmitMessagePart part = message.getPart();
-            if (part.getFlushId() != flushId)
+            if (!stabilizationPhase || part.getFlushId() != flushId)
                 return true;
             
             RetransmitNodeInfo info = retransmits.get(new Pair<UUID, UUID>(part.getFailedNodeId(), message.getSource().getId()));

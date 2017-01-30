@@ -1,5 +1,5 @@
-MessageRetransmitProtocol:
-* doReceive - принимать сообщения только в фазе стабилизации
+MessageRetransmitProtocol - code review
+TotalOrderProtocol, OrderedQueue - сode review
 ------------
 * проверить флаги приоритета и параллельности посылаемых сообщений
 * проверить групповые протоколы на потокобезопасность при stop/start. Можно сделать закрытие channel через compartment, чтобы не требовалась синхронизация. По аналогии с gracefull вызывается stop в контексте compartment, проверка на stopped и присваивание stopped = true выполняется до вызова и под синхронизатором, остальные без синхронизации
