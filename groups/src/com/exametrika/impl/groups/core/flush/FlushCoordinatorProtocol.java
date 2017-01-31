@@ -28,6 +28,7 @@ import com.exametrika.common.utils.Assert;
 import com.exametrika.common.utils.Enums;
 import com.exametrika.common.utils.Strings;
 import com.exametrika.impl.groups.core.channel.IGracefulCloseStrategy;
+import com.exametrika.impl.groups.core.exchange.IExchangeData;
 import com.exametrika.impl.groups.core.failuredetection.IFailureDetectionListener;
 import com.exametrika.impl.groups.core.failuredetection.IFailureDetector;
 import com.exametrika.impl.groups.core.membership.IMembershipDelta;
@@ -60,6 +61,8 @@ public final class FlushCoordinatorProtocol extends AbstractProtocol implements 
     private IMembershipDelta installingMembershipDelta;
     private long startWaitTime;
     private boolean stopped;
+    private Set<IAddress> exchangeRespondingMembers = new HashSet<IAddress>();
+    private List<Map<UUID, IExchangeData>> dataExchanges = new ArrayList<Map<UUID, IExchangeData>>();
     
     public enum Phase
     {
@@ -150,7 +153,8 @@ public final class FlushCoordinatorProtocol extends AbstractProtocol implements 
         registry.register(new FlushMessagePartSerializer());
         registry.register(new FlushStateResponseMessagePartSerializer());
         registry.register(new MembershipSerializationRegistrar());
-        registry.register(new FlushDataExchangeMessagePartSerializer());
+        registry.register(new FlushExchangeGetMessagePartSerializer());
+        registry.register(new FlushExchangeSetMessagePartSerializer());
     }
     
     @Override
@@ -161,7 +165,8 @@ public final class FlushCoordinatorProtocol extends AbstractProtocol implements 
         registry.unregister(FlushMessagePartSerializer.ID);
         registry.unregister(FlushStateResponseMessagePartSerializer.ID);
         registry.unregister(new MembershipSerializationRegistrar());
-        registry.unregister(FlushDataExchangeMessagePartSerializer.ID);
+        registry.unregister(FlushExchangeGetMessagePartSerializer.ID);
+        registry.unregister(FlushExchangeSetMessagePartSerializer.ID);
     }
 
     @Override
@@ -256,6 +261,31 @@ public final class FlushCoordinatorProtocol extends AbstractProtocol implements 
             if (respondingMembers.isEmpty())
                 proceedWithFlushStateResponses();
         }
+        else if (message.getPart() instanceof FlushExchangeGetMessagePart)
+        {
+            if (phase != Phase.STABILIZE)
+                return;
+            
+            FlushExchangeGetMessagePart part = message.getPart();
+            
+            if (!part.getFailedMembers().isEmpty())
+                failureDetector.addFailedMembers(part.getFailedMembers());
+            if (!part.getLeftMembers().isEmpty())
+                failureDetector.addLeftMembers(part.getLeftMembers());
+            
+            if (!exchangeRespondingMembers.contains(message.getSource()))
+                return;
+            
+            exchangeRespondingMembers.remove(message.getSource());
+            
+            INode member = membershipManager.getPreparedMembership().getGroup().findMember(message.getSource());
+            Assert.notNull(member);
+            for (int i = 0; i < part.getDataExchanges().size(); i++)
+                dataExchanges.get(i).put(member.getId(), part.getDataExchanges().get(i));
+            
+            if (exchangeRespondingMembers.isEmpty())
+                sendExchangeResponse();
+        }
         else
             receiver.receive(message);
     }
@@ -287,6 +317,11 @@ public final class FlushCoordinatorProtocol extends AbstractProtocol implements 
             return;
         }
 
+        exchangeRespondingMembers.remove(member);
+        if (exchangeRespondingMembers.isEmpty())
+            sendExchangeResponse();
+        
+        
         if (respondingMembers.isEmpty() || !respondingMembers.contains(member))
             return;
 
@@ -447,8 +482,11 @@ public final class FlushCoordinatorProtocol extends AbstractProtocol implements 
             flushProcessingRequired = false;
             processingMembers.clear();
             respondingMembers = getRespondingMembers(null);
+            exchangeRespondingMembers = new HashSet<IAddress>(respondingMembers);
             startWaitTime = timeService.getCurrentTime();
 
+            initExchanges();
+            
             FlushStartMessagePart flushStartForNew = new FlushStartMessagePart(installingMembershipDelta == null, installingMembership, null,
                 getNodesIds(failureDetector.getFailedMembers()), getNodesIds(failureDetector.getLeftMembers()));
             
@@ -540,6 +578,26 @@ public final class FlushCoordinatorProtocol extends AbstractProtocol implements 
         phaseRestartRequired = false;
     }
 
+    private void initExchanges()
+    {
+        dataExchanges = new ArrayList<Map<UUID, IExchangeData>>();
+        for (int i = 0; i < participantProtocol.getParticipants().size(); i++)
+            dataExchanges.add(new HashMap<UUID, IExchangeData>());
+    }
+    
+    private void sendExchangeResponse()
+    {
+        if (phase != Phase.STABILIZE)
+            return;
+        
+        FlushExchangeSetMessagePart part = new FlushExchangeSetMessagePart(dataExchanges);
+        Set<IAddress> respondingMembers = getRespondingMembers(null);
+        for (IAddress member : respondingMembers)
+            send(messageFactory.create(member, part, MessageFlags.HIGH_PRIORITY));
+        
+        dataExchanges = new ArrayList<Map<UUID, IExchangeData>>();
+    }
+    
     private Set<UUID> getNodesIds(Set<INode> nodes)
     {
         Set<UUID> ids = new HashSet<UUID>(nodes.size());

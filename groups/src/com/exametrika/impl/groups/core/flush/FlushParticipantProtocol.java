@@ -4,8 +4,10 @@
 package com.exametrika.impl.groups.core.flush;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -24,6 +26,7 @@ import com.exametrika.common.messaging.impl.protocols.AbstractProtocol;
 import com.exametrika.common.utils.Assert;
 import com.exametrika.common.utils.Strings;
 import com.exametrika.impl.groups.core.channel.IGracefulCloseStrategy;
+import com.exametrika.impl.groups.core.exchange.IExchangeData;
 import com.exametrika.impl.groups.core.failuredetection.IFailureDetector;
 import com.exametrika.impl.groups.core.membership.IMembershipDelta;
 import com.exametrika.impl.groups.core.membership.IMembershipManager;
@@ -143,6 +146,18 @@ public final class FlushParticipantProtocol extends AbstractProtocol implements 
 
             for (IFlushParticipant participant : participants)
                 participant.startFlush(flush);
+            
+            List<IExchangeData> exchanges = new ArrayList<IExchangeData>();
+            for (IFlushParticipant participant : participants)
+            {
+                if (participant instanceof IExchangeableFlushParticipant)
+                    exchanges.add(((IExchangeableFlushParticipant)participant).getLocalData());
+                else
+                    exchanges.add(null);
+            }
+            send(messageFactory.create(message.getSource(), new FlushExchangeGetMessagePart( 
+                getNodesIds(failureDetector.getFailedMembers()), getNodesIds(failureDetector.getLeftMembers()), exchanges), 
+                MessageFlags.HIGH_PRIORITY));
         }
         else if (message.getPart() instanceof FlushMessagePart && 
             ((FlushMessagePart)message.getPart()).getType() == FlushMessagePart.Type.PROCESS)
@@ -183,7 +198,7 @@ public final class FlushParticipantProtocol extends AbstractProtocol implements 
             if (flush == null)
             {
                 send(messageFactory.create(message.getSource(), new FlushResponseMessagePart(flushProcessingRequired, 
-                    getNodesIds(failureDetector.getFailedMembers()), getNodesIds(failureDetector.getLeftMembers()), null), 
+                    getNodesIds(failureDetector.getFailedMembers()), getNodesIds(failureDetector.getLeftMembers())), 
                     MessageFlags.HIGH_PRIORITY));
                 return;
             }
@@ -209,7 +224,7 @@ public final class FlushParticipantProtocol extends AbstractProtocol implements 
                 logger.log(LogLevel.DEBUG, marker, messages.completeFlush());
 
             send(messageFactory.create(message.getSource(), new FlushResponseMessagePart(flushProcessingRequired, 
-                getNodesIds(failureDetector.getFailedMembers()), getNodesIds(failureDetector.getLeftMembers()), null), 
+                getNodesIds(failureDetector.getFailedMembers()), getNodesIds(failureDetector.getLeftMembers())), 
                 MessageFlags.HIGH_PRIORITY));
         }
         else if (message.getPart() instanceof FlushMessagePart &&
@@ -236,8 +251,35 @@ public final class FlushParticipantProtocol extends AbstractProtocol implements 
             
             send(messageFactory.create(message.getSource(), responsePart, MessageFlags.HIGH_PRIORITY));
         }
+        else if (message.getPart() instanceof FlushExchangeSetMessagePart)
+        {
+            if (phase != Phase.STABILIZE)
+                return;
+            
+            FlushExchangeSetMessagePart part = message.getPart();
+            for (int i = 0; i < participants.size(); i++)
+            {
+                IFlushParticipant participant = participants.get(i);
+                if (participant instanceof IExchangeableFlushParticipant)
+                    ((IExchangeableFlushParticipant)participant).setRemoteData(getDataExchanges(flush.getNewMembership(),
+                        part.getDataExchanges().get(i)));
+            }
+        }
         else
             receiver.receive(message);
+    }
+
+    private Map<INode, IExchangeData> getDataExchanges(IMembership membership, Map<UUID, IExchangeData> map)
+    {
+        Map<INode, IExchangeData> dataExchanges = new HashMap<INode, IExchangeData>();
+        for (Map.Entry<UUID, IExchangeData> entry : map.entrySet())
+        {
+            INode member = membership.getGroup().findMember(entry.getKey());
+            Assert.notNull(member);
+            
+            dataExchanges.put(member, entry.getValue());
+        }
+        return dataExchanges;
     }
 
     private List<Object> getCoordinatorStates()
@@ -273,8 +315,7 @@ public final class FlushParticipantProtocol extends AbstractProtocol implements 
         
         send(messageFactory.create(failureDetector.getCurrentCoordinator().getAddress(),
             new FlushResponseMessagePart(flushProcessingRequired, getNodesIds(failureDetector.getFailedMembers()),
-            getNodesIds(failureDetector.getLeftMembers())), 
-            MessageFlags.HIGH_PRIORITY));
+            getNodesIds(failureDetector.getLeftMembers())), MessageFlags.HIGH_PRIORITY));
     }
     
     private Set<UUID> getNodesIds(Set<INode> nodes)

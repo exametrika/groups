@@ -3,6 +3,7 @@
  */
 package com.exametrika.impl.groups.core.flush;
 
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
@@ -12,37 +13,39 @@ import com.exametrika.common.l10n.Messages;
 import com.exametrika.common.messaging.IMessagePart;
 import com.exametrika.common.utils.Assert;
 import com.exametrika.common.utils.Immutables;
+import com.exametrika.impl.groups.core.exchange.IExchangeData;
 
 /**
- * The {@link FlushResponseMessagePart} is a flush response message part.
+ * The {@link FlushExchangeGetMessagePart} is a flush data exchange get message part.
  * 
  * @threadsafety This class and its methods are thread safe.
  * @author Medvedev-Anse 
  */
 
-public final class FlushResponseMessagePart implements IMessagePart
+public final class FlushExchangeGetMessagePart implements IMessagePart
 {
     private static final IMessages messages = Messages.get(IMessages.class);
-    private final boolean flushProcessingRequired;
     private final Set<UUID> failedMembers;
     private final Set<UUID> leftMembers;
+    private final List<IExchangeData> dataExchanges;
     private final int size;
 
-    public FlushResponseMessagePart(boolean flushProcessingRequired, Set<UUID> failedMembers, Set<UUID> leftMembers)
+    public FlushExchangeGetMessagePart(Set<UUID> failedMembers, Set<UUID> leftMembers,
+        List<IExchangeData> dataExchanges)
     {
         Assert.notNull(failedMembers);
         Assert.notNull(leftMembers);
+        Assert.notNull(dataExchanges);
         
-        this.flushProcessingRequired = flushProcessingRequired;
         this.failedMembers = Immutables.wrap(failedMembers);
         this.leftMembers = Immutables.wrap(leftMembers);
+        this.dataExchanges = Immutables.wrap(dataExchanges);
         
-        this.size = (failedMembers.size() + leftMembers.size()) * 16 + 1;
-    }
-    
-    public boolean isFlushProcessingRequired()
-    {
-        return flushProcessingRequired;
+        int size = (failedMembers.size() + leftMembers.size()) * 16;
+        for (IExchangeData exchange : dataExchanges)
+            size += exchange.getSize();
+        
+        this.size = size;
     }
     
     public Set<UUID> getFailedMembers()
@@ -55,6 +58,11 @@ public final class FlushResponseMessagePart implements IMessagePart
         return leftMembers;
     }
     
+    public List<IExchangeData> getDataExchanges()
+    {
+        return dataExchanges;
+    }
+    
     @Override
     public int getSize()
     {
@@ -64,13 +72,13 @@ public final class FlushResponseMessagePart implements IMessagePart
     @Override 
     public String toString()
     {
-        return messages.toString(flushProcessingRequired, failedMembers, leftMembers).toString();
+        return messages.toString(failedMembers, leftMembers, dataExchanges).toString();
     }
     
     private interface IMessages
     {
-        @DefaultMessage("flush processing required: {0}, failed members: {1}, failed members: {2}")
-        ILocalizedMessage toString(boolean flushProcessingRequired, Set<UUID> failedMembers, Set<UUID> leftMembers);
+        @DefaultMessage("failed members: {0}, failed members: {1}, data exchanges: {2}")
+        ILocalizedMessage toString(Set<UUID> failedMembers, Set<UUID> leftMembers, List<IExchangeData> exchanges);
     }
 }
 

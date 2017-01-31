@@ -3,6 +3,7 @@
  */
 package com.exametrika.impl.groups.core.flush;
 
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -12,30 +13,33 @@ import com.exametrika.common.utils.Immutables;
 import com.exametrika.impl.groups.core.exchange.IExchangeData;
 
 /**
- * The {@link FlushDataExchangeMessagePart} is flush data exchange message part.
+ * The {@link FlushExchangeSetMessagePart} is flush data exchange set message part.
  * 
  * @threadsafety This class and its methods are thread safe.
  * @author Medvedev-A
  */
-public final class FlushDataExchangeMessagePart implements IMessagePart
+public final class FlushExchangeSetMessagePart implements IMessagePart
 {
-    private final Map<UUID, IExchangeData> dataExchanges;
+    private final List<Map<UUID, IExchangeData>> dataExchanges;
     private final int size;
 
-    public FlushDataExchangeMessagePart(Map<UUID, IExchangeData> dataExchanges)
+    public FlushExchangeSetMessagePart(List<Map<UUID, IExchangeData>> dataExchanges)
     {
         Assert.notNull(dataExchanges);
         
         this.dataExchanges = Immutables.wrap(dataExchanges);
         
         int size = 0;
-        for (IExchangeData exchange : dataExchanges.values())
-            size += exchange.getSize();
-        
+        for (Map<UUID, IExchangeData> map : dataExchanges)
+        {
+            for (IExchangeData exchange : map.values())
+                size += exchange.getSize();
+        }
+            
         this.size = size;
     }
 
-    public Map<UUID, IExchangeData> getDataExchanges()
+    public List<Map<UUID, IExchangeData>> getDataExchanges()
     {
         return dataExchanges;
     }
