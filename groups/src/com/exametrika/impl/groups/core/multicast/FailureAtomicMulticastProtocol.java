@@ -8,7 +8,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
-import java.util.UUID;
 
 import com.exametrika.api.groups.core.IMembership;
 import com.exametrika.api.groups.core.INode;
@@ -32,12 +31,11 @@ import com.exametrika.common.utils.Assert;
 import com.exametrika.common.utils.ByteArray;
 import com.exametrika.common.utils.Serializers;
 import com.exametrika.impl.groups.MessageFlags;
-import com.exametrika.impl.groups.core.exchange.IDataExchangeProvider;
 import com.exametrika.impl.groups.core.exchange.IExchangeData;
 import com.exametrika.impl.groups.core.failuredetection.IFailureDetectionListener;
 import com.exametrika.impl.groups.core.failuredetection.IFailureDetector;
+import com.exametrika.impl.groups.core.flush.IExchangeableFlushParticipant;
 import com.exametrika.impl.groups.core.flush.IFlush;
-import com.exametrika.impl.groups.core.flush.IFlushParticipant;
 import com.exametrika.impl.groups.core.membership.GroupAddress;
 import com.exametrika.impl.groups.core.membership.IMembershipManager;
 
@@ -48,10 +46,8 @@ import com.exametrika.impl.groups.core.membership.IMembershipManager;
  * @threadsafety This class and its methods are not thread safe.
  * @author Medvedev-A
  */
-public final class FailureAtomicMulticastProtocol extends AbstractProtocol implements IFailureDetectionListener, IFlushParticipant, 
-    IDataExchangeProvider
+public final class FailureAtomicMulticastProtocol extends AbstractProtocol implements IFailureDetectionListener, IExchangeableFlushParticipant
 {
-    private static final UUID PROVIDER_ID = UUID.fromString("8c69015e-218d-42a5-af27-6180b55b4535");
     private final IMembershipManager membershipManager;
     private final IFailureDetector failureDetector;
     private final int maxBundlingMessageSize;
@@ -121,7 +117,7 @@ public final class FailureAtomicMulticastProtocol extends AbstractProtocol imple
             totalOrderProtocol = null;
         }
         
-        this.retransmitProtocol = new MessageRetransmitProtocol(this, membershipManager, logger, messageFactory, this, this, 
+        this.retransmitProtocol = new MessageRetransmitProtocol(this, membershipManager, messageFactory, this, this, 
             timeService, durable, ordered, receiveQueues, this, orderedQueue, maxUnlockQueueCapacity, minLockQueueCapacity);
     }
 
@@ -150,13 +146,7 @@ public final class FailureAtomicMulticastProtocol extends AbstractProtocol imple
     }
     
     @Override
-    public boolean isFlushProcessingRequired(IFlush flush)
-    {
-        return true;
-    }
-
-    @Override
-    public boolean isCoordinatorStateSupported()
+    public boolean isFlushProcessingRequired()
     {
         return true;
     }
@@ -168,17 +158,6 @@ public final class FailureAtomicMulticastProtocol extends AbstractProtocol imple
             totalOrderProtocol.setCoordinator(); 
     }
     
-    @Override
-    public Object getCoordinatorState()
-    {
-        return null;
-    }
-
-    @Override
-    public void setCoordinatorState(List<Object> states)
-    {
-    }
-
     @Override
     public void startFlush(IFlush flush)
     {
@@ -194,8 +173,6 @@ public final class FailureAtomicMulticastProtocol extends AbstractProtocol imple
         
         if (sendQueue.isCompletionRequired())
             sendCompletion();
-        
-        tryGrantFlush();
     }
 
     @Override
@@ -210,6 +187,7 @@ public final class FailureAtomicMulticastProtocol extends AbstractProtocol imple
     @Override
     public void processFlush()
     {
+        flush.grantFlush(this);
     }
     
     @Override
@@ -260,37 +238,25 @@ public final class FailureAtomicMulticastProtocol extends AbstractProtocol imple
         totalOrderProtocol.onTimer();
     }
 
-    @Override
-    public UUID getId()
-    {
-        return PROVIDER_ID;
-    }
 
     @Override
-    public IExchangeData getData()
+    public IExchangeData getLocalData()
     {
         return retransmitProtocol.getData();
     }
 
     @Override
-    public void setData(INode source, IExchangeData data)
+    public void setRemoteData(Map<INode, IExchangeData> data)
     {
-        retransmitProtocol.setData(source, data);
+        retransmitProtocol.setData(data);
     }
-    
-    @Override
-    public void onCycleCompleted()
-    {
-        retransmitProtocol.onCycleCompleted();
-    }
- 
+
     @Override
     public void register(ISerializationRegistry registry)
     {
         registry.register(new FailureAtomicMessagePartSerializer());
         registry.register(new CompleteMessagePartSerializer());
         registry.register(new AcknowledgeSendMessagePartSerializer());
-        registry.register(new AcknowledgeRetransmitMessagePartSerializer());
         registry.register(new FailureAtomicExchangeDataSerializer());
         registry.register(new RetransmitMessagePartSerializer());
         registry.register(new TotalOrderMessagePartSerializer());
@@ -303,7 +269,6 @@ public final class FailureAtomicMulticastProtocol extends AbstractProtocol imple
         registry.unregister(FailureAtomicMessagePartSerializer.ID);
         registry.unregister(CompleteMessagePartSerializer.ID);
         registry.unregister(AcknowledgeSendMessagePartSerializer.ID);
-        registry.unregister(AcknowledgeRetransmitMessagePartSerializer.ID);
         registry.unregister(FailureAtomicExchangeDataSerializer.ID);
         registry.unregister(RetransmitMessagePartSerializer.ID);
         registry.unregister(TotalOrderMessagePartSerializer.ID);
@@ -456,9 +421,7 @@ public final class FailureAtomicMulticastProtocol extends AbstractProtocol imple
         if (bundledMessages == null)
             return;
         
-        long minCompletedMessageId = 0;
-        if (flush == null)
-            minCompletedMessageId = sendQueue.complete();
+        long minCompletedMessageId = sendQueue.complete();
 
         IMembership membership = membershipManager.getPreparedMembership();
         Assert.checkState(membership != null);
@@ -501,7 +464,8 @@ public final class FailureAtomicMulticastProtocol extends AbstractProtocol imple
             }
         }
         
-        tryGrantFlush();
+        if (flush != null)
+            tryGrantFlush();
     }
     
     private void processReceiveQueues(long currentTime)

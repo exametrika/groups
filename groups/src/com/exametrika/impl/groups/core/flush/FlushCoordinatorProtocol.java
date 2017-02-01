@@ -278,7 +278,7 @@ public final class FlushCoordinatorProtocol extends AbstractProtocol implements 
             
             exchangeRespondingMembers.remove(message.getSource());
             
-            INode member = membershipManager.getPreparedMembership().getGroup().findMember(message.getSource());
+            INode member = installingMembership.getGroup().findMember(message.getSource());
             Assert.notNull(member);
             for (int i = 0; i < part.getDataExchanges().size(); i++)
                 dataExchanges.get(i).put(member.getId(), part.getDataExchanges().get(i));
@@ -320,7 +320,6 @@ public final class FlushCoordinatorProtocol extends AbstractProtocol implements 
         exchangeRespondingMembers.remove(member);
         if (exchangeRespondingMembers.isEmpty())
             sendExchangeResponse();
-        
         
         if (respondingMembers.isEmpty() || !respondingMembers.contains(member))
             return;
@@ -569,6 +568,7 @@ public final class FlushCoordinatorProtocol extends AbstractProtocol implements 
             flushProcessingRequired = false;
             processingMembers.clear();
             startWaitTime = 0;
+            initExchanges();
             
             if (logger.isLogEnabled(LogLevel.DEBUG))
                 logger.log(LogLevel.DEBUG, marker, messages.flushCompleted());

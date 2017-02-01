@@ -20,7 +20,7 @@ public interface IFlushParticipant
     boolean isFlushProcessingRequired();
     
     /**
-     * Sets participant as coordinator when local node has became a coordinator of the group.
+     * Sets participant as coordinator when local node has become a coordinator of the group.
      */
     void setCoordinator();
     

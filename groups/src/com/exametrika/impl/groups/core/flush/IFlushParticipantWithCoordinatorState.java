@@ -7,7 +7,7 @@ import java.util.List;
 
 
 /**
- * The {@link IFlushParticipantWithCoordinatorState} is a flush participant with cordinator state.
+ * The {@link IFlushParticipantWithCoordinatorState} is a flush participant with coordinator state.
  * 
  * @threadsafety Implementations of this interface and its methods are thread safe.
  * @author Medvedev-A

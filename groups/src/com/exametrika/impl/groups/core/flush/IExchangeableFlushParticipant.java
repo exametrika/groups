@@ -10,7 +10,7 @@ import com.exametrika.impl.groups.core.exchange.IExchangeData;
 
 
 /**
- * The {@link IExchangeableFlushParticipant} is a flush participant which supports data exchane on start flush phase.
+ * The {@link IExchangeableFlushParticipant} is a flush participant which supports data exchange on message stabilization flush phase.
  * 
  * @threadsafety Implementations of this interface and its methods are thread safe.
  * @author Medvedev-A

@@ -261,7 +261,7 @@ public final class FlushParticipantProtocol extends AbstractProtocol implements 
             {
                 IFlushParticipant participant = participants.get(i);
                 if (participant instanceof IExchangeableFlushParticipant)
-                    ((IExchangeableFlushParticipant)participant).setRemoteData(getDataExchanges(flush.getNewMembership(),
+                    ((IExchangeableFlushParticipant)participant).setRemoteData(getDataExchanges(preparedMembership,
                         part.getDataExchanges().get(i)));
             }
         }
@@ -279,6 +279,7 @@ public final class FlushParticipantProtocol extends AbstractProtocol implements 
             
             dataExchanges.put(member, entry.getValue());
         }
+        
         return dataExchanges;
     }
 
