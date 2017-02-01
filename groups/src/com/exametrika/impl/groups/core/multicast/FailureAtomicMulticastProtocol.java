@@ -238,7 +238,6 @@ public final class FailureAtomicMulticastProtocol extends AbstractProtocol imple
         totalOrderProtocol.onTimer();
     }
 
-
     @Override
     public IExchangeData getLocalData()
     {

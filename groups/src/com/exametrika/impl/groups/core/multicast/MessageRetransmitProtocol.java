@@ -5,8 +5,10 @@ package com.exametrika.impl.groups.core.multicast;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 import com.exametrika.api.groups.core.IMembership;
@@ -51,6 +53,7 @@ public final class MessageRetransmitProtocol
     private IFlush flush;
     private boolean stabilizationPhase;
     private long flushId;
+    private Set<UUID> retransmits;
 
     public MessageRetransmitProtocol(IFlushParticipant flushParticipant, IMembershipManager membershipManager,  
         IMessageFactory messageFactory, IReceiver receiver, ISender sender, ITimeService timeService, boolean durable, boolean ordered,
@@ -99,6 +102,7 @@ public final class MessageRetransmitProtocol
     {
         this.flush = flush;
         flushId++;
+        retransmits = null;
         if (flush.getOldMembership() != null)
             stabilizationPhase = true;
         else
@@ -143,31 +147,48 @@ public final class MessageRetransmitProtocol
         if (!stabilizationPhase)
             return;
 
-        // TODO: переделать
-        // - по каждому сбойному узлу-отправителю из missingInfo
-        //  * проверяем, является ли локальный узел получателем (имеет пропуски), если нет, завершаем фазу стабилизации
-        //    - получить очередь для заданного retransmitinfo, (игнорируем maxreceived == -1
-        //    - если ненайдена или lastreceivedid очереди меньше maxreceived значит пропуск
-        //    - сохранять мапку ретрансмитов до момента приема (если есть пропуски)
-        // - учесть, что ретрансмит узлу может быть послан и принят на узле до приема setdata(race condition)
         IMembership membership = membershipManager.getMembership();
-        List<RetransmitInfo> retransmits = buildRetransmitInfos(data, membership);
-        for (RetransmitInfo info : retransmits)
+        
+        Map<UUID, RetransmitInfo> retransmitsMap = new HashMap<UUID, RetransmitInfo>();
+        for (Map.Entry<INode, IExchangeData> entry : data.entrySet())
+            buildRetransmitInfos(entry, retransmitsMap, membership);
+        
+        Set<UUID> retransmits = new HashSet<UUID>();
+        for (RetransmitInfo info : retransmitsMap.values())
         {
-            for (RetransmitNodeInfo nodeInfo : info.retransmits)
+            if (info.maxReceivedMessageId == -1)
+                continue;
+            
+            ReceiveQueue receiveQueue = receiveQueues.get(info.failedNode.getAddress());
+            if (info.senderNode.equals(membershipManager.getLocalNode()))
             {
-                List<IMessage> retransmittedMessages = new ArrayList<IMessage>();
-                for (long i = nodeInfo.receivedMessageId + 1; i <= info.maxReceivedMessageId; i++)
-                    retransmittedMessages.add(info.receiveQueue.getMessage(i));
-             
-                sender.send(messageFactory.create(nodeInfo.receiveNode.getAddress(),
-                    new RetransmitMessagePart(info.failedNode.getId(), flushId, retransmittedMessages),
-                    MessageFlags.HIGH_PRIORITY));
+                Assert.notNull(receiveQueue);
+                
+                for (RetransmitNodeInfo nodeInfo : info.retransmits)
+                {
+                    if (nodeInfo.receivedMessageId == -1)
+                        nodeInfo.receivedMessageId = receiveQueue.getLastAcknowledgedMessageId();
+                    
+                    if (nodeInfo.receivedMessageId < info.maxReceivedMessageId)
+                    {
+                        List<IMessage> retransmittedMessages = new ArrayList<IMessage>();
+                        for (long i = nodeInfo.receivedMessageId + 1; i <= info.maxReceivedMessageId; i++)
+                            retransmittedMessages.add(receiveQueue.getMessage(i));
+                     
+                        sender.send(messageFactory.create(nodeInfo.receiveNode.getAddress(),
+                            new RetransmitMessagePart(info.failedNode.getId(), flushId, retransmittedMessages),
+                            MessageFlags.HIGH_PRIORITY));
+                    }
+                }
             }
+            else if (receiveQueue == null || receiveQueue.getLastReceivedMessageId() < info.maxReceivedMessageId)
+                retransmits.add(info.failedNode.getId());
         }
         
-        // TODO: см. выше
-        completeStabilizationPhase(false);
+        if (!retransmits.isEmpty())
+            this.retransmits = retransmits;
+        else
+            completeStabilizationPhase(false);
     }
     
     public boolean receive(IMessage message)
@@ -182,26 +203,31 @@ public final class MessageRetransmitProtocol
             Assert.checkState(membership != null);
             Assert.isTrue(!part.getRetransmittedMessages().isEmpty());
             
+            INode failedNode = membership.getGroup().findMember(part.getFailedNodeId());
+            ReceiveQueue receiveQueue = receiveQueues.get(failedNode.getAddress());
+            if (receiveQueue == null)
+            {
+                FailureAtomicMessagePart firstPart = part.getRetransmittedMessages().get(0).getPart();
+                receiveQueue = new ReceiveQueue(failedNode.getAddress(), receiver, orderedQueue,
+                    firstPart.getMessageId(), durable, ordered, maxUnlockQueueCapacity, minLockQueueCapacity,
+                    flowController);
+                receiveQueues.put(failedNode.getAddress(), receiveQueue);
+            }
+            
             for (IMessage retransmittedMessage : part.getRetransmittedMessages())
             {
                 FailureAtomicMessagePart failureAtomicPart = retransmittedMessage.getPart();
-                
-                ReceiveQueue receiveQueue = receiveQueues.get(retransmittedMessage.getSource());
-                if (receiveQueue == null)
-                {
-                    receiveQueue = new ReceiveQueue(retransmittedMessage.getSource(), receiver, orderedQueue,
-                        failureAtomicPart.getMessageId(), durable, ordered, maxUnlockQueueCapacity, minLockQueueCapacity,
-                        flowController);
-                    receiveQueues.put(retransmittedMessage.getSource(), receiveQueue);
-                }
-                
                 receiveQueue.receive(failureAtomicPart.getMessageId(), failureAtomicPart.getOrder(), 
                     retransmittedMessage, timeService.getCurrentTime());
                 receiveQueue.acknowledge();
             }
             
-            //TODO: завершать, только если получены все недостающие, определенные на этапе setData
-            completeStabilizationPhase(false);
+            if (retransmits != null)
+            {
+                retransmits.remove(part.getFailedNodeId());
+                if (retransmits.isEmpty())
+                    completeStabilizationPhase(false);
+            }            
             return true;
         }
         else
@@ -215,26 +241,6 @@ public final class MessageRetransmitProtocol
         if (receiveQueue != null)
             lastReceivedMessageId = receiveQueue.getLastReceivedMessageId();
         missingMessageInfos.add(new MissingMessageInfo(node.getId(), lastReceivedMessageId));
-    }
-    
-    private List<RetransmitInfo> buildRetransmitInfos(Map<INode, IExchangeData> exchangeData, IMembership membership)
-    {
-        Map<UUID, RetransmitInfo> retransmits = new HashMap<UUID, RetransmitInfo>();
-        for (Map.Entry<INode, IExchangeData> entry : exchangeData.entrySet())
-            buildRetransmitInfos(entry, retransmits, membership);
-        
-        List<RetransmitInfo> list = new ArrayList<RetransmitInfo>();
-        for (RetransmitInfo info : retransmits.values())
-        {
-            if (info.senderNode.equals(membershipManager.getLocalNode()) && info.maxReceivedMessageId != -1)
-            {
-                info.receiveQueue = receiveQueues.get(info.failedNode.getAddress());
-                info.buildMissing();
-                if (!info.retransmits.isEmpty())
-                    list.add(info);
-            }
-        }
-        return list;
     }
     
     private void buildRetransmitInfos(Map.Entry<INode, IExchangeData> exchangeData, 
@@ -265,6 +271,7 @@ public final class MessageRetransmitProtocol
     private void completeStabilizationPhase(boolean failure)
     {
         stabilizationPhase = false;
+        retransmits = null;
         
         if (failure)
             flush.grantFlush(flushParticipant);
@@ -277,7 +284,6 @@ public final class MessageRetransmitProtocol
         private final INode failedNode;
         private INode senderNode;
         private long maxReceivedMessageId = -1;
-        private ReceiveQueue receiveQueue;
         private List<RetransmitNodeInfo> retransmits;
         
         public RetransmitInfo(INode failedNode)
@@ -285,20 +291,6 @@ public final class MessageRetransmitProtocol
             Assert.notNull(failedNode);
             
             this.failedNode = failedNode;
-        }
-        
-        public void buildMissing()
-        {
-            List<RetransmitNodeInfo> retransmits = new ArrayList<RetransmitNodeInfo>();
-            for (RetransmitNodeInfo info : this.retransmits)
-            {
-                if (info.receivedMessageId == -1)
-                    info.receivedMessageId = receiveQueue.getLastAcknowledgedMessageId();
-                if (info.receivedMessageId < maxReceivedMessageId)
-                    retransmits.add(info);
-            }
-            
-            this.retransmits = retransmits;
         }
     }
     
