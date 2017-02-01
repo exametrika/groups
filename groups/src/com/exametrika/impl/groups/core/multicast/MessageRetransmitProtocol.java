@@ -99,7 +99,10 @@ public final class MessageRetransmitProtocol
     {
         this.flush = flush;
         flushId++;
-        stabilizationPhase = true;
+        if (flush.getOldMembership() != null)
+            stabilizationPhase = true;
+        else
+            parent.tryGrantFlush();
     }
     
     public void beforeProcessFlush()
@@ -142,11 +145,11 @@ public final class MessageRetransmitProtocol
 
         // TODO: переделать
         // - по каждому сбойному узлу-отправителю из missingInfo
-        //  * находим максимальный принятый и его держателя, который будет отправителем
-        //  * по всем работоспособным узлам старого членства проверяем, есть ли у них пропуски относительно максимального принятого
-        //    (если missingInfo по заданному узлу-получателю не содержит ничего, значит ничего не принято)
-        //  * проверяем, является ли локальный узел отправителем, если да, отправляем недостающие
         //  * проверяем, является ли локальный узел получателем (имеет пропуски), если нет, завершаем фазу стабилизации
+        //    - получить очередь для заданного retransmitinfo, (игнорируем maxreceived == -1
+        //    - если ненайдена или lastreceivedid очереди меньше maxreceived значит пропуск
+        //    - сохранять мапку ретрансмитов до момента приема (если есть пропуски)
+        // - учесть, что ретрансмит узлу может быть послан и принят на узле до приема setdata(race condition)
         IMembership membership = membershipManager.getMembership();
         List<RetransmitInfo> retransmits = buildRetransmitInfos(data, membership);
         for (RetransmitInfo info : retransmits)
@@ -207,11 +210,10 @@ public final class MessageRetransmitProtocol
     
     private void addMissingMessageInfo(INode node, List<MissingMessageInfo> missingMessageInfos)
     {
+        long lastReceivedMessageId = -1;
         ReceiveQueue receiveQueue = receiveQueues.get(node.getAddress());
-        if (receiveQueue == null)
-            return;
-        
-        long lastReceivedMessageId = receiveQueue.getLastReceivedMessageId();
+        if (receiveQueue != null)
+            lastReceivedMessageId = receiveQueue.getLastReceivedMessageId();
         missingMessageInfos.add(new MissingMessageInfo(node.getId(), lastReceivedMessageId));
     }
     
@@ -224,11 +226,12 @@ public final class MessageRetransmitProtocol
         List<RetransmitInfo> list = new ArrayList<RetransmitInfo>();
         for (RetransmitInfo info : retransmits.values())
         {
-            if (info.senderNode.equals(membershipManager.getLocalNode()))
+            if (info.senderNode.equals(membershipManager.getLocalNode()) && info.maxReceivedMessageId != -1)
             {
                 info.receiveQueue = receiveQueues.get(info.failedNode.getAddress());
                 info.buildMissing();
-                list.add(info);
+                if (!info.retransmits.isEmpty())
+                    list.add(info);
             }
         }
         return list;
@@ -289,6 +292,8 @@ public final class MessageRetransmitProtocol
             List<RetransmitNodeInfo> retransmits = new ArrayList<RetransmitNodeInfo>();
             for (RetransmitNodeInfo info : this.retransmits)
             {
+                if (info.receivedMessageId == -1)
+                    info.receivedMessageId = receiveQueue.getLastAcknowledgedMessageId();
                 if (info.receivedMessageId < maxReceivedMessageId)
                     retransmits.add(info);
             }
@@ -300,7 +305,7 @@ public final class MessageRetransmitProtocol
     private static class RetransmitNodeInfo
     {
         private final INode receiveNode;
-        private final long receivedMessageId;
+        private long receivedMessageId;
         
         public RetransmitNodeInfo(INode receiveNode, long receivedMessageId)
         {
