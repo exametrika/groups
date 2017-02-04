@@ -5,7 +5,6 @@ package com.exametrika.impl.groups.core.multicast;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 import com.exametrika.api.groups.core.IMembership;
 import com.exametrika.api.groups.core.IMembershipService;
@@ -13,7 +12,6 @@ import com.exametrika.api.groups.core.INode;
 import com.exametrika.common.messaging.IAddress;
 import com.exametrika.common.messaging.IMessage;
 import com.exametrika.common.messaging.IMessageFactory;
-import com.exametrika.common.messaging.IReceiver;
 import com.exametrika.common.messaging.ISender;
 import com.exametrika.common.tasks.IFlowController;
 import com.exametrika.common.time.ITimeService;
@@ -33,18 +31,13 @@ import com.exametrika.impl.groups.core.multicast.TotalOrderMessagePart.OrderInfo
  */
 public final class TotalOrderProtocol
 {
+    private final FailureAtomicMulticastProtocol parent;
     private final IMembershipService membershipService;
     private final IMessageFactory messageFactory;
-    private final IReceiver receiver;
     private final ISender sender;
     private final ITimeService timeService;
-    private final boolean durable;
-    private final Map<IAddress, ReceiveQueue> receiveQueues;
-    private final OrderedQueue orderedQueue;
     private final long maxBundlingPeriod;
     private final int maxBundlingMessageCount;
-    private final int maxUnlockQueueCapacity;
-    private final int minLockQueueCapacity;
     private IFlowController<IAddress> flowController;
     private final SimpleList<ReceiveQueue> orderingQueues = new SimpleList<ReceiveQueue>();
     private boolean coordinator;
@@ -52,32 +45,22 @@ public final class TotalOrderProtocol
     private long lastOrderSendTime;
     private boolean flushStarted;
     
-    
-    public TotalOrderProtocol(IMembershipService membershipService, IMessageFactory messageFactory,
-        IReceiver receiver, ISender sender, ITimeService timeService, boolean durable, Map<IAddress, ReceiveQueue> receiveQueues,
-        OrderedQueue orderedQueue, long maxBundlingPeriod, int maxBundlingMessageCount,
-        int maxUnlockQueueCapacity, int minLockQueueCapacity)
+    public TotalOrderProtocol(FailureAtomicMulticastProtocol parent, IMembershipService membershipService, IMessageFactory messageFactory,
+        ISender sender, ITimeService timeService, long maxBundlingPeriod, int maxBundlingMessageCount)
     {
+        Assert.notNull(parent);
         Assert.notNull(membershipService);
         Assert.notNull(messageFactory);
-        Assert.notNull(receiver);
         Assert.notNull(sender);
         Assert.notNull(timeService);
-        Assert.notNull(receiveQueues);
-        Assert.notNull(orderedQueue);
         
+        this.parent = parent;
         this.membershipService = membershipService;
         this.messageFactory = messageFactory;
-        this.receiver = receiver;
         this.sender = sender;
         this.timeService = timeService;
-        this.durable = durable;
-        this.receiveQueues = receiveQueues;
-        this.orderedQueue = orderedQueue;
         this.maxBundlingPeriod = maxBundlingPeriod;
         this.maxBundlingMessageCount = maxBundlingMessageCount;
-        this.maxUnlockQueueCapacity = maxUnlockQueueCapacity;
-        this.minLockQueueCapacity = minLockQueueCapacity;
     }
     
     public void setFlowController(IFlowController<IAddress> flowController)
@@ -95,6 +78,8 @@ public final class TotalOrderProtocol
     
     public long acquireOrder(int count)
     {
+        Assert.isTrue(count > 0);
+       
         long res = nextOrder;
         nextOrder += count;
         
@@ -110,6 +95,7 @@ public final class TotalOrderProtocol
     {
         flushStarted = true;
         nextOrder = 1;
+        orderingQueues.clear();
     }
     
     public void endFlush()
@@ -151,13 +137,7 @@ public final class TotalOrderProtocol
             {
                 INode sender = membership.getGroup().findMember(info.senderId);
                 
-                ReceiveQueue receiveQueue = receiveQueues.get(sender.getAddress());
-                if (receiveQueue == null)
-                {
-                    receiveQueue = new ReceiveQueue(sender.getAddress(), receiver, orderedQueue, info.startMessageId, durable, 
-                        true, maxUnlockQueueCapacity, minLockQueueCapacity, flowController);
-                    receiveQueues.put(message.getSource(), receiveQueue);
-                }
+                ReceiveQueue receiveQueue = parent.ensureReceiveQueue(sender.getAddress(), info.startMessageId);
             
                 for (int i = 0; i < info.count; i++)
                     receiveQueue.receive(info.startMessageId + i, info.startOrder + i, null, currentTime);
@@ -169,7 +149,7 @@ public final class TotalOrderProtocol
         else
             return false;
     }
-    
+
     private void sendOrder()
     {
         List<OrderInfo> orders = new ArrayList<OrderInfo>();

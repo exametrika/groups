@@ -131,47 +131,35 @@ public final class ReceiveQueue
         MessageInfo info;
         int pos = (int)(messageId - startMessageId);
         int size = deque.size();
-        if (pos >= size)
+        if (pos == size)
         {
             if (messageId == lastAcknowlegedMessageId + 1)
                 firstUnacknowledgedReceiveTime = currentTime;
-            
-            for (int i = size; i < pos; i++)
-                deque.offer(null);
             
             info = new MessageInfo();
             info.message = message;
             info.order = order;
             deque.offer(info);
         }
-        else
+        else if (pos < size)
         {
             info = deque.get(pos);
-            if (info != null)
+            if (message != null)
             {
-                if (message != null)
-                {
-                    if (info.message != null)
-                        return false;
-                    else
-                        info.message = message;
-                }
-                
-                if (order != 0)
-                {
-                    Assert.isTrue(info.order == 0);
-                    info.order = order;
-                }
+                if (info.message != null)
+                    return false;
+                else
+                    info.message = message;
             }
-            else
+            
+            if (order != 0)
             {
-                info = new MessageInfo();
-                info.message = message;
+                Assert.isTrue(info.order == 0);
                 info.order = order;
-                
-                deque.set(pos, info);
             }
         }
+        else
+            return Assert.error();
         
         lastReceiveTime = currentTime;
         
@@ -256,7 +244,6 @@ public final class ReceiveQueue
         for (int i = 0; i < deque.size(); i++)
         {
             MessageInfo info = deque.get(i);
-            Assert.checkState(info != null);
             
             if (info.message != null && !info.delivered)
                 receiver.receive(info.message);

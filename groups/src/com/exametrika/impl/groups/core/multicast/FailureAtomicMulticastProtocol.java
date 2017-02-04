@@ -107,9 +107,8 @@ public final class FailureAtomicMulticastProtocol extends AbstractProtocol imple
         if (ordered)
         {
             orderedQueue = new OrderedQueue(this, maxUnlockQueueCapacity, minLockQueueCapacity);
-            totalOrderProtocol = new TotalOrderProtocol(membershipManager, messageFactory, this, this, 
-                timeService, durable, receiveQueues, orderedQueue, maxBundlingPeriod, maxTotalOrderBundlingMessageCount,
-                maxUnlockQueueCapacity, minLockQueueCapacity);
+            totalOrderProtocol = new TotalOrderProtocol(this, membershipManager, messageFactory, this, 
+                timeService, maxBundlingPeriod, maxTotalOrderBundlingMessageCount);
         }
         else
         {
@@ -117,8 +116,8 @@ public final class FailureAtomicMulticastProtocol extends AbstractProtocol imple
             totalOrderProtocol = null;
         }
         
-        this.retransmitProtocol = new MessageRetransmitProtocol(this, membershipManager, messageFactory, this, this, 
-            timeService, durable, ordered, receiveQueues, this, orderedQueue, maxUnlockQueueCapacity, minLockQueueCapacity);
+        this.retransmitProtocol = new MessageRetransmitProtocol(this, membershipManager, messageFactory, this, 
+            timeService, receiveQueues, this);
     }
 
     public void setFlowController(IFlowController<IAddress> flowController)
@@ -274,6 +273,18 @@ public final class FailureAtomicMulticastProtocol extends AbstractProtocol imple
         registry.unregister(BundleMessagePartSerializer.ID);
     }
     
+    public ReceiveQueue ensureReceiveQueue(IAddress sender, long startMessageId)
+    {
+        ReceiveQueue receiveQueue = receiveQueues.get(sender);
+        if (receiveQueue == null)
+        {
+            receiveQueue = new ReceiveQueue(sender, this, orderedQueue, startMessageId, durable, 
+                totalOrderProtocol != null, maxUnlockQueueCapacity, minLockQueueCapacity, flowController);
+            receiveQueues.put(sender, receiveQueue);
+        }
+        return receiveQueue;
+    }
+    
     @Override
     protected void doSend(ISender sender, IMessage message)
     {
@@ -352,13 +363,7 @@ public final class FailureAtomicMulticastProtocol extends AbstractProtocol imple
             FailureAtomicMessagePart bundleFirstPart = bundledMessages.get(0).getPart();
             long bundleStartMessageId = bundleFirstPart.getMessageId();
             
-            ReceiveQueue receiveQueue = receiveQueues.get(message.getSource());
-            if (receiveQueue == null)
-            {
-                receiveQueue = new ReceiveQueue(message.getSource(), this, orderedQueue, bundleStartMessageId, 
-                    durable, totalOrderProtocol != null, maxUnlockQueueCapacity, minLockQueueCapacity, flowController);
-                receiveQueues.put(message.getSource(), receiveQueue);
-            }
+            ReceiveQueue receiveQueue = ensureReceiveQueue(message.getSource(), bundleStartMessageId);
             
             for (IMessage bundledMessage : bundledMessages)
             {

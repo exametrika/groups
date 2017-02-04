@@ -16,7 +16,6 @@ import com.exametrika.api.groups.core.INode;
 import com.exametrika.common.messaging.IAddress;
 import com.exametrika.common.messaging.IMessage;
 import com.exametrika.common.messaging.IMessageFactory;
-import com.exametrika.common.messaging.IReceiver;
 import com.exametrika.common.messaging.ISender;
 import com.exametrika.common.messaging.MessageFlags;
 import com.exametrika.common.tasks.IFlowController;
@@ -39,50 +38,35 @@ public final class MessageRetransmitProtocol
     private final IFlushParticipant flushParticipant;
     private final IMembershipManager membershipManager;
     private final IMessageFactory messageFactory;
-    private final IReceiver receiver;
     private final ISender sender;
     private final ITimeService timeService;
-    private final boolean durable;
-    private final boolean ordered;
-    private final int maxUnlockQueueCapacity;
-    private final int minLockQueueCapacity;
     private IFlowController<IAddress> flowController;
     private final Map<IAddress, ReceiveQueue> receiveQueues;
     private final FailureAtomicMulticastProtocol parent;
-    private final OrderedQueue orderedQueue;
     private IFlush flush;
     private boolean stabilizationPhase;
     private long flushId;
     private Set<UUID> retransmits;
 
     public MessageRetransmitProtocol(IFlushParticipant flushParticipant, IMembershipManager membershipManager,  
-        IMessageFactory messageFactory, IReceiver receiver, ISender sender, ITimeService timeService, boolean durable, boolean ordered,
-        Map<IAddress, ReceiveQueue> receiveQueues, FailureAtomicMulticastProtocol parent, OrderedQueue orderedQueue,
-        int maxUnlockQueueCapacity, int minLockQueueCapacity)
+        IMessageFactory messageFactory, ISender sender, ITimeService timeService,
+        Map<IAddress, ReceiveQueue> receiveQueues, FailureAtomicMulticastProtocol parent)
     {
         Assert.notNull(flushParticipant);
         Assert.notNull(membershipManager);
         Assert.notNull(messageFactory);
-        Assert.notNull(receiver);
         Assert.notNull(sender);
         Assert.notNull(timeService);
         Assert.notNull(receiveQueues);
         Assert.notNull(parent);
-        Assert.isTrue(ordered == (orderedQueue != null));
         
         this.flushParticipant = flushParticipant;
         this.membershipManager = membershipManager;
         this.messageFactory = messageFactory;
-        this.receiver = receiver;
         this.sender = sender;
         this.timeService = timeService;
-        this.durable = durable;
-        this.ordered = ordered;
         this.receiveQueues = receiveQueues;
         this.parent = parent;
-        this.orderedQueue = orderedQueue;
-        this.maxUnlockQueueCapacity = maxUnlockQueueCapacity;
-        this.minLockQueueCapacity = minLockQueueCapacity;
     }
     
     public void setFlowController(IFlowController<IAddress> flowController)
@@ -204,15 +188,8 @@ public final class MessageRetransmitProtocol
             Assert.isTrue(!part.getRetransmittedMessages().isEmpty());
             
             INode failedNode = membership.getGroup().findMember(part.getFailedNodeId());
-            ReceiveQueue receiveQueue = receiveQueues.get(failedNode.getAddress());
-            if (receiveQueue == null)
-            {
-                FailureAtomicMessagePart firstPart = part.getRetransmittedMessages().get(0).getPart();
-                receiveQueue = new ReceiveQueue(failedNode.getAddress(), receiver, orderedQueue,
-                    firstPart.getMessageId(), durable, ordered, maxUnlockQueueCapacity, minLockQueueCapacity,
-                    flowController);
-                receiveQueues.put(failedNode.getAddress(), receiveQueue);
-            }
+            FailureAtomicMessagePart firstPart = part.getRetransmittedMessages().get(0).getPart();
+            ReceiveQueue receiveQueue = parent.ensureReceiveQueue(failedNode.getAddress(), firstPart.getMessageId());
             
             for (IMessage retransmittedMessage : part.getRetransmittedMessages())
             {
