@@ -5,6 +5,7 @@ package com.exametrika.impl.groups.core.multicast;
 
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -61,7 +62,7 @@ public final class FailureAtomicMulticastProtocol extends AbstractProtocol imple
     private final int minLockQueueCapacity;
     private IFlowController<IAddress> flowController;
     private final ISerializationRegistry serializationRegistry;
-    private final Map<IAddress, ReceiveQueue> receiveQueues = new TreeMap<IAddress, ReceiveQueue>();
+    private Map<IAddress, ReceiveQueue> receiveQueues = new LinkedHashMap<IAddress, ReceiveQueue>();
     private final SendQueue sendQueue;
     private final MessageRetransmitProtocol retransmitProtocol;
     private final List<IMessage> pendingNewMessages = new ArrayList<IMessage>();
@@ -279,7 +280,7 @@ public final class FailureAtomicMulticastProtocol extends AbstractProtocol imple
         if (receiveQueue == null)
         {
             receiveQueue = new ReceiveQueue(sender, this, orderedQueue, startMessageId, durable, 
-                totalOrderProtocol != null, maxUnlockQueueCapacity, minLockQueueCapacity, flowController);
+                totalOrderProtocol != null, maxUnlockQueueCapacity, minLockQueueCapacity, flowController, timeService.getCurrentTime());
             receiveQueues.put(sender, receiveQueue);
         }
         return receiveQueue;
@@ -496,6 +497,7 @@ public final class FailureAtomicMulticastProtocol extends AbstractProtocol imple
         if (orderedQueue != null)
             orderedQueue.flushMessages();
         
+        Map<IAddress, ReceiveQueue> receiveQueues = new TreeMap<IAddress, ReceiveQueue>(this.receiveQueues);
         IMembership newMembership = flush.getNewMembership();
         for (Iterator<Map.Entry<IAddress, ReceiveQueue>> it = receiveQueues.entrySet().iterator(); it.hasNext(); )
         {
@@ -509,5 +511,7 @@ public final class FailureAtomicMulticastProtocol extends AbstractProtocol imple
             else
                 receiveQueue.completeAll();
         }
+        
+        this.receiveQueues = new LinkedHashMap<IAddress, ReceiveQueue>(receiveQueues);
     }
 }

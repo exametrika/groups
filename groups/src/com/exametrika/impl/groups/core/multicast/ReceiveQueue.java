@@ -32,6 +32,7 @@ public final class ReceiveQueue
     private final int minLockQueueCapacity;
     private final IFlowController<IAddress> flowController;
     private long startMessageId;
+    private long lastReceivedMessageId;
     private long lastAcknowlegedMessageId;
     private long firstUnacknowledgedReceiveTime;
     private long lastReceiveTime;
@@ -42,7 +43,7 @@ public final class ReceiveQueue
     
     public ReceiveQueue(IAddress sender, IReceiver receiver, OrderedQueue orderedQueue, long startMessageId, 
         boolean durable, boolean ordered, int maxUnlockQueueCapacity, int minLockQueueCapacity, 
-        IFlowController<IAddress> flowController)
+        IFlowController<IAddress> flowController, long currentTime)
     {
         Assert.notNull(sender);
         Assert.notNull(receiver);
@@ -54,7 +55,11 @@ public final class ReceiveQueue
         this.durable = durable;
         this.ordered = ordered;
         this.startMessageId = startMessageId;
+        this.lastReceivedMessageId = startMessageId - 1;
         this.lastAcknowlegedMessageId = startMessageId - 1;
+        this.lastCompletedMessageId = startMessageId - 1;
+        this.lastOrderedMessageId = startMessageId - 1;
+        this.lastReceiveTime = currentTime;
         this.maxUnlockQueueCapacity = maxUnlockQueueCapacity;
         this.minLockQueueCapacity = minLockQueueCapacity;
         this.flowController = flowController;
@@ -82,17 +87,17 @@ public final class ReceiveQueue
     
     public void setLastOrderedMessageId()
     {
-        lastOrderedMessageId = getLastReceivedMessageId();
+        lastOrderedMessageId = lastReceivedMessageId;
     }
     
     public boolean isAcknowledgementRequired()
     {
-        return lastAcknowlegedMessageId != getLastReceivedMessageId();
+        return lastAcknowlegedMessageId != lastReceivedMessageId;
     }
     
     public long getLastReceivedMessageId()
     {
-        return startMessageId + deque.size() - 1;
+        return lastReceivedMessageId;
     }
     
     public long getLastAcknowledgedMessageId()
@@ -112,7 +117,7 @@ public final class ReceiveQueue
     
     public IMessage getMessage(long messageId)
     {
-        Assert.isTrue(messageId >= startMessageId && messageId < startMessageId + deque.size());
+        Assert.isTrue(messageId >= startMessageId && messageId <= lastReceivedMessageId);
         
         int pos = (int)(messageId - startMessageId);
         IMessage message = deque.get(pos).message;
@@ -165,6 +170,9 @@ public final class ReceiveQueue
         
         if (message != null)
         {
+            Assert.isTrue(messageId == lastReceivedMessageId + 1);
+            lastReceivedMessageId++;
+            
             queueCapacity += message.getSize();
             if (!flowLocked && queueCapacity >= minLockQueueCapacity)
             {
@@ -187,11 +195,10 @@ public final class ReceiveQueue
         }
         else if (info.completed)
         {
-            Assert.isTrue(ordered && order != 0);
-            
             deliver(info);
-            Assert.isTrue(deque.poll() == info);
             
+            Assert.isTrue(deque.poll() == info);
+            Assert.isTrue(ordered && order != 0);
             startMessageId++;
         }
 
@@ -200,7 +207,7 @@ public final class ReceiveQueue
 
     public void acknowledge()
     {
-        lastAcknowlegedMessageId = getLastReceivedMessageId();
+        lastAcknowlegedMessageId = lastReceivedMessageId;
     }
     
     public void complete(long messageId) 
@@ -218,7 +225,7 @@ public final class ReceiveQueue
             
             if (allowPoll && (!ordered || info.order > 0))
             {
-                deque.poll();
+                Assert.isTrue(deque.poll() == info);
                 startMessageId++;
                 
                 if (durable)
@@ -232,10 +239,12 @@ public final class ReceiveQueue
     public void completeAll()
     {
         startMessageId += deque.size();
+        Assert.isTrue(startMessageId == lastReceivedMessageId + 1);
+        
         lastAcknowlegedMessageId = startMessageId - 1;
         lastCompletedMessageId = startMessageId - 1;
         lastOrderedMessageId = startMessageId - 1;
-
+        
         deque.clear();
     }
     

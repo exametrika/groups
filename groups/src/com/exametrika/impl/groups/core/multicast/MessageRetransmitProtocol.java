@@ -240,6 +240,14 @@ public final class MessageRetransmitProtocol
                 retransmitInfo.maxReceivedMessageId = missingInfo.getLastReceivedMessageId();
                 retransmitInfo.senderNode = exchangeData.getKey();
             }
+            else if (retransmitInfo.maxReceivedMessageId == missingInfo.getLastReceivedMessageId()) 
+            {
+                Assert.notNull(retransmitInfo.senderNode);
+                int rank1 = membership.getGroup().getMembers().indexOf(retransmitInfo.senderNode);
+                int rank2 = membership.getGroup().getMembers().indexOf(exchangeData.getKey());
+                if (rank2 < rank1)
+                    retransmitInfo.senderNode = exchangeData.getKey();
+            }
             
             retransmitInfo.retransmits.add(new RetransmitNodeInfo(exchangeData.getKey(), missingInfo.getLastReceivedMessageId()));
         }
