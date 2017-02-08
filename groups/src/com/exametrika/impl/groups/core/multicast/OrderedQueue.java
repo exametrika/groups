@@ -97,7 +97,7 @@ public final class OrderedQueue
                 return;
             
             message = deque.poll();
-            receiver.receive(message.removePart());
+            receiver.receive(message);
             
             queueCapacity -= message.getSize();
             if (flowLocked && queueCapacity <= maxUnlockQueueCapacity)

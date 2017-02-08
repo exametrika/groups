@@ -215,6 +215,8 @@ public final class ReceiveQueue
         if (messageId == 0)
             return;
         
+        Assert.isTrue(messageId >= startMessageId && messageId < startMessageId + deque.size());
+        
         boolean allowPoll = lastCompletedMessageId == startMessageId - 1;
         
         for (long i = lastCompletedMessageId + 1; i <= messageId; i++)
@@ -272,7 +274,7 @@ public final class ReceiveQueue
         
         info.delivered = true;
         if (!ordered || info.message.hasFlags(MessageFlags.UNORDERED))
-            receiver.receive(info.message.removePart());
+            receiver.receive(info.message);
         else
             orderedQueue.offer(info.order, info.message);
         
