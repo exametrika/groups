@@ -34,6 +34,14 @@ public interface IFailureDetector
     List<INode> getHealthyMembers();
     
     /**
+     * Is member with specified identifier healthy?
+     *
+     * @param memberId member identifier
+     * @return true if member with specified identifier is healthy
+     */
+    boolean isHealthyMember(UUID memberId);
+    
+    /**
      * Returns list of group members of current membership, whose failure has been detected.
      *
      * @return list of failed members

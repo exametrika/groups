@@ -55,6 +55,7 @@ public final class FailureDetectionProtocol extends AbstractProtocol implements 
     private IMembership membership;
     private INode currentCoordinator;
     private List<INode> healthyMembers = new ArrayList<INode>();
+    private Set<UUID> healthyMembersIds = new HashSet<UUID>();
     private Set<INode> failedMembers = new HashSet<INode>();
     private Set<INode> leftMembers = new HashSet<INode>();
     private Map<IAddress, FailureInfo> failureHistory = new LinkedHashMap<IAddress, FailureInfo>();
@@ -107,6 +108,12 @@ public final class FailureDetectionProtocol extends AbstractProtocol implements 
     public List<INode> getHealthyMembers()
     {
         return healthyMembers;
+    }
+    
+    @Override
+    public boolean isHealthyMember(UUID member)
+    {
+        return healthyMembersIds.contains(member);
     }
     
     @Override
@@ -419,10 +426,14 @@ public final class FailureDetectionProtocol extends AbstractProtocol implements 
         }
         
         healthyMembers.clear();
+        healthyMembersIds.clear();
         for (INode member : membership.getGroup().getMembers())
         {
             if (!failedMembers.contains(member) && !leftMembers.contains(member))
+            {
                 healthyMembers.add(member);
+                healthyMembersIds.add(member.getId());
+            }
         }
 
         if (logger.isLogEnabled(LogLevel.TRACE))

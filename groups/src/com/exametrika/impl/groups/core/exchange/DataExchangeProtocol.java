@@ -300,7 +300,7 @@ public final class DataExchangeProtocol extends AbstractProtocol implements IMem
             List<INode> healthyMembers = new ArrayList<INode>();
             for (INode node : membership.getGroup().getMembers())
             {
-                if (!failureDetector.getFailedMembers().contains(node) && !failureDetector.getLeftMembers().contains(node))
+                if (failureDetector.isHealthyMember(node.getId()))
                     healthyMembers.add(node);
             }
             

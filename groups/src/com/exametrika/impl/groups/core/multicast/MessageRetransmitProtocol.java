@@ -22,6 +22,7 @@ import com.exametrika.common.tasks.IFlowController;
 import com.exametrika.common.time.ITimeService;
 import com.exametrika.common.utils.Assert;
 import com.exametrika.impl.groups.core.exchange.IExchangeData;
+import com.exametrika.impl.groups.core.failuredetection.IFailureDetector;
 import com.exametrika.impl.groups.core.flush.IFlush;
 import com.exametrika.impl.groups.core.flush.IFlushParticipant;
 import com.exametrika.impl.groups.core.membership.IMembershipManager;
@@ -43,15 +44,17 @@ public final class MessageRetransmitProtocol
     private IFlowController<IAddress> flowController;
     private final Map<IAddress, ReceiveQueue> receiveQueues;
     private final FailureAtomicMulticastProtocol parent;
+    private final IFailureDetector failureDetector;
     private IFlush flush;
     private boolean stabilizationPhase;
     private long flushId;
     private Set<UUID> retransmits;
-
+    
     public MessageRetransmitProtocol(IFlushParticipant flushParticipant, IMembershipManager membershipManager,  
         IMessageFactory messageFactory, ISender sender, ITimeService timeService,
-        Map<IAddress, ReceiveQueue> receiveQueues, FailureAtomicMulticastProtocol parent)
+        Map<IAddress, ReceiveQueue> receiveQueues, FailureAtomicMulticastProtocol parent, IFailureDetector failureDetector)
     {
+        
         Assert.notNull(flushParticipant);
         Assert.notNull(membershipManager);
         Assert.notNull(messageFactory);
@@ -59,6 +62,7 @@ public final class MessageRetransmitProtocol
         Assert.notNull(timeService);
         Assert.notNull(receiveQueues);
         Assert.notNull(parent);
+        Assert.notNull(failureDetector);
         
         this.flushParticipant = flushParticipant;
         this.membershipManager = membershipManager;
@@ -67,6 +71,7 @@ public final class MessageRetransmitProtocol
         this.timeService = timeService;
         this.receiveQueues = receiveQueues;
         this.parent = parent;
+        this.failureDetector = failureDetector;
     }
     
     public void setFlowController(IFlowController<IAddress> flowController)
@@ -116,12 +121,12 @@ public final class MessageRetransmitProtocol
             return null;
 
         List<MissingMessageInfo> missingMessageInfos = new ArrayList<MissingMessageInfo>();
-        
-        for (INode node : flush.getMembershipChange().getLeftMembers())
-            addMissingMessageInfo(node, missingMessageInfos);
-        
-        for (INode node : flush.getMembershipChange().getFailedMembers())
-            addMissingMessageInfo(node, missingMessageInfos);
+        IMembership membership = flush.getOldMembership();
+        for (INode node : membership.getGroup().getMembers())
+        {
+            if (!failureDetector.isHealthyMember(node.getId()))
+                addMissingMessageInfo(node, missingMessageInfos);
+        }
 
         return new FailureAtomicExchangeData(flushId, missingMessageInfos);
     }

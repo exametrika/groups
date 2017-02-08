@@ -118,7 +118,7 @@ public final class FailureAtomicMulticastProtocol extends AbstractProtocol imple
         }
         
         this.retransmitProtocol = new MessageRetransmitProtocol(this, membershipManager, messageFactory, this, 
-            timeService, receiveQueues, this);
+            timeService, receiveQueues, this, failureDetector);
     }
 
     public void setFlowController(IFlowController<IAddress> flowController)
@@ -198,7 +198,10 @@ public final class FailureAtomicMulticastProtocol extends AbstractProtocol imple
             totalOrderProtocol.endFlush();
         
         for (IMessage message : pendingNewMessages)
-            receive(message);
+        {
+            if (failureDetector.isHealthyMember(message.getSource().getId()))
+                receive(message);
+        }
         
         pendingNewMessages.clear();
         
@@ -467,7 +470,7 @@ public final class FailureAtomicMulticastProtocol extends AbstractProtocol imple
             CompleteMessagePart part = new CompleteMessagePart(minCompletedMessageId);
             for (INode node : membership.getGroup().getMembers())
             {
-                if (failureDetector.getFailedMembers().contains(node) || failureDetector.getLeftMembers().contains(node))
+                if (!failureDetector.isHealthyMember(node.getId()))
                     continue;
                 
                 send(messageFactory.create(node.getAddress(), part, MessageFlags.HIGH_PRIORITY));
@@ -503,7 +506,6 @@ public final class FailureAtomicMulticastProtocol extends AbstractProtocol imple
             orderedQueue.flushMessages();
         
         Map<IAddress, ReceiveQueue> receiveQueues = new TreeMap<IAddress, ReceiveQueue>(this.receiveQueues);
-        IMembership newMembership = flush.getNewMembership();
         for (Iterator<Map.Entry<IAddress, ReceiveQueue>> it = receiveQueues.entrySet().iterator(); it.hasNext(); )
         {
             Map.Entry<IAddress, ReceiveQueue> entry = it.next();
@@ -511,7 +513,7 @@ public final class FailureAtomicMulticastProtocol extends AbstractProtocol imple
             ReceiveQueue receiveQueue = entry.getValue();
             receiveQueue.flushMessages();
             
-            if (newMembership.getGroup().findMember(entry.getKey()) == null)
+            if (!failureDetector.isHealthyMember(entry.getKey().getId()))
                 it.remove();
             else
                 receiveQueue.completeAll();
