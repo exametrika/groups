@@ -172,15 +172,9 @@ public final class StateTransferServerProtocol extends AbstractProtocol implemen
     }
     
     @Override
-    public boolean isFlushProcessingRequired(IFlush flush)
+    public boolean isFlushProcessingRequired()
     {
         return true;
-    }
-
-    @Override
-    public boolean isCoordinatorStateSupported()
-    {
-        return false;
     }
 
     @Override
@@ -188,18 +182,6 @@ public final class StateTransferServerProtocol extends AbstractProtocol implemen
     {
     }
     
-    @Override
-    public Object getCoordinatorState()
-    {
-        return null;
-    }
-
-    @Override
-    public void setCoordinatorState(List<Object> states)
-    {
-        Assert.supports(false);
-    }
-
     @Override
     public void startFlush(IFlush flush)
     {

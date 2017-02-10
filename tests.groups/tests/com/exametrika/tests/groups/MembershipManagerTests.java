@@ -143,7 +143,7 @@ public class MembershipManagerTests
         assertThat(changeInfo.membershipChange.getFailedMembers(), is(com.exametrika.common.utils.Collections.<INode>asSet(node2)));
         
         MembershipDeltaInfo deltaInfo = Memberships.createMembership(membership, com.exametrika.common.utils.Collections.<INode>asSet(node1), 
-            com.exametrika.common.utils.Collections.<INode>asSet(node2), com.exametrika.common.utils.Collections.<INode>asSet(node4, node5));
+            com.exametrika.common.utils.Collections.<INode>asSet(node2), com.exametrika.common.utils.Collections.<INode>asSet(node4, node5), null);
         assertTrue(deltaInfo.oldMembership == membership);
         assertTrue(deltaInfo.newMembership.getId() == 2);
         assertThat(deltaInfo.newMembership.getGroup().getCoordinator(), is((INode)node3));
@@ -165,7 +165,7 @@ public class MembershipManagerTests
         assertThat(changeInfo.newMembership.getGroup().isPrimary(), is(false));
         
         deltaInfo = Memberships.createMembership(membership, com.exametrika.common.utils.Collections.<INode>asSet(node1), 
-            com.exametrika.common.utils.Collections.<INode>asSet(node2), com.exametrika.common.utils.Collections.<INode>asSet());
+            com.exametrika.common.utils.Collections.<INode>asSet(node2), com.exametrika.common.utils.Collections.<INode>asSet(), null);
         assertThat(deltaInfo.newMembership.getGroup().isPrimary(), is(false));
     }
     
@@ -176,7 +176,7 @@ public class MembershipManagerTests
         NodeDiscovererMock nodeDiscoverer = new NodeDiscovererMock();
         FailureDetectorMock failureDetector = new FailureDetectorMock();
         FlushManagerMock flushManager = new FlushManagerMock();
-        MembershipTracker tracker = new MembershipTracker(1000, membershipManager, nodeDiscoverer, failureDetector, flushManager);
+        MembershipTracker tracker = new MembershipTracker(1000, membershipManager, nodeDiscoverer, failureDetector, flushManager, null);
         
         INode discoveredNode1 = new Node("test", new TcpAddress(UUID.randomUUID(), 
             new InetSocketAddress("localhost", 9090), "test"), Collections.<String, Object>emptyMap());
@@ -508,6 +508,12 @@ public class MembershipManagerTests
         @Override
         public void addLeftMembers(Set<UUID> memberIds)
         {
+        }
+
+        @Override
+        public boolean isHealthyMember(UUID memberId)
+        {
+            return false;
         }
     }
     

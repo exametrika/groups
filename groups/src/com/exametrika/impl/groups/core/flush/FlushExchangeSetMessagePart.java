@@ -33,7 +33,10 @@ public final class FlushExchangeSetMessagePart implements IMessagePart
         for (Map<UUID, IExchangeData> map : dataExchanges)
         {
             for (IExchangeData exchange : map.values())
-                size += exchange.getSize();
+            {
+                if (exchange != null)
+                    size += exchange.getSize();
+            }
         }
             
         this.size = size;

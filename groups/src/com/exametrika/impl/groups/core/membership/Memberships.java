@@ -15,6 +15,7 @@ import com.exametrika.api.groups.core.IMembership;
 import com.exametrika.api.groups.core.IMembershipChange;
 import com.exametrika.api.groups.core.INode;
 import com.exametrika.common.utils.Assert;
+import com.exametrika.impl.groups.core.flush.IFlushCondition;
 
 
 
@@ -81,7 +82,7 @@ public final class Memberships
     }
     
     public static MembershipDeltaInfo createMembership(IMembership oldMembership, Set<INode> failedMembers, Set<INode> leftMembers,
-        Set<INode> discoveredNodes)
+        Set<INode> discoveredNodes, IFlushCondition flushCondition)
     {
         Assert.notNull(oldMembership);
         Assert.notNull(failedMembers);
@@ -126,6 +127,9 @@ public final class Memberships
         }
         
         if (failedMemberIds.isEmpty() && leftMemberIds.isEmpty() && joinedMembers.isEmpty())
+            return null;
+        
+        if (flushCondition != null && !flushCondition.canStartFlush(members, joinedMembers, failedMemberIds, leftMemberIds))
             return null;
         
         IGroup group = new Group(oldMembership.getGroup().getId(), oldMembership.getGroup().getName(), primaryGroup, members);

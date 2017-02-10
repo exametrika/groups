@@ -137,6 +137,7 @@ public final class MessageRetransmitProtocol
             return;
 
         IMembership membership = membershipManager.getMembership();
+        Assert.checkState(membership != null);
         
         Map<UUID, RetransmitInfo> retransmitsMap = new HashMap<UUID, RetransmitInfo>();
         for (Map.Entry<INode, IExchangeData> entry : data.entrySet())

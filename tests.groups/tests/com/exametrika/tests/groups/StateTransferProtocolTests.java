@@ -680,13 +680,7 @@ public class StateTransferProtocolTests
         }
         
         @Override
-        public boolean isFlushProcessingRequired(IFlush flush)
-        {
-            return false;
-        }
-
-        @Override
-        public boolean isCoordinatorStateSupported()
+        public boolean isFlushProcessingRequired()
         {
             return false;
         }
@@ -695,17 +689,6 @@ public class StateTransferProtocolTests
         public void setCoordinator()
         {
             this.coordinator = true;
-        }
-
-        @Override
-        public Object getCoordinatorState()
-        {
-            return null;
-        }
-
-        @Override
-        public void setCoordinatorState(List<Object> states)
-        {
         }
 
         @Override
@@ -880,7 +863,7 @@ public class StateTransferProtocolTests
             protocols.add(failureDetectionProtocol);
             
             membershipTracker = new MembershipTracker(1000, membershipManager, discoveryProtocol, 
-                failureDetectionProtocol, flushCoordinatorProtocol);
+                failureDetectionProtocol, flushCoordinatorProtocol, null);
             
             gracefulCloseStrategies.add(flushCoordinatorProtocol);
             gracefulCloseStrategies.add(flushParticipantProtocol);

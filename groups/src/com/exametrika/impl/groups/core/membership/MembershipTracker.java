@@ -73,10 +73,6 @@ public final class MembershipTracker implements ICompartmentProcessor, IGraceful
         INode currentCoordinator = failureDetector.getCurrentCoordinator();
         if (currentCoordinator != null && !currentCoordinator.equals(membershipManager.getLocalNode()))
             return;
-
-        if (flushCondition != null && !flushCondition.canStartFlush())
-            return;
-        
         IMembership oldMembership = membershipManager.getMembership();
         
         if (oldMembership == null)
@@ -87,7 +83,7 @@ public final class MembershipTracker implements ICompartmentProcessor, IGraceful
         else
         {
             MembershipDeltaInfo info = Memberships.createMembership(oldMembership, failureDetector.getFailedMembers(), failureDetector.getLeftMembers(), 
-                nodeDiscoverer.getDiscoveredNodes());
+                nodeDiscoverer.getDiscoveredNodes(), flushCondition);
             
             if (info != null)
                 flushManager.install(info.newMembership, info.membershipDelta);

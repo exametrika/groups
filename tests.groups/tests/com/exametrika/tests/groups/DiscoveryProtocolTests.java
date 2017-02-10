@@ -546,6 +546,17 @@ public class DiscoveryProtocolTests
         public void addLeftMembers(Set<UUID> memberIds)
         {
         }
+
+        @Override
+        public boolean isHealthyMember(UUID memberId)
+        {
+            for (INode node : healthyMembers)
+            {
+                if (node.getId().equals(memberId))
+                    return true;
+            }
+            return false;
+        }
     }
     
     private class TestChannelFactory extends ChannelFactory

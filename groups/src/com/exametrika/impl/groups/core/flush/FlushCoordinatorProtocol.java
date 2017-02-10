@@ -410,9 +410,12 @@ public final class FlushCoordinatorProtocol extends AbstractProtocol implements 
             if (membershipManager.getMembership() != null)
             {
                 Assert.notNull(installingMembershipDelta);
-                Assert.isNull(installingMembership);
                 
-                installingMembership = Memberships.createMembership(membershipManager.getMembership(), installingMembershipDelta).newMembership;
+                if (installingMembership == null)
+                    installingMembership = Memberships.createMembership(membershipManager.getMembership(), 
+                        installingMembershipDelta).newMembership;
+                else
+                    Assert.isTrue(installingMembership.getId() == installingMembershipDelta.getId());
             }
             else
             {

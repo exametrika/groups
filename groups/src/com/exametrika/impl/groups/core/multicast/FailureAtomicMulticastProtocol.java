@@ -28,6 +28,7 @@ import com.exametrika.common.messaging.impl.message.Message;
 import com.exametrika.common.messaging.impl.message.MessageSerializers;
 import com.exametrika.common.messaging.impl.protocols.AbstractProtocol;
 import com.exametrika.common.tasks.IFlowController;
+import com.exametrika.common.time.ITimeService;
 import com.exametrika.common.utils.Assert;
 import com.exametrika.common.utils.ByteArray;
 import com.exametrika.common.utils.Serializers;
@@ -47,7 +48,8 @@ import com.exametrika.impl.groups.core.membership.IMembershipManager;
  * @threadsafety This class and its methods are not thread safe.
  * @author Medvedev-A
  */
-public final class FailureAtomicMulticastProtocol extends AbstractProtocol implements IFailureDetectionListener, IExchangeableFlushParticipant
+public final class FailureAtomicMulticastProtocol extends AbstractProtocol implements IFailureDetectionListener, 
+    IExchangeableFlushParticipant, ITimeService
 {
     private final IMembershipManager membershipManager;
     private final IFailureDetector failureDetector;
@@ -102,14 +104,14 @@ public final class FailureAtomicMulticastProtocol extends AbstractProtocol imple
         if (durable)
             ordered = true;
         
-        this.sendQueue = new SendQueue(failureDetector, timeService, senderDeliveryHandler, durable, maxUnlockQueueCapacity, 
+        this.sendQueue = new SendQueue(failureDetector, this, senderDeliveryHandler, durable, maxUnlockQueueCapacity, 
             minLockQueueCapacity);
         
         if (ordered)
         {
             orderedQueue = new OrderedQueue(this, maxUnlockQueueCapacity, minLockQueueCapacity);
             totalOrderProtocol = new TotalOrderProtocol(this, membershipManager, messageFactory, this, 
-                timeService, maxBundlingPeriod, maxTotalOrderBundlingMessageCount);
+                this, maxBundlingPeriod, maxTotalOrderBundlingMessageCount);
         }
         else
         {
@@ -118,7 +120,7 @@ public final class FailureAtomicMulticastProtocol extends AbstractProtocol imple
         }
         
         this.retransmitProtocol = new MessageRetransmitProtocol(this, membershipManager, messageFactory, this, 
-            timeService, receiveQueues, this, failureDetector);
+            this, receiveQueues, this, failureDetector);
     }
 
     public void setFlowController(IFlowController<IAddress> flowController)
@@ -277,6 +279,12 @@ public final class FailureAtomicMulticastProtocol extends AbstractProtocol imple
         registry.unregister(BundleMessagePartSerializer.ID);
     }
     
+    @Override
+    public long getCurrentTime()
+    {
+        return timeService.getCurrentTime();
+    }
+    
     public ReceiveQueue ensureReceiveQueue(IAddress sender, long startMessageId)
     {
         ReceiveQueue receiveQueue = receiveQueues.get(sender);
@@ -334,7 +342,7 @@ public final class FailureAtomicMulticastProtocol extends AbstractProtocol imple
         {
             BundleMessagePart part = message.getPart();
             
-            IMembership membership = membershipManager.getMembership();
+            IMembership membership = membershipManager.getMembership();//TODO:
             Assert.checkState(membership != null);
             
             if (part.getMembershipId() < membership.getId())
@@ -464,7 +472,7 @@ public final class FailureAtomicMulticastProtocol extends AbstractProtocol imple
         
         if (minCompletedMessageId != 0)
         {
-            IMembership membership = membershipManager.getMembership();
+            IMembership membership = membershipManager.getMembership();//TODO:
             Assert.checkState(membership != null);
             
             CompleteMessagePart part = new CompleteMessagePart(minCompletedMessageId);

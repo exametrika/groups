@@ -320,32 +320,15 @@ public class FlushProtocolTests
         private boolean failOnFlush;
         
         @Override
-        public boolean isFlushProcessingRequired(IFlush flush)
+        public boolean isFlushProcessingRequired()
         {
             return true;
-        }
-
-        @Override
-        public boolean isCoordinatorStateSupported()
-        {
-            return false;
         }
 
         @Override
         public void setCoordinator()
         {
             isCoordinator = true;
-        }
-
-        @Override
-        public Object getCoordinatorState()
-        {
-            return null;
-        }
-
-        @Override
-        public void setCoordinatorState(List<Object> states)
-        {
         }
 
         @Override
@@ -488,7 +471,7 @@ public class FlushProtocolTests
             protocols.add(failureDetectionProtocol);
 
             membershipTracker = new MembershipTracker(1000, membershipManager, discoveryProtocol, 
-                failureDetectionProtocol, flushCoordinatorProtocol);
+                failureDetectionProtocol, flushCoordinatorProtocol, null);
             
             gracefulCloseStrategies.add(flushCoordinatorProtocol);
             gracefulCloseStrategies.add(flushParticipantProtocol);

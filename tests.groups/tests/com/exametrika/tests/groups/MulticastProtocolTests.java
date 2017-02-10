@@ -16,6 +16,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.junit.After;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import com.exametrika.api.groups.core.IGroup;
@@ -400,30 +401,13 @@ public class MulticastProtocolTests
         }
         
         @Override
-        public boolean isFlushProcessingRequired(IFlush flush)
-        {
-            return false;
-        }
-
-        @Override
-        public boolean isCoordinatorStateSupported()
+        public boolean isFlushProcessingRequired()
         {
             return false;
         }
 
         @Override
         public void setCoordinator()
-        {
-        }
-
-        @Override
-        public Object getCoordinatorState()
-        {
-            return null;
-        }
-
-        @Override
-        public void setCoordinatorState(List<Object> states)
         {
         }
 
@@ -503,9 +487,9 @@ public class MulticastProtocolTests
         return factoryParameters;
     }
     
-    private static class TestDeliveryHandler implements IDeliveryHandler
+    public static class TestDeliveryHandler implements IDeliveryHandler
     {
-        private boolean delivered;
+        public boolean delivered;
 
         @Override
         public void onDelivered(IMessage message)
@@ -627,7 +611,7 @@ public class MulticastProtocolTests
             protocols.add(flushCoordinatorProtocol);
 
             DataExchangeProtocol dataExchangeProtocol = new DataExchangeProtocol(channelName, messageFactory, membershipManager,
-                failureDetectionProtocol, Arrays.<IDataExchangeProvider>asList(multicastProtocol), dataExchangePeriod);
+                failureDetectionProtocol, Arrays.<IDataExchangeProvider>asList(), dataExchangePeriod);
             membershipListeners.add(dataExchangeProtocol);
             protocols.add(dataExchangeProtocol);
             failureDetectionListeners.add(dataExchangeProtocol);
@@ -636,7 +620,7 @@ public class MulticastProtocolTests
             protocols.add(failureDetectionProtocol);
             
             membershipTracker = new MembershipTracker(1000, membershipManager, discoveryProtocol, 
-                failureDetectionProtocol, flushCoordinatorProtocol);
+                failureDetectionProtocol, flushCoordinatorProtocol, null);
             
             gracefulCloseStrategies.add(flushCoordinatorProtocol);
             gracefulCloseStrategies.add(flushParticipantProtocol);

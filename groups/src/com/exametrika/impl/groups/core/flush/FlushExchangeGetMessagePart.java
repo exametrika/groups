@@ -43,7 +43,10 @@ public final class FlushExchangeGetMessagePart implements IMessagePart
         
         int size = (failedMembers.size() + leftMembers.size()) * 16;
         for (IExchangeData exchange : dataExchanges)
-            size += exchange.getSize();
+        {
+            if (exchange != null)
+                size += exchange.getSize();
+        }
         
         this.size = size;
     }
