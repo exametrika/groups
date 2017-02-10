@@ -130,7 +130,7 @@ public final class TotalOrderProtocol
         {
             TotalOrderMessagePart part = message.getPart();
             
-            IMembership membership = membershipService.getMembership();//TODO:
+            IMembership membership = membershipService.getMembership();
             long currentTime = timeService.getCurrentTime();
             
             for (OrderInfo info : part.getOrders())

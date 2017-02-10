@@ -16,7 +16,6 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.junit.After;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import com.exametrika.api.groups.core.IGroup;
@@ -94,7 +93,7 @@ import com.exametrika.tests.groups.MembershipManagerTests.PropertyProviderMock;
  */
 public class MulticastProtocolTests
 {
-    private static final int COUNT = 10;
+    private static final int COUNT = 2;// TODO:10
     private GroupChannel[] channels = new GroupChannel[COUNT];
     private Sequencer flushSequencer = new Sequencer();
     
@@ -112,10 +111,6 @@ public class MulticastProtocolTests
         TestChannelFactory channelFactory = new TestChannelFactory(new WellKnownAddressesDiscoveryStrategy(wellKnownAddresses));
         createGroup(wellKnownAddresses, channelFactory, Collections.<Integer>asSet());
          
-        Threads.sleep(10000);
-         
-        checkMembership(channelFactory, Collections.<Integer>asSet(0, 1));
-        
         Threads.sleep(10000);
         
         checkMembership(channelFactory, Collections.<Integer>asSet());
@@ -340,23 +335,25 @@ public class MulticastProtocolTests
     
     private static final class TestBufferMessagePart implements IMessagePart
     {
+        private final int index;
         private final long value;
 
-        public TestBufferMessagePart(long value)
+        public TestBufferMessagePart(int index, long value)
         {
+            this.index = index;
             this.value = value;
         }
         
         @Override
         public int getSize()
         {
-            return 8;
+            return 12;
         }
         
         @Override
         public String toString()
         {
-            return Long.toString(value);
+            return Integer.toString(index) + ":" + Long.toString(value);
         }
     }
     
@@ -374,14 +371,16 @@ public class MulticastProtocolTests
         {
             TestBufferMessagePart part = (TestBufferMessagePart)object;
 
+            serialization.writeInt(part.index);
             serialization.writeLong(part.value);
         }
         
         @Override
         public Object deserialize(IDeserialization deserialization, UUID id)
         {
+            int index = deserialization.readInt();
             long value = deserialization.readLong();
-            return new TestBufferMessagePart(value);
+            return new TestBufferMessagePart(index, value);
         }
     }
     
@@ -391,6 +390,7 @@ public class MulticastProtocolTests
         private final TestStateTransferFactory stateTransferFactory;
         private IMembership membership;
         private int index;
+        private long count;
 
         public TestMessageSender(int index, String channelName, IMessageFactory messageFactory, TestStateTransferFactory stateTransferFactory)
         {
@@ -439,8 +439,9 @@ public class MulticastProtocolTests
         @Override
         public void onTimer(long currentTime)
         {
-            if (membership != null)
-                getSender().send(getMessageFactory().create(membership.getGroup().getAddress(), new TestBufferMessagePart(index * 17)));
+            if (membership != null && count < 2)
+                getSender().send(getMessageFactory().create(membership.getGroup().getAddress(), 
+                    new TestBufferMessagePart(index, count++)));
         }
         
         @Override
@@ -463,7 +464,7 @@ public class MulticastProtocolTests
                 TestBufferMessagePart part = message.getPart();
                 ByteArray buffer = stateTransferFactory.state;
                 long counter = Bytes.readLong(buffer.getBuffer(), buffer.getOffset());
-                Bytes.writeLong(buffer.getBuffer(), buffer.getOffset(), counter + part.value);
+                Bytes.writeLong(buffer.getBuffer(), buffer.getOffset(), counter + (part.index + 1) * part.value);
             }
             else
                 receiver.receive(message);

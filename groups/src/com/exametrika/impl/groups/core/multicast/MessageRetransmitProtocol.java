@@ -100,7 +100,6 @@ public final class MessageRetransmitProtocol
     
     public void beforeProcessFlush()
     {
-        flush.grantFlush(flushParticipant);
         stabilizationPhase = false;
     }
     

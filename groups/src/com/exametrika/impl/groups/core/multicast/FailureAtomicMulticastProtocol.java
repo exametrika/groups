@@ -342,13 +342,15 @@ public final class FailureAtomicMulticastProtocol extends AbstractProtocol imple
         {
             BundleMessagePart part = message.getPart();
             
-            IMembership membership = membershipManager.getMembership();//TODO:
-            Assert.checkState(membership != null);
+            IMembership membership = membershipManager.getMembership();
+            long membershipId = 0;
+            if (membership != null)
+                membershipId = membership.getId();
             
-            if (part.getMembershipId() < membership.getId())
+            if (part.getMembershipId() < membershipId)
                 return;
             
-            if (part.getMembershipId() > membership.getId())
+            if (part.getMembershipId() > membershipId)
             {
                 pendingNewMessages.add(message);
                 pendingQueueCapacity += message.getSize();
@@ -472,7 +474,7 @@ public final class FailureAtomicMulticastProtocol extends AbstractProtocol imple
         
         if (minCompletedMessageId != 0)
         {
-            IMembership membership = membershipManager.getMembership();//TODO:
+            IMembership membership = membershipManager.getMembership();
             Assert.checkState(membership != null);
             
             CompleteMessagePart part = new CompleteMessagePart(minCompletedMessageId);

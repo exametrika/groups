@@ -148,7 +148,12 @@ public final class SendQueue
         
         List<IMessage> bundle = new ArrayList<IMessage>();
         for (int i = pos; i < deque.size(); i++)
-            bundle.add(deque.get(i));
+        {
+            IMessage message = deque.get(i);
+            Assert.notNull(bundle);
+            
+            bundle.add(message);
+        }
         
         lastSendMessageId = startMessageId + deque.size() - 1;
         
