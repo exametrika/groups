@@ -93,7 +93,8 @@ import com.exametrika.tests.groups.MembershipManagerTests.PropertyProviderMock;
  */
 public class MulticastProtocolTests
 {
-    private static final int COUNT = 2;// TODO:10
+    private static final int COUNT = 10;
+    private static final long SEND_COUNT = Long.MAX_VALUE;
     private GroupChannel[] channels = new GroupChannel[COUNT];
     private Sequencer flushSequencer = new Sequencer();
     
@@ -439,7 +440,7 @@ public class MulticastProtocolTests
         @Override
         public void onTimer(long currentTime)
         {
-            if (membership != null && count < 2)
+            if (membership != null && count < SEND_COUNT)
                 getSender().send(getMessageFactory().create(membership.getGroup().getAddress(), 
                     new TestBufferMessagePart(index, count++)));
         }

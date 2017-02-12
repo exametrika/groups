@@ -212,17 +212,16 @@ public final class ReceiveQueue
     
     public void complete(long messageId) 
     {
-        if (messageId == 0)
+        if (messageId == 0 || messageId < startMessageId)
             return;
         
         Assert.isTrue(messageId >= startMessageId && messageId < startMessageId + deque.size());
         
         boolean allowPoll = lastCompletedMessageId == startMessageId - 1;
-        long initialStartMessageId = startMessageId;
         
         for (long i = lastCompletedMessageId + 1; i <= messageId; i++)
         {
-            MessageInfo info = deque.get((int)(i - initialStartMessageId));
+            MessageInfo info = deque.get((int)(i - startMessageId));
             
             info.completed = true;
             

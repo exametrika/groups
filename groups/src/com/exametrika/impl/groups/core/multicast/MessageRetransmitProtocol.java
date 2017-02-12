@@ -273,8 +273,8 @@ public final class MessageRetransmitProtocol
     {
         private final INode failedNode;
         private INode senderNode;
-        private long maxReceivedMessageId = -1;
-        private List<RetransmitNodeInfo> retransmits;
+        private long maxReceivedMessageId = -2;
+        private List<RetransmitNodeInfo> retransmits = new ArrayList<RetransmitNodeInfo>();
         
         public RetransmitInfo(INode failedNode)
         {

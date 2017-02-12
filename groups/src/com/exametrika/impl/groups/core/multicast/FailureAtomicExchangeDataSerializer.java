@@ -38,7 +38,7 @@ public final class FailureAtomicExchangeDataSerializer extends AbstractSerialize
         for (MissingMessageInfo info : data.getMissingMessageInfos())
         {
             Serializers.writeUUID(serialization, info.getFailedSenderId());
-            Serializers.writeVarLong(serialization, info.getLastReceivedMessageId());
+            serialization.writeLong(info.getLastReceivedMessageId());
         }
     }
     
@@ -51,7 +51,7 @@ public final class FailureAtomicExchangeDataSerializer extends AbstractSerialize
         for (int i = 0; i < count; i++)
         {
             UUID failedSenderId = Serializers.readUUID(deserialization);
-            long lastReceivedMessageId = Serializers.readVarLong(deserialization);
+            long lastReceivedMessageId = deserialization.readLong();
 
             missingMessageInfos.add(new MissingMessageInfo(failedSenderId, lastReceivedMessageId));
         }

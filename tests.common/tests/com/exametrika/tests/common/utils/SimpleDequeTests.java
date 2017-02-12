@@ -85,6 +85,14 @@ public class SimpleDequeTests
             i++;
         }
         
+        for (i = 0; i < COUNT; i++)
+        {
+            assertThat(queue.get(i), is(i));
+            queue.set(i, i * 2);
+            assertThat(queue.get(i), is(2 * i));
+            queue.set(i, i);
+        }
+        
         i = 0;
         for (IIterator<Integer> it = queue.iterator(); it.hasNext();)
         {

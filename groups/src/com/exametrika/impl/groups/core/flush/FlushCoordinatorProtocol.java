@@ -598,7 +598,7 @@ public final class FlushCoordinatorProtocol extends AbstractProtocol implements 
         for (IAddress member : respondingMembers)
             send(messageFactory.create(member, part, MessageFlags.HIGH_PRIORITY));
         
-        dataExchanges = new ArrayList<Map<UUID, IExchangeData>>();
+        initExchanges();
     }
     
     private Set<UUID> getNodesIds(Set<INode> nodes)

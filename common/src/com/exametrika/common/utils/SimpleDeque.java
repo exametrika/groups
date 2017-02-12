@@ -60,12 +60,12 @@ public final class SimpleDeque<T> implements Iterable<T>
     
     public T get(int pos)
     {
-        return elements[pos & (elements.length - 1)];
+        return elements[(head + pos) & (elements.length - 1)];
     }
     
     public void set(int pos, T value)
     {
-        elements[pos & (elements.length - 1)] = value;
+        elements[(head + pos) & (elements.length - 1)] = value;
     }
     
     public void addFirst(T value) 
