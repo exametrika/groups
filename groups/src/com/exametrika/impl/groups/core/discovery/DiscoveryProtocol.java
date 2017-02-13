@@ -93,8 +93,6 @@ public final class DiscoveryProtocol extends AbstractProtocol implements INodeDi
     @Override
     public void stop()
     {
-        membership = null;
-        coordinator = null;
         discoveredNodes.clear();
         stopped = true;
 

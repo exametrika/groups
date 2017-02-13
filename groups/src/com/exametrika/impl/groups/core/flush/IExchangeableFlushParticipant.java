@@ -25,9 +25,10 @@ public interface IExchangeableFlushParticipant extends IFlushParticipant
     IExchangeData getLocalData();
     
     /**
-     * Sets remote exchange data.
+     * Sets remote exchange data from healthy nodes of prepared new membership.
      *
-     * @param data exchange data from remote nodes
+     * @param data exchange data from remote nodes from healthy nodes of prepared new membership.
+     * Exchange data can be null.
      */
     void setRemoteData(Map<INode, IExchangeData> data);
 }

@@ -140,7 +140,10 @@ public final class MessageRetransmitProtocol
         
         Map<UUID, RetransmitInfo> retransmitsMap = new HashMap<UUID, RetransmitInfo>();
         for (Map.Entry<INode, IExchangeData> entry : data.entrySet())
-            buildRetransmitInfos(entry, retransmitsMap, membership);
+        {
+            if (entry.getValue() != null)
+                buildRetransmitInfos(entry, retransmitsMap, membership);
+        }
         
         Set<UUID> retransmits = new HashSet<UUID>();
         for (RetransmitInfo info : retransmitsMap.values())
@@ -229,7 +232,6 @@ public final class MessageRetransmitProtocol
         Map<UUID, RetransmitInfo> retransmits, IMembership membership)
     {
         FailureAtomicExchangeData data = (FailureAtomicExchangeData)exchangeData.getValue();
-        
         for (MissingMessageInfo missingInfo : data.getMissingMessageInfos())
         {
             RetransmitInfo retransmitInfo = retransmits.get(missingInfo.getFailedSenderId());
