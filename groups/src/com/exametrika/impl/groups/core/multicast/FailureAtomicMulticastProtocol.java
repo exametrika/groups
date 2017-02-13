@@ -20,10 +20,12 @@ import com.exametrika.common.io.impl.Deserialization;
 import com.exametrika.common.io.impl.Serialization;
 import com.exametrika.common.messaging.IAddress;
 import com.exametrika.common.messaging.IDeliveryHandler;
+import com.exametrika.common.messaging.IFeed;
 import com.exametrika.common.messaging.IMessage;
 import com.exametrika.common.messaging.IMessageFactory;
 import com.exametrika.common.messaging.IReceiver;
 import com.exametrika.common.messaging.ISender;
+import com.exametrika.common.messaging.ISink;
 import com.exametrika.common.messaging.impl.message.Message;
 import com.exametrika.common.messaging.impl.message.MessageSerializers;
 import com.exametrika.common.messaging.impl.protocols.AbstractProtocol;
@@ -300,39 +302,25 @@ public final class FailureAtomicMulticastProtocol extends AbstractProtocol imple
     @Override
     protected void doSend(ISender sender, IMessage message)
     {
-        if (message.getDestination() instanceof GroupAddress)
-        {
-            Assert.isNull(message.getFiles());
-            
-            long messageId = sendQueue.acquireMessageId();
-            
-            long order = 0;
-            if (totalOrderProtocol != null && totalOrderProtocol.isCoordinator() && !message.hasFlags(MessageFlags.UNORDERED))
-                order = totalOrderProtocol.acquireOrder(1);
-            
-            FailureAtomicMessagePart part = new FailureAtomicMessagePart(messageId, order);
-            message = message.addPart(part, true);
-
-            sendQueue.offer(message);
-
-            if (message.hasFlags(MessageFlags.NO_DELAY) || message.getSize() > maxBundlingMessageSize ||
-                sendQueue.getQueueCapacity() > maxBundleSize || 
-                timeService.getCurrentTime() > sendQueue.getBundleCreationTime() + maxBundlingPeriod)
-                sendBundle(message.getFlags());
-        }
-        else if (!(message.getPart() instanceof AcknowledgeSendMessagePart))
-        {
-            ReceiveQueue receiveQueue = receiveQueues.get(message.getDestination());
-            if (receiveQueue != null && receiveQueue.isAcknowledgementRequired())
-            {
-                message = message.addPart(new AcknowledgeSendMessagePart(receiveQueue.getLastReceivedMessageId()));
-                receiveQueue.acknowledge();
-            }
-            
+        message = doSend(message);
+        if (message != null)
             sender.send(message);
-        }
+    }
+    
+    @Override
+    protected boolean doSend(IFeed feed, ISink sink, IMessage message)
+    {
+        message = doSend(message);
+        if (message != null)
+            return super.doSend(feed, sink, message);
         else
-            sender.send(message);
+            return true;
+    }
+    
+    @Override
+    protected boolean supportsPullSendModel()
+    {
+        return true;
     }
 
     @Override
@@ -438,16 +426,54 @@ public final class FailureAtomicMulticastProtocol extends AbstractProtocol imple
             receiver.receive(message);
     }
     
+    private IMessage doSend(IMessage message)
+    {
+        if (message.getDestination() instanceof GroupAddress)
+        {
+            Assert.isNull(message.getFiles());
+            
+            long messageId = sendQueue.acquireMessageId();
+            
+            long order = 0;
+            if (totalOrderProtocol != null && totalOrderProtocol.isCoordinator() && !message.hasFlags(MessageFlags.UNORDERED))
+                order = totalOrderProtocol.acquireOrder(1);
+            
+            FailureAtomicMessagePart part = new FailureAtomicMessagePart(messageId, order);
+            message = message.addPart(part, true);
+
+            sendQueue.offer(message);
+
+            if (message.hasFlags(MessageFlags.NO_DELAY) || message.getSize() > maxBundlingMessageSize ||
+                sendQueue.getQueueCapacity() > maxBundleSize || 
+                timeService.getCurrentTime() > sendQueue.getBundleCreationTime() + maxBundlingPeriod)
+                sendBundle(message.getFlags());
+            
+            return null;
+        }
+        else if (!(message.getPart() instanceof AcknowledgeSendMessagePart))
+        {
+            ReceiveQueue receiveQueue = receiveQueues.get(message.getDestination());
+            if (receiveQueue != null && receiveQueue.isAcknowledgementRequired())
+            {
+                message = message.addPart(new AcknowledgeSendMessagePart(receiveQueue.getLastReceivedMessageId()));
+                receiveQueue.acknowledge();
+            }
+        }
+        
+        return message;
+    }
+    
     private void sendBundle(int flags)
     {
+        IMembership membership = membershipManager.getPreparedMembership();
+        if (membership == null)
+            return;
+        
         List<IMessage> bundledMessages = sendQueue.createBundle();
         if (bundledMessages == null)
             return;
         
         long minCompletedMessageId = sendQueue.complete();
-
-        IMembership membership = membershipManager.getPreparedMembership();
-        Assert.checkState(membership != null);
         
         ByteOutputStream stream = new ByteOutputStream(0x1000);
         ISerialization serialization = new Serialization(serializationRegistry, true, stream);
