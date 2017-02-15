@@ -56,7 +56,7 @@ public final class FlowControlMessagePart implements IMessagePart
     private interface IMessages
     {
         @DefaultMessage("flow-id: {0}, blocked: {1}")
-        ILocalizedMessage toString(UUID id, boolean blocked);
+        ILocalizedMessage toString(UUID flowId, boolean blocked);
     }
 }
 
