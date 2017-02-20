@@ -11,6 +11,7 @@ import com.exametrika.common.utils.Assert;
 import com.exametrika.common.utils.SimpleDeque;
 import com.exametrika.common.utils.SimpleList.Element;
 import com.exametrika.impl.groups.MessageFlags;
+import com.exametrika.impl.groups.core.membership.Memberships;
 
 
 /**
@@ -28,9 +29,6 @@ public final class ReceiveQueue
     private final boolean ordered;
     private final SimpleDeque<MessageInfo> deque = new SimpleDeque<MessageInfo>();
     private final Element<ReceiveQueue> element = new Element<ReceiveQueue>(this);
-    private final int maxUnlockQueueCapacity;
-    private final int minLockQueueCapacity;
-    private final IFlowController<IAddress> flowController;
     private long startMessageId;
     private long lastReceivedMessageId;
     private long lastAcknowlegedMessageId;
@@ -38,12 +36,11 @@ public final class ReceiveQueue
     private long lastReceiveTime;
     private long lastCompletedMessageId;
     private long lastOrderedMessageId;
-    private int queueCapacity;
-    private boolean flowLocked;
+    private final QueueCapacityController capacityController;
     
     public ReceiveQueue(IAddress sender, IReceiver receiver, OrderedQueue orderedQueue, long startMessageId, 
         boolean durable, boolean ordered, int maxUnlockQueueCapacity, int minLockQueueCapacity, 
-        IFlowController<IAddress> flowController, long currentTime)
+        IFlowController<RemoteFlowId> flowController, long currentTime)
     {
         Assert.notNull(sender);
         Assert.notNull(receiver);
@@ -60,9 +57,9 @@ public final class ReceiveQueue
         this.lastCompletedMessageId = startMessageId - 1;
         this.lastOrderedMessageId = startMessageId - 1;
         this.lastReceiveTime = currentTime;
-        this.maxUnlockQueueCapacity = maxUnlockQueueCapacity;
-        this.minLockQueueCapacity = minLockQueueCapacity;
-        this.flowController = flowController;
+        this.capacityController = new QueueCapacityController(minLockQueueCapacity, maxUnlockQueueCapacity, 
+            Memberships.CORE_GROUP_ADDRESS, Memberships.CORE_GROUP_ID);
+        this.capacityController.setFlowController(flowController);
     }
     
     public IAddress getSender()
@@ -172,13 +169,7 @@ public final class ReceiveQueue
         {
             Assert.isTrue(messageId == lastReceivedMessageId + 1);
             lastReceivedMessageId++;
-            
-            queueCapacity += message.getSize();
-            if (!flowLocked && queueCapacity >= minLockQueueCapacity)
-            {
-                flowLocked = true;
-                flowController.lockFlow(message.getSource());
-            }
+            capacityController.addCapacity(message.getSource(), message.getSize());
         }
         
         if (!durable)
@@ -260,12 +251,7 @@ public final class ReceiveQueue
                 receiver.receive(info.message);
         }
         
-        queueCapacity = 0;
-        if (flowLocked)
-        {
-            flowLocked = false;
-            flowController.unlockFlow(null);
-        }
+        capacityController.clearCapacity();
     }
     
     private void deliver(MessageInfo info)
@@ -278,12 +264,7 @@ public final class ReceiveQueue
         else
             orderedQueue.offer(info.order, info.message);
         
-        queueCapacity -= info.message.getSize();
-        if (flowLocked && queueCapacity <= maxUnlockQueueCapacity)
-        {
-            flowLocked = false;
-            flowController.unlockFlow(info.message.getSource());
-        }
+        capacityController.removeCapacity(info.message.getSize());
     }
     
     private static class MessageInfo

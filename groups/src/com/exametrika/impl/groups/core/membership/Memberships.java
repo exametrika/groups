@@ -29,6 +29,7 @@ public final class Memberships
 {
     public static final UUID CORE_GROUP_ID = UUID.fromString("d2ea2d73-c7ee-492b-a532-7a81fc74fe8c");
     public static final String CORE_GROUP_NAME = "core"; 
+    public static final GroupAddress CORE_GROUP_ADDRESS = new GroupAddress(CORE_GROUP_ID, CORE_GROUP_NAME);
     
     public static class MembershipDeltaInfo
     {
@@ -76,7 +77,7 @@ public final class Memberships
         members.add(localNode);
         members.addAll(discoveredNodes);
 
-        IGroup group = new Group(CORE_GROUP_ID, CORE_GROUP_NAME, true, members);
+        IGroup group = new Group(CORE_GROUP_ADDRESS, true, members);
         
         return new Membership(1, group);
     }
@@ -132,7 +133,7 @@ public final class Memberships
         if (flushCondition != null && !flushCondition.canStartFlush(members, joinedMembers, failedMemberIds, leftMemberIds))
             return null;
         
-        IGroup group = new Group(oldMembership.getGroup().getId(), oldMembership.getGroup().getName(), primaryGroup, members);
+        IGroup group = new Group((GroupAddress)oldMembership.getGroup().getAddress(), primaryGroup, members);
         
         IMembership newMembership = new Membership(oldMembership.getId() + 1, group);
         IMembershipDelta membershipDelta = new MembershipDelta(newMembership.getId(), joinedMembers, leftMemberIds, 
@@ -169,7 +170,7 @@ public final class Memberships
         else
             primaryGroup = false;
 
-        IGroup group = new Group(oldMembership.getGroup().getId(), oldMembership.getGroup().getName(), primaryGroup, members);
+        IGroup group = new Group((GroupAddress)oldMembership.getGroup().getAddress(), primaryGroup, members);
         
         IMembership newMembership = new Membership(oldMembership.getId() + 1, group);
         IMembershipChange membershipChange = new MembershipChange(joinedMembers, leftMembers, failedMembers);

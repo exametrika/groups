@@ -20,6 +20,7 @@ import com.exametrika.api.groups.core.IMembershipListener;
 import com.exametrika.api.groups.core.IMembershipListener.LeaveReason;
 import com.exametrika.api.groups.core.INode;
 import com.exametrika.common.io.ISerializationRegistry;
+import com.exametrika.common.messaging.IAddress;
 import com.exametrika.common.messaging.IChannel;
 import com.exametrika.common.messaging.ILiveNodeProvider;
 import com.exametrika.common.messaging.IMessageFactory;
@@ -44,13 +45,17 @@ import com.exametrika.impl.groups.core.failuredetection.FailureDetectionProtocol
 import com.exametrika.impl.groups.core.failuredetection.GroupNodeTrackingStrategy;
 import com.exametrika.impl.groups.core.failuredetection.IFailureDetectionListener;
 import com.exametrika.impl.groups.core.membership.Group;
+import com.exametrika.impl.groups.core.membership.GroupAddress;
 import com.exametrika.impl.groups.core.membership.IMembershipManager;
 import com.exametrika.impl.groups.core.membership.Membership;
 import com.exametrika.impl.groups.core.membership.MembershipSerializationRegistrar;
+import com.exametrika.impl.groups.core.membership.Memberships;
 import com.exametrika.impl.groups.core.membership.Node;
 import com.exametrika.impl.groups.core.multicast.FlowControlProtocol;
+import com.exametrika.impl.groups.core.multicast.QueueCapacityController;
 import com.exametrika.impl.groups.core.multicast.RemoteFlowId;
 import com.exametrika.tests.common.messaging.ReceiverMock;
+import com.exametrika.tests.common.messaging.TestAddress;
 
 /**
  * The {@link FlowControlProtocolTests} are tests for {@link FlowControlProtocol}.
@@ -88,7 +93,7 @@ public class FlowControlProtocolTests
             nodes.add(channelFactory.membershipServices.get(i).getLocalNode());
         }
         
-        Membership membership = new Membership(1, new Group(UUID.randomUUID(), "test", true, nodes));
+        Membership membership = new Membership(1, new Group(new GroupAddress(UUID.randomUUID(), "test"), true, nodes));
         for (int i = 0; i < COUNT; i++)
         {
             channelFactory.protocols.get(i).onPreparedMembershipChanged(null, membership, null);
@@ -183,7 +188,7 @@ public class FlowControlProtocolTests
             nodes.add(channelFactory.membershipServices.get(i).getLocalNode());
         }
         
-        Membership membership = new Membership(1, new Group(UUID.randomUUID(), "test", true, nodes));
+        Membership membership = new Membership(1, new Group(new GroupAddress(UUID.randomUUID(), "test"), true, nodes));
         for (int i = 0; i < COUNT; i++)
         {
             channelFactory.protocols.get(i).onPreparedMembershipChanged(null, membership, null);
@@ -261,7 +266,56 @@ public class FlowControlProtocolTests
         assertThat(controller2.unlockedFlows.get(1).getSender(), is(channels[COUNT - 1].getLiveNodeProvider().getLocalNode()));
     }
     
-    public static void failChannel(IChannel channel) throws Exception
+    @Test
+    public void testCapacityController()
+    {
+        QueueCapacityController controller = new QueueCapacityController(1000, 500, Memberships.CORE_GROUP_ADDRESS, 
+            Memberships.CORE_GROUP_ID);
+        FlowControllerMock flowController = new FlowControllerMock();
+        controller.setFlowController(flowController);
+        IAddress address1 = new TestAddress(UUID.randomUUID(), "test1");
+        IAddress address2 = new TestAddress(UUID.randomUUID(), "test2");
+        controller.addCapacity(address1, 600);
+        
+        assertThat(flowController.lockedFlows.size(), is(0));
+        
+        controller.addCapacity(address2, 600);
+        controller.addCapacity(address1, 600);
+        controller.addCapacity(address1, 600);
+        controller.addCapacity(address1, 600);
+        
+        assertThat(controller.getCapacity(), is(3000));
+        assertThat(flowController.lockedFlows.size(), is(2));
+        assertThat(flowController.lockedFlows.get(0).getSender(), is(address2));
+        assertThat(flowController.lockedFlows.get(1).getSender(), is(address1));
+        
+        controller.removeCapacity(500);
+        assertThat(flowController.unlockedFlows.size(), is(0));
+        controller.removeCapacity(2000);
+        
+        assertThat(controller.getCapacity(), is(500));
+        assertThat(flowController.unlockedFlows.size(), is(2));
+        assertThat(flowController.unlockedFlows.get(0).getSender(), is(address2));
+        assertThat(flowController.unlockedFlows.get(1).getSender(), is(address1));
+        
+        controller.removeCapacity(500);
+        assertThat(flowController.unlockedFlows.size(), is(2));
+        
+        flowController.lockedFlows.clear();
+        flowController.unlockedFlows.clear();
+        
+        controller.addCapacity(address1, 600);
+        controller.addCapacity(address1, 600);
+        controller.addCapacity(address2, 600);
+        
+        controller.clearCapacity();
+        assertThat(controller.getCapacity(), is(0));
+        assertThat(flowController.unlockedFlows.size(), is(2));
+        assertThat(flowController.unlockedFlows.get(0).getSender(), is(address1));
+        assertThat(flowController.unlockedFlows.get(1).getSender(), is(address2));
+    }
+    
+    private  static void failChannel(IChannel channel) throws Exception
     {
         ((TcpNioDispatcher)Tests.get(((Channel)channel).getCompartment(), "dispatcher")).getSelector().close();
         IOs.close(channel);
@@ -398,8 +452,9 @@ public class FlowControlProtocolTests
             FlowControllerMock flowController = new FlowControllerMock();
             flowControllers.add(flowController);
             
-            FlowControlProtocol flowControlProtocol = new FlowControlProtocol(channelName, messageFactory, flowController,
+            FlowControlProtocol flowControlProtocol = new FlowControlProtocol(channelName, messageFactory,
                 membershipService);
+            flowControlProtocol.setFlowController(flowController);
             protocols.add(flowControlProtocol);
             flowControlProtocols.add(flowControlProtocol);
             

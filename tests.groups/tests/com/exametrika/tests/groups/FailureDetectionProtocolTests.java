@@ -49,6 +49,7 @@ import com.exametrika.impl.groups.core.failuredetection.FailureDetectionProtocol
 import com.exametrika.impl.groups.core.failuredetection.GroupNodeTrackingStrategy;
 import com.exametrika.impl.groups.core.failuredetection.IFailureDetectionListener;
 import com.exametrika.impl.groups.core.membership.Group;
+import com.exametrika.impl.groups.core.membership.GroupAddress;
 import com.exametrika.impl.groups.core.membership.IMembershipManager;
 import com.exametrika.impl.groups.core.membership.Membership;
 import com.exametrika.impl.groups.core.membership.MembershipSerializationRegistrar;
@@ -91,7 +92,7 @@ public class FailureDetectionProtocolTests
             nodes.add(channelFactory.membershipServices.get(i).getLocalNode());
         }
         
-        Membership membership = new Membership(1, new Group(UUID.randomUUID(), "test", true, nodes));
+        Membership membership = new Membership(1, new Group(new GroupAddress(UUID.randomUUID(), "test"), true, nodes));
         for (int i = 0; i < COUNT; i++)
         {
             channelFactory.protocols.get(i).onPreparedMembershipChanged(null, membership, null);
@@ -142,7 +143,7 @@ public class FailureDetectionProtocolTests
         List<INode> healthy = new ArrayList<INode>(newNodes);
         healthy.remove(nodes.get(4));
         
-        Membership membership2 = new Membership(2, new Group(UUID.randomUUID(), "test", true, newNodes));
+        Membership membership2 = new Membership(2, new Group(new GroupAddress(UUID.randomUUID(), "test"), true, newNodes));
         for (int i = 0; i < COUNT; i++)
         {
             if (i == 0 || i == 3 || i == 4)
@@ -187,7 +188,7 @@ public class FailureDetectionProtocolTests
             nodes.add(channelFactory.membershipServices.get(i).getLocalNode());
         }
         
-        Membership membership = new Membership(1, new Group(UUID.randomUUID(), "test", true, nodes));
+        Membership membership = new Membership(1, new Group(new GroupAddress(UUID.randomUUID(), "test"), true, nodes));
         for (int i = 0; i < COUNT; i++)
         {
             channelFactory.protocols.get(i).onPreparedMembershipChanged(null, membership, null);
@@ -257,7 +258,7 @@ public class FailureDetectionProtocolTests
             nodes.add(channelFactory.membershipServices.get(i).getLocalNode());
         }
         
-        Membership membership = new Membership(1, new Group(UUID.randomUUID(), "test", true, nodes));
+        Membership membership = new Membership(1, new Group(new GroupAddress(UUID.randomUUID(), "test"), true, nodes));
         for (int i = 0; i < COUNT; i++)
         {
             channelFactory.protocols.get(i).onPreparedMembershipChanged(null, membership, null);
@@ -302,7 +303,7 @@ public class FailureDetectionProtocolTests
         List<INode> newHealthy = new ArrayList<INode>(newNodes);
         newHealthy.remove(nodes.get(4));
         
-        Membership membership2 = new Membership(2, new Group(UUID.randomUUID(), "test", true, newNodes));
+        Membership membership2 = new Membership(2, new Group(new GroupAddress(UUID.randomUUID(), "test"), true, newNodes));
         for (int i = 0; i < COUNT; i++)
         {
             if (i == 0 || i == 3 || i == 4)

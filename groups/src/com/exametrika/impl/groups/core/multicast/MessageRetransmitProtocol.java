@@ -18,7 +18,6 @@ import com.exametrika.common.messaging.IMessage;
 import com.exametrika.common.messaging.IMessageFactory;
 import com.exametrika.common.messaging.ISender;
 import com.exametrika.common.messaging.MessageFlags;
-import com.exametrika.common.tasks.IFlowController;
 import com.exametrika.common.time.ITimeService;
 import com.exametrika.common.utils.Assert;
 import com.exametrika.impl.groups.core.exchange.IExchangeData;
@@ -41,7 +40,6 @@ public final class MessageRetransmitProtocol
     private final IMessageFactory messageFactory;
     private final ISender sender;
     private final ITimeService timeService;
-    private IFlowController<IAddress> flowController;
     private final Map<IAddress, ReceiveQueue> receiveQueues;
     private final FailureAtomicMulticastProtocol parent;
     private final IFailureDetector failureDetector;
@@ -54,7 +52,6 @@ public final class MessageRetransmitProtocol
         IMessageFactory messageFactory, ISender sender, ITimeService timeService,
         Map<IAddress, ReceiveQueue> receiveQueues, FailureAtomicMulticastProtocol parent, IFailureDetector failureDetector)
     {
-        
         Assert.notNull(flushParticipant);
         Assert.notNull(membershipManager);
         Assert.notNull(messageFactory);
@@ -72,14 +69,6 @@ public final class MessageRetransmitProtocol
         this.receiveQueues = receiveQueues;
         this.parent = parent;
         this.failureDetector = failureDetector;
-    }
-    
-    public void setFlowController(IFlowController<IAddress> flowController)
-    {
-        Assert.notNull(flowController);
-        Assert.isNull(this.flowController);
-        
-        this.flowController = flowController;
     }
     
     public boolean isStabilizationPhase()

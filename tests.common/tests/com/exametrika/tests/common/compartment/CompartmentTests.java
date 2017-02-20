@@ -15,7 +15,7 @@ import com.exametrika.common.compartment.ICompartmentDispatcher;
 import com.exametrika.common.compartment.ICompartmentFactory.Parameters;
 import com.exametrika.common.compartment.ICompartmentGroupFactory;
 import com.exametrika.common.compartment.ICompartmentGroupProcessor;
-import com.exametrika.common.compartment.ICompartmentProcessor;
+import com.exametrika.common.compartment.ICompartmentTimerProcessor;
 import com.exametrika.common.compartment.ICompartmentTask;
 import com.exametrika.common.compartment.impl.Compartment;
 import com.exametrika.common.compartment.impl.CompartmentFactory;
@@ -212,7 +212,7 @@ public class CompartmentTests
         parameters.dispatcher = dispatcher;
         parameters.dispatchPeriod = 100;
         TestCompartmentProcessor processor = new TestCompartmentProcessor();
-        parameters.processors.add(processor);
+        parameters.timerProcessors.add(processor);
         Compartment compartment3 = new CompartmentFactory().createCompartment(parameters);
         processor.compartment = compartment3;
 
@@ -263,7 +263,7 @@ public class CompartmentTests
         parameters.minLockQueueCapacity = 3;
         parameters.maxUnlockQueueCapacity = 1;
         TestCompartmentBlocker blocker = new TestCompartmentBlocker();
-        parameters.processors.add(blocker);
+        parameters.timerProcessors.add(blocker);
         final Compartment compartment = new CompartmentFactory().createCompartment(parameters);
         SimpleCompartmentQueue queue1 = (SimpleCompartmentQueue)parameters.queue;
         parameters = new Parameters();
@@ -447,7 +447,7 @@ public class CompartmentTests
         }
     }
     
-    private static class TestCompartmentProcessor implements ICompartmentProcessor
+    private static class TestCompartmentProcessor implements ICompartmentTimerProcessor
     {
         private Compartment compartment;
         private volatile int count;
@@ -618,7 +618,7 @@ public class CompartmentTests
         }
     }
     
-    private static class TestCompartmentBlocker implements ICompartmentProcessor
+    private static class TestCompartmentBlocker implements ICompartmentTimerProcessor
     {
         private boolean blocked;
         

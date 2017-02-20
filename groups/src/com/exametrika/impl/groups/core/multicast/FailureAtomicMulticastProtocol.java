@@ -12,6 +12,8 @@ import java.util.TreeMap;
 
 import com.exametrika.api.groups.core.IMembership;
 import com.exametrika.api.groups.core.INode;
+import com.exametrika.common.compartment.ICompartment;
+import com.exametrika.common.compartment.ICompartmentProcessor;
 import com.exametrika.common.io.ISerialization;
 import com.exametrika.common.io.ISerializationRegistry;
 import com.exametrika.common.io.impl.ByteInputStream;
@@ -23,6 +25,7 @@ import com.exametrika.common.messaging.IDeliveryHandler;
 import com.exametrika.common.messaging.IFeed;
 import com.exametrika.common.messaging.IMessage;
 import com.exametrika.common.messaging.IMessageFactory;
+import com.exametrika.common.messaging.IPullableSender;
 import com.exametrika.common.messaging.IReceiver;
 import com.exametrika.common.messaging.ISender;
 import com.exametrika.common.messaging.ISink;
@@ -42,6 +45,7 @@ import com.exametrika.impl.groups.core.flush.IExchangeableFlushParticipant;
 import com.exametrika.impl.groups.core.flush.IFlush;
 import com.exametrika.impl.groups.core.membership.GroupAddress;
 import com.exametrika.impl.groups.core.membership.IMembershipManager;
+import com.exametrika.impl.groups.core.membership.Memberships;
 
 /**
  * The {@link FailureAtomicMulticastProtocol} represents a failure atomic reliable multicast protocol. Protocol requires
@@ -51,7 +55,7 @@ import com.exametrika.impl.groups.core.membership.IMembershipManager;
  * @author Medvedev-A
  */
 public final class FailureAtomicMulticastProtocol extends AbstractProtocol implements IFailureDetectionListener, 
-    IExchangeableFlushParticipant, ITimeService
+    IExchangeableFlushParticipant, ITimeService, ICompartmentProcessor, IFlowController<RemoteFlowId>
 {
     private final IMembershipManager membershipManager;
     private final IFailureDetector failureDetector;
@@ -64,7 +68,7 @@ public final class FailureAtomicMulticastProtocol extends AbstractProtocol imple
     private final boolean durable;
     private final int maxUnlockQueueCapacity;
     private final int minLockQueueCapacity;
-    private IFlowController<IAddress> flowController;
+    private IFlowController<RemoteFlowId> remoteFlowController;
     private final ISerializationRegistry serializationRegistry;
     private Map<IAddress, ReceiveQueue> receiveQueues = new LinkedHashMap<IAddress, ReceiveQueue>();
     private final SendQueue sendQueue;
@@ -74,8 +78,7 @@ public final class FailureAtomicMulticastProtocol extends AbstractProtocol imple
     private final TotalOrderProtocol totalOrderProtocol;
     private IFlush flush;
     private boolean flushGranted;
-    private int pendingQueueCapacity;
-    private boolean flowLocked;
+    private final QueueCapacityController capacityController;
     
     public FailureAtomicMulticastProtocol(String channelName, IMessageFactory messageFactory, 
         IMembershipManager membershipManager, IFailureDetector failureDetector, 
@@ -102,12 +105,14 @@ public final class FailureAtomicMulticastProtocol extends AbstractProtocol imple
         this.maxUnlockQueueCapacity = maxUnlockQueueCapacity;
         this.minLockQueueCapacity = minLockQueueCapacity;
         this.serializationRegistry = serializationRegistry;
+        this.capacityController = new QueueCapacityController(minLockQueueCapacity, maxUnlockQueueCapacity, 
+            Memberships.CORE_GROUP_ADDRESS, Memberships.CORE_GROUP_ID);
 
         if (durable)
             ordered = true;
         
-        this.sendQueue = new SendQueue(failureDetector, this, senderDeliveryHandler, durable, maxUnlockQueueCapacity, 
-            minLockQueueCapacity);
+        this.sendQueue = new SendQueue(this, failureDetector, this, senderDeliveryHandler, durable, maxUnlockQueueCapacity, 
+            minLockQueueCapacity, messageFactory);
         
         if (ordered)
         {
@@ -125,19 +130,27 @@ public final class FailureAtomicMulticastProtocol extends AbstractProtocol imple
             this, receiveQueues, this, failureDetector);
     }
 
-    public void setFlowController(IFlowController<IAddress> flowController)
+    public void setRemoteFlowController(IFlowController<RemoteFlowId> flowController)
     {
         Assert.notNull(flowController);
-        Assert.isNull(this.flowController);
+        Assert.isNull(this.remoteFlowController);
         
-        this.flowController = flowController;
-        this.sendQueue.setFlowController(flowController);
-        this.retransmitProtocol.setFlowController(flowController);
+        this.remoteFlowController = flowController;
+        this.capacityController.setFlowController(flowController);
         if (orderedQueue != null)
-        {
             orderedQueue.setFlowController(flowController);
-            totalOrderProtocol.setFlowController(flowController);
-        }
+    }
+    
+    public void setLocalFlowController(IFlowController<RemoteFlowId> flowController)
+    {
+        Assert.notNull(flowController);
+        
+        this.sendQueue.setFlowController(flowController);
+    }
+    
+    public void setCompartment(ICompartment compartment)
+    {
+        sendQueue.setCompartment(compartment);
     }
     
     public void tryGrantFlush()
@@ -208,13 +221,7 @@ public final class FailureAtomicMulticastProtocol extends AbstractProtocol imple
         }
         
         pendingNewMessages.clear();
-        
-        if (flowLocked)
-        {
-            flowController.unlockFlow(null);
-            flowLocked = false;
-            pendingQueueCapacity = 0;
-        }
+        capacityController.clearCapacity();
     }
 
     @Override
@@ -245,6 +252,24 @@ public final class FailureAtomicMulticastProtocol extends AbstractProtocol imple
         totalOrderProtocol.onTimer();
     }
 
+    @Override
+    public void lockFlow(RemoteFlowId flow)
+    {
+        sendQueue.lockFlow(flow);
+    }
+
+    @Override
+    public void unlockFlow(RemoteFlowId flow)
+    {
+        sendQueue.unlockFlow(flow);
+    }
+    
+    @Override
+    public void process()
+    {
+        sendQueue.process();
+    }
+    
     @Override
     public IExchangeData getLocalData()
     {
@@ -293,7 +318,7 @@ public final class FailureAtomicMulticastProtocol extends AbstractProtocol imple
         if (receiveQueue == null)
         {
             receiveQueue = new ReceiveQueue(sender, this, orderedQueue, startMessageId, durable, 
-                totalOrderProtocol != null, maxUnlockQueueCapacity, minLockQueueCapacity, flowController, timeService.getCurrentTime());
+                totalOrderProtocol != null, maxUnlockQueueCapacity, minLockQueueCapacity, remoteFlowController, timeService.getCurrentTime());
             receiveQueues.put(sender, receiveQueue);
         }
         return receiveQueue;
@@ -308,19 +333,27 @@ public final class FailureAtomicMulticastProtocol extends AbstractProtocol imple
     }
     
     @Override
-    protected boolean doSend(IFeed feed, ISink sink, IMessage message)
+    protected ISink doRegister(IPullableSender pullableSender, IAddress destination, IFeed feed)
     {
-        message = doSend(message);
-        if (message != null)
-            return super.doSend(feed, sink, message);
+        if (destination.equals(Memberships.CORE_GROUP_ADDRESS))
+            return sendQueue.register(feed);
         else
-            return true;
+            return pullableSender.register(destination, feed);
+    }
+    
+    @Override
+    protected void doUnregister(IPullableSender pullableSender, ISink sink)
+    {
+        if (sink.getDestination().equals(Memberships.CORE_GROUP_ADDRESS))
+            sendQueue.unregister((MulticastSink)sink);
+        else
+            pullableSender.unregister(sink);
     }
     
     @Override
     protected boolean supportsPullSendModel()
     {
-        return true;
+        return false;
     }
 
     @Override
@@ -341,14 +374,7 @@ public final class FailureAtomicMulticastProtocol extends AbstractProtocol imple
             if (part.getMembershipId() > membershipId)
             {
                 pendingNewMessages.add(message);
-                pendingQueueCapacity += message.getSize();
-                
-                if (!flowLocked && pendingQueueCapacity >= minLockQueueCapacity)
-                {
-                    flowLocked = true;
-                    flowController.lockFlow(message.getSource());
-                }
-                
+                capacityController.addCapacity(message.getSource(), message.getSize());
                 return;
             }
 

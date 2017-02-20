@@ -3,7 +3,7 @@
  */
 package com.exametrika.common.messaging.impl.protocols;
 
-import com.exametrika.common.compartment.ICompartmentProcessor;
+import com.exametrika.common.compartment.ICompartmentTimerProcessor;
 import com.exametrika.common.io.ISerializationRegistrar;
 import com.exametrika.common.io.ISerializationRegistry;
 import com.exametrika.common.l10n.DefaultMessage;
@@ -36,7 +36,7 @@ import com.exametrika.common.utils.ILifecycle;
  * @threadsafety This class and its methods are thread safe.
  * @author Medvedev-A
  */
-public abstract class AbstractProtocol implements ISender, IReceiver, IPullableSender, ILifecycle, ICompartmentProcessor,
+public abstract class AbstractProtocol implements ISender, IReceiver, IPullableSender, ILifecycle, ICompartmentTimerProcessor,
     ISerializationRegistrar
 {
     private static final IMessages messages = Messages.get(IMessages.class);

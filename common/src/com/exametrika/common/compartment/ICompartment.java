@@ -30,6 +30,20 @@ public interface ICompartment extends ICompartmentMXBean, ILifecycle, IFlowContr
     ICompartmentGroup getGroup();
 
     /**
+     * Adds compartment timer processor.
+     *
+     * @param processor compartment processor
+     */
+    public void addTimerProcessor(ICompartmentTimerProcessor processor);
+    
+    /**
+     * Removes compartment timer processor.
+     *
+     * @param processor compartment processor
+     */
+    public void removeTimerProcessor(ICompartmentTimerProcessor processor);
+    
+    /**
      * Adds compartment processor.
      *
      * @param processor compartment processor
@@ -82,4 +96,9 @@ public interface ICompartment extends ICompartmentMXBean, ILifecycle, IFlowContr
      * @return true if task has been accepted, false has been rejected due to capacity restrictions
      */
     boolean execute(Runnable task);
+    
+    /**
+     * Wakes up compartment dispatcher unblocking main compartment thread.
+     */
+    void wakeup();
 }

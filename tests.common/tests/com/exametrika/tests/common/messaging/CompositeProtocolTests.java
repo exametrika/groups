@@ -14,6 +14,8 @@ import java.util.UUID;
 
 import org.junit.Test;
 
+import com.exametrika.common.compartment.ICompartmentFactory;
+import com.exametrika.common.compartment.impl.Compartment;
 import com.exametrika.common.io.ISerializationRegistry;
 import com.exametrika.common.io.impl.SerializationRegistry;
 import com.exametrika.common.messaging.IAddress;
@@ -54,6 +56,8 @@ public class CompositeProtocolTests
     @Test
     public void testProtocol()
     {
+        ICompartmentFactory.Parameters parameters = new ICompartmentFactory.Parameters();
+        Compartment compartment = new Compartment(parameters);
         IAddress member1 = new TestAddress(UUID.randomUUID(), "member1");
         IAddress member2 = new TestAddress(UUID.randomUUID(), "member2");
         
@@ -72,6 +76,7 @@ public class CompositeProtocolTests
         TestProtocol parent2 = new TestProtocol("test", messageFactory);
         TestRootProtocol root = new TestRootProtocol("test", messageFactory);
         LocalSendOptimizationProtocol local = new LocalSendOptimizationProtocol("test", null, messageFactory, liveNodeManager);
+        local.setCompartment(compartment);
         UnhandledMessageProtocol error = new UnhandledMessageProtocol("test", messageFactory);
         
         TestProtocol[] protocols = new TestProtocol[]{leaf1, leaf2, parent1, parent2, root};
@@ -92,12 +97,15 @@ public class CompositeProtocolTests
         stack.start();
         
         stack.onTimer(100);
+        local.process();
         
         leaf1.send(messageFactory.create(member2, MessageFlags.LOW_PRIORITY));
         leaf1.send(messageFactory.create(member1, MessageFlags.LOW_PRIORITY));
         root.receive(messageFactory.create(member1, MessageFlags.HIGH_PRIORITY));
         root.receive(messageFactory.create(member1, MessageFlags.LOW_PRIORITY));
         root.receive(messageFactory.create(member1, MessageFlags.PARALLEL));
+        
+        local.process();
         
         stack.stop();
         

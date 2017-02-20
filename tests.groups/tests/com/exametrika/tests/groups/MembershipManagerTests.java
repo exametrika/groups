@@ -35,6 +35,7 @@ import com.exametrika.impl.groups.core.discovery.INodeDiscoverer;
 import com.exametrika.impl.groups.core.failuredetection.IFailureDetector;
 import com.exametrika.impl.groups.core.flush.IFlushManager;
 import com.exametrika.impl.groups.core.membership.Group;
+import com.exametrika.impl.groups.core.membership.GroupAddress;
 import com.exametrika.impl.groups.core.membership.IMembershipDelta;
 import com.exametrika.impl.groups.core.membership.IMembershipManager;
 import com.exametrika.impl.groups.core.membership.IPreparedMembershipListener;
@@ -77,8 +78,8 @@ public class MembershipManagerTests
         Node node1 = new Node(address1.getName(), address1, Collections.<String, Object>singletonMap("key", "value"));
         Node node2 = new Node(address2.getName(), address2, Collections.<String, Object>singletonMap("key", "value"));
         
-        Group group = new Group(new UUID(1, 1), "test", true, Arrays.<INode>asList(node1, node2));
-        Group group2 = new Group(new UUID(0, 0), "test", true, Arrays.<INode>asList(node1, node2));
+        Group group = new Group(new GroupAddress(new UUID(1, 1), "test"), true, Arrays.<INode>asList(node1, node2));
+        Group group2 = new Group(new GroupAddress(new UUID(0, 0), "test"), true, Arrays.<INode>asList(node1, node2));
         assertThat(group.getCoordinator(), is((INode)node1));
         assertThat(group.getMembers(), is(Arrays.<INode>asList(node1, node2)));
         assertThat(group.findMember(address2), is((INode)node2));
@@ -97,7 +98,7 @@ public class MembershipManagerTests
         Node node1 = new Node(address1.getName(), address1, Collections.<String, Object>singletonMap("key", "value"));
         Node node2 = new Node(address2.getName(), address2, Collections.<String, Object>singletonMap("key", "value"));
         
-        Group group = new Group(UUID.randomUUID(), "test", true, Arrays.<INode>asList(node1, node2));
+        Group group = new Group(new GroupAddress(UUID.randomUUID(), "test"), true, Arrays.<INode>asList(node1, node2));
         
         Membership membership = new Membership(1, group);
         Membership membership2 = new Membership(2, group);
@@ -242,7 +243,7 @@ public class MembershipManagerTests
         Node node1 = new Node(address1.getName(), address1, Collections.<String, Object>singletonMap("key", "value"));
         IAddress address2 = new TcpAddress(UUID.randomUUID(), new InetSocketAddress("localhost", 9090), "test2");
         Node node2 = new Node(address2.getName(), address2, Collections.<String, Object>singletonMap("key", "value"));
-        Group group = new Group(UUID.randomUUID(), "test", true, Arrays.<INode>asList(manager.getLocalNode(), node1));
+        Group group = new Group(new GroupAddress(UUID.randomUUID(), "test"), true, Arrays.<INode>asList(manager.getLocalNode(), node1));
         Membership membership = new Membership(1, group);
         
         manager.prepareInstallMembership(membership);
@@ -256,7 +257,7 @@ public class MembershipManagerTests
         assertThat(manager.getMembership(), is((IMembership)membership));
         assertTrue(listener.onJoined);
         
-        Group group2 = new Group(UUID.randomUUID(), "test", true, Arrays.<INode>asList(manager.getLocalNode(), node1, node2));
+        Group group2 = new Group(new GroupAddress(UUID.randomUUID(), "test"), true, Arrays.<INode>asList(manager.getLocalNode(), node1, node2));
         Membership membership2 = new Membership(2, group2);
         MembershipChange membershipChange = new MembershipChange(Collections.<INode>singleton(node2), 
             Collections.<INode>emptySet(), Collections.<INode>emptySet());

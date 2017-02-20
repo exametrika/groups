@@ -276,8 +276,8 @@ public class ChannelFactory
         compartmentParameters.name = transportParameters.channelName;
         compartmentParameters.dispatchPeriod = transportParameters.selectionPeriod;
         compartmentParameters.dispatcher = transportParameters.dispatcher;
-        compartmentParameters.processors.add(transport);
-        compartmentParameters.processors.add(protocolStack);
+        compartmentParameters.timerProcessors.add(transport);
+        compartmentParameters.timerProcessors.add(protocolStack);
         compartmentParameters.flowController = new NoFlowController();
         compartmentParameters.minLockQueueCapacity = factoryParameters.compartmentMinLockQueueCapacity;
         compartmentParameters.minLockQueueCapacity = factoryParameters.compartmentMinLockQueueCapacity;
@@ -285,6 +285,8 @@ public class ChannelFactory
         ICompartment compartment = new CompartmentFactory().createCompartment(compartmentParameters);
 
         transport.setFlowController(compartment);
+        highLocal.setCompartment(compartment);
+        lowLocal.setCompartment(compartment);
         
         Channel channel = createChannel(channelName, channelObserver, liveNodeManager, messageFactory, protocolStack, transport,
             connectionManager, compartment);

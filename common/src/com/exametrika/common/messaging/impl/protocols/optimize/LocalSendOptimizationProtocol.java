@@ -6,6 +6,8 @@ package com.exametrika.common.messaging.impl.protocols.optimize;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.exametrika.common.compartment.ICompartment;
+import com.exametrika.common.compartment.ICompartmentProcessor;
 import com.exametrika.common.messaging.IFeed;
 import com.exametrika.common.messaging.ILiveNodeProvider;
 import com.exametrika.common.messaging.IMessage;
@@ -21,12 +23,14 @@ import com.exametrika.common.utils.Assert;
  * @threadsafety This class and its methods are thread safe.
  * @author Medvedev-A
  */
-public final class LocalSendOptimizationProtocol extends AbstractProtocol
+public final class LocalSendOptimizationProtocol extends AbstractProtocol implements ICompartmentProcessor
 {
     private final ILiveNodeProvider liveNodeProvider;
+    private ICompartment compartment;
     private List<IMessage> messages = new ArrayList<IMessage>();
 
-    public LocalSendOptimizationProtocol(String channelName, String loggerName, IMessageFactory messageFactory, ILiveNodeProvider liveNodeProvider)
+    public LocalSendOptimizationProtocol(String channelName, String loggerName, IMessageFactory messageFactory, 
+        ILiveNodeProvider liveNodeProvider)
     {
         super(channelName, null, messageFactory);
         
@@ -35,8 +39,16 @@ public final class LocalSendOptimizationProtocol extends AbstractProtocol
         this.liveNodeProvider = liveNodeProvider;
     }
     
+    public void setCompartment(ICompartment compartment)
+    {
+        Assert.notNull(compartment);
+        Assert.isNull(this.compartment);
+        
+        this.compartment = compartment;
+    }
+    
     @Override
-    public void onTimer(long currentTime)
+    public void process()
     {
         if (!messages.isEmpty())
         {
@@ -52,7 +64,7 @@ public final class LocalSendOptimizationProtocol extends AbstractProtocol
     protected void doSend(ISender sender, IMessage message)
     {
         if (message.getDestination().equals(liveNodeProvider.getLocalNode()))
-            messages.add(message);
+            addMessage(message);
         else
             super.doSend(sender, message);
     }
@@ -62,16 +74,22 @@ public final class LocalSendOptimizationProtocol extends AbstractProtocol
     {
         if (message.getDestination().equals(liveNodeProvider.getLocalNode()))
         {
-            messages.add(message);
+            addMessage(message);
             return true;
         }
         else
             return super.doSend(feed, sink, message);
     }
-    
+
     @Override
     protected boolean supportsPullSendModel()
     {
         return true;
+    }
+    
+    private void addMessage(IMessage message)
+    {
+        messages.add(message);
+        compartment.wakeup();
     }
 }

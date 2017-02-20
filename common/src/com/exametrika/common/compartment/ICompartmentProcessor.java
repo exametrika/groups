@@ -17,8 +17,6 @@ public interface ICompartmentProcessor
 {
     /**
      * Called from main compartment thread.
-     *
-     * @param currentTime current time
      */
-    void onTimer(long currentTime);
+    void process();
 }

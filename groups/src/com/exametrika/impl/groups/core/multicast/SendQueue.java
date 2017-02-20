@@ -11,15 +11,20 @@ import java.util.Map;
 import java.util.Set;
 
 import com.exametrika.api.groups.core.INode;
+import com.exametrika.common.compartment.ICompartment;
 import com.exametrika.common.messaging.IAddress;
 import com.exametrika.common.messaging.IDeliveryHandler;
+import com.exametrika.common.messaging.IFeed;
 import com.exametrika.common.messaging.IMessage;
+import com.exametrika.common.messaging.IMessageFactory;
+import com.exametrika.common.messaging.ISink;
 import com.exametrika.common.tasks.IFlowController;
 import com.exametrika.common.time.ITimeService;
 import com.exametrika.common.utils.Assert;
 import com.exametrika.common.utils.SimpleDeque;
 import com.exametrika.impl.groups.core.failuredetection.IFailureDetector;
 import com.exametrika.impl.groups.core.flush.IFlush;
+import com.exametrika.impl.groups.core.membership.Memberships;
 
 
 /**
@@ -30,13 +35,11 @@ import com.exametrika.impl.groups.core.flush.IFlush;
  */
 public final class SendQueue
 {
+    private final FailureAtomicMulticastProtocol parent;
     private final IFailureDetector failureDetector;
     private final ITimeService timeService;
     private final IDeliveryHandler deliveryHandler;
     private final boolean durable;
-    private final int maxUnlockQueueCapacity;
-    private final int minLockQueueCapacity;
-    private IFlowController<IAddress> flowController;
     private final SimpleDeque<IMessage> deque = new SimpleDeque<IMessage>();
     private final Map<IAddress, Long> acknowledgedMessageIds = new HashMap<IAddress, Long>();
     private boolean completionRequired;
@@ -47,30 +50,49 @@ public final class SendQueue
     private long bundleCreationTime;
     private long lastSendMessageId;
     private long lastOldMembershipMessageId;
-    private int queueCapacity;
-    private boolean flowLocked;
+    private final QueueCapacityController capacityController;
+    private IFlowController<RemoteFlowId> flowController;
+    private final IMessageFactory messageFactory;
+    private ICompartment compartment;
+    private long lockCount;
+    private volatile ArrayList<MulticastSink> sinks = new ArrayList<MulticastSink>();
+    private volatile boolean canWrite;
     
-    public SendQueue(IFailureDetector failureDetector, ITimeService timeService, IDeliveryHandler deliveryHandler, 
-        boolean durable, int maxUnlockQueueCapacity, int minLockQueueCapacity)
+    public SendQueue(FailureAtomicMulticastProtocol parent, IFailureDetector failureDetector, ITimeService timeService, 
+        IDeliveryHandler deliveryHandler, boolean durable, int maxUnlockQueueCapacity, int minLockQueueCapacity, 
+        IMessageFactory messageFactory)
     {
+        Assert.notNull(parent);
         Assert.notNull(failureDetector);
         Assert.notNull(timeService);
         Assert.isTrue(durable == (deliveryHandler != null));
+        Assert.notNull(messageFactory);
         
+        this.parent = parent;
         this.failureDetector = failureDetector;
         this.timeService = timeService;
         this.deliveryHandler = deliveryHandler;
+        this.messageFactory = messageFactory;
         this.durable = durable;
-        this.maxUnlockQueueCapacity = maxUnlockQueueCapacity;
-        this.minLockQueueCapacity = minLockQueueCapacity;
+        this.capacityController = new QueueCapacityController(minLockQueueCapacity, maxUnlockQueueCapacity, 
+            Memberships.CORE_GROUP_ADDRESS, Memberships.CORE_GROUP_ID);
     }
     
-    public void setFlowController(IFlowController<IAddress> flowController)
+    public void setFlowController(IFlowController<RemoteFlowId> flowController)
     {
         Assert.notNull(flowController);
         Assert.isNull(this.flowController);
         
         this.flowController = flowController;
+        capacityController.setFlowController(flowController);
+    }
+    
+    public void setCompartment(ICompartment compartment)
+    {
+        Assert.notNull(compartment);
+        Assert.isNull(this.compartment);
+        
+        this.compartment = compartment;
     }
     
     public boolean isCompletionRequired()
@@ -100,7 +122,7 @@ public final class SendQueue
     
     public int getQueueCapacity()
     {
-        return queueCapacity;
+        return capacityController.getCapacity();
     }
     
     public void onMemberFailed(INode member)
@@ -131,13 +153,7 @@ public final class SendQueue
             bundleCreationTime = timeService.getCurrentTime();
         
         deque.offer(message);
-        
-        queueCapacity += message.getSize();
-        if (!flowLocked && queueCapacity >= minLockQueueCapacity)
-        {
-            flowLocked = true;
-            flowController.lockFlow(message.getSource());
-        }
+        capacityController.addCapacity(message.getSource(), message.getSize());
     }
     
     public List<IMessage> createBundle()
@@ -161,13 +177,7 @@ public final class SendQueue
         {
             startMessageId += deque.size();
             deque.clear();
-            
-            queueCapacity = 0;
-            if (flowLocked)
-            {
-                flowLocked = false;
-                flowController.unlockFlow(null);
-            }
+            capacityController.clearCapacity();
         }
         
         return bundle;
@@ -206,13 +216,7 @@ public final class SendQueue
                 Assert.checkState(message != null);
                 
                 deliveryHandler.onDelivered(message);
-                
-                queueCapacity -= message.getSize();
-                if (flowLocked && queueCapacity <= maxUnlockQueueCapacity)
-                {
-                    flowLocked = false;
-                    flowController.unlockFlow(message.getSource());
-                }
+                capacityController.removeCapacity(message.getSize());
             }
             
             startMessageId = minCompletedMessageId + 1;
@@ -222,6 +226,89 @@ public final class SendQueue
         lastCompletionSendTime = timeService.getCurrentTime();
         
         return minCompletedMessageId;
+    }
+    
+    public void lockFlow(RemoteFlowId flow)
+    {
+        Assert.isTrue(flow.getFlowId().equals(Memberships.CORE_GROUP_ID));
+        lockCount++;
+        flowController.lockFlow(flow);
+    }
+
+    public void unlockFlow(RemoteFlowId flow)
+    {
+        Assert.isTrue(flow.getFlowId().equals(Memberships.CORE_GROUP_ID));
+        lockCount--;
+        flowController.unlockFlow(flow);
+    }
+    
+    public synchronized ISink register(IFeed feed)
+    {
+        Assert.notNull(feed);
+        
+        MulticastSink sink = new MulticastSink(this, Memberships.CORE_GROUP_ADDRESS, feed, messageFactory);
+        
+        ArrayList<MulticastSink> sinks = (ArrayList<MulticastSink>)this.sinks.clone();
+        sinks.add(sink);
+        
+        this.sinks = sinks;
+        
+        return sink;
+    }
+    
+    public synchronized void unregister(MulticastSink sink)
+    {
+        Assert.notNull(sink);
+        
+        sink.setInvalid();
+        
+        ArrayList<MulticastSink> sinks = (ArrayList<MulticastSink>)this.sinks.clone();
+        sinks.remove(sink);
+        
+        this.sinks = sinks;
+    }
+    
+    public void updateWriteStatus()
+    {
+        boolean canWrite = false;
+        synchronized (this)
+        {
+            List<MulticastSink> sinks = this.sinks;
+            for (MulticastSink sink : sinks)
+            {
+                if (sink.canWrite())
+                {
+                    canWrite = true;
+                    break;
+                }
+            }
+            
+            this.canWrite = canWrite;
+        }
+        
+        if (canWrite)
+            compartment.wakeup();
+    }
+    
+    public boolean send(IMessage message)
+    {
+        parent.send(message);
+        return canWrite();
+    }
+    
+    public void process()
+    {
+        if (canWrite())
+            return;
+        
+        List<MulticastSink> sinks = this.sinks;
+        for (MulticastSink sink : sinks)
+            sink.onWrite();
+    }
+
+    private boolean canWrite()
+    {
+        return lockCount > 0 || capacityController.isLocked() || !canWrite;
     }
     
     private void setCompletionRequired()

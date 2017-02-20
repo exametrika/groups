@@ -3,12 +3,12 @@
  */
 package com.exametrika.impl.groups.core.multicast;
 
-import com.exametrika.common.messaging.IAddress;
 import com.exametrika.common.messaging.IMessage;
 import com.exametrika.common.messaging.IReceiver;
 import com.exametrika.common.tasks.IFlowController;
 import com.exametrika.common.utils.Assert;
 import com.exametrika.common.utils.SimpleDeque;
+import com.exametrika.impl.groups.core.membership.Memberships;
 
 
 /**
@@ -20,41 +20,29 @@ import com.exametrika.common.utils.SimpleDeque;
 public final class OrderedQueue
 {
     private final IReceiver receiver;
-    private final int maxUnlockQueueCapacity;
-    private final int minLockQueueCapacity;
-    private IFlowController<IAddress> flowController;
     private final SimpleDeque<IMessage> deque = new SimpleDeque<IMessage>();
     private long startOrder;
-    private int queueCapacity;
-    private boolean flowLocked;
+    private final QueueCapacityController capacityController;
     
     public OrderedQueue(IReceiver receiver, int maxUnlockQueueCapacity, int minLockQueueCapacity)
     {
         Assert.notNull(receiver);
         
         this.receiver = receiver;
-        this.maxUnlockQueueCapacity = maxUnlockQueueCapacity;
-        this.minLockQueueCapacity = minLockQueueCapacity;
+        this.capacityController = new QueueCapacityController(minLockQueueCapacity, maxUnlockQueueCapacity, 
+            Memberships.CORE_GROUP_ADDRESS, Memberships.CORE_GROUP_ID);
     }
     
-    public void setFlowController(IFlowController<IAddress> flowController)
+    public void setFlowController(IFlowController<RemoteFlowId> flowController)
     {
-        Assert.notNull(flowController);
-        Assert.isNull(this.flowController);
-        
-        this.flowController = flowController;
+        capacityController.setFlowController(flowController);
     }
     
     public void offer(long order, IMessage message)
     {
         Assert.isTrue(order >= startOrder);
         
-        queueCapacity += message.getSize();
-        if (!flowLocked && queueCapacity >= minLockQueueCapacity)
-        {
-            flowLocked = true;
-            flowController.lockFlow(message.getSource());
-        }
+        capacityController.addCapacity(message.getSource(), message.getSize());
         
         int pos = (int)(order - startOrder);
         int size = deque.size();
@@ -80,12 +68,7 @@ public final class OrderedQueue
                 receiver.receive(message);
         }
         
-        queueCapacity = 0;
-        if (flowLocked)
-        {
-            flowLocked = false;
-            flowController.unlockFlow(null);
-        }
+        capacityController.clearCapacity();
     }
     
     private void deliverMessages()
@@ -99,12 +82,7 @@ public final class OrderedQueue
             message = deque.poll();
             receiver.receive(message);
             
-            queueCapacity -= message.getSize();
-            if (flowLocked && queueCapacity <= maxUnlockQueueCapacity)
-            {
-                flowLocked = false;
-                flowController.unlockFlow(message.getSource());
-            }
+            capacityController.removeCapacity(message.getSize());
         }
     }
 }

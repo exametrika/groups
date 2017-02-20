@@ -9,11 +9,9 @@ import java.util.List;
 import com.exametrika.api.groups.core.IMembership;
 import com.exametrika.api.groups.core.IMembershipService;
 import com.exametrika.api.groups.core.INode;
-import com.exametrika.common.messaging.IAddress;
 import com.exametrika.common.messaging.IMessage;
 import com.exametrika.common.messaging.IMessageFactory;
 import com.exametrika.common.messaging.ISender;
-import com.exametrika.common.tasks.IFlowController;
 import com.exametrika.common.time.ITimeService;
 import com.exametrika.common.utils.Assert;
 import com.exametrika.common.utils.SimpleList;
@@ -38,7 +36,6 @@ public final class TotalOrderProtocol
     private final ITimeService timeService;
     private final long maxBundlingPeriod;
     private final int maxBundlingMessageCount;
-    private IFlowController<IAddress> flowController;
     private final SimpleList<ReceiveQueue> orderingQueues = new SimpleList<ReceiveQueue>();
     private boolean coordinator;
     private long nextOrder = 1;
@@ -61,14 +58,6 @@ public final class TotalOrderProtocol
         this.timeService = timeService;
         this.maxBundlingPeriod = maxBundlingPeriod;
         this.maxBundlingMessageCount = maxBundlingMessageCount;
-    }
-    
-    public void setFlowController(IFlowController<IAddress> flowController)
-    {
-        Assert.notNull(flowController);
-        Assert.isNull(this.flowController);
-        
-        this.flowController = flowController;
     }
     
     public boolean isCoordinator()

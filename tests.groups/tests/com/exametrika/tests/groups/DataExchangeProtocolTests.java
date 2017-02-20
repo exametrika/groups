@@ -25,7 +25,7 @@ import com.exametrika.api.groups.core.IMembership;
 import com.exametrika.api.groups.core.IMembershipListener;
 import com.exametrika.api.groups.core.INode;
 import com.exametrika.common.compartment.ICompartment;
-import com.exametrika.common.compartment.ICompartmentProcessor;
+import com.exametrika.common.compartment.ICompartmentTimerProcessor;
 import com.exametrika.common.io.ISerializationRegistry;
 import com.exametrika.common.messaging.IChannel;
 import com.exametrika.common.messaging.ILiveNodeProvider;
@@ -296,7 +296,7 @@ public class DataExchangeProtocolTests
             provider.changeData = true;
     }
     
-    private class FlushParticipantMock implements IFlushParticipant, ICompartmentProcessor
+    private class FlushParticipantMock implements IFlushParticipant, ICompartmentTimerProcessor
     {
         private boolean isCoordinator;
         private IFlush flush;
@@ -541,13 +541,13 @@ public class DataExchangeProtocolTests
             FailureDetectionProtocol failureDetectionProtocol = protocolStack.find(FailureDetectionProtocol.class);
             failureDetectionProtocol.setFailureObserver(transport);
             failureDetectionProtocol.setChannelReconnector((IChannelReconnector)channel);
-            channel.getCompartment().addProcessor(membershipTracker);
+            channel.getCompartment().addTimerProcessor(membershipTracker);
             
             GroupNodeTrackingStrategy strategy = (GroupNodeTrackingStrategy)protocolStack.find(HeartbeatProtocol.class).getNodeTrackingStrategy();
             strategy.setFailureDetector(failureDetectionProtocol);
             strategy.setMembershipManager((IMembershipManager)failureDetectionProtocol.getMembersipService());
             
-            channel.getCompartment().addProcessor(flushParticipants.get(flushParticipants.size() - 1));
+            channel.getCompartment().addTimerProcessor(flushParticipants.get(flushParticipants.size() - 1));
         }
         
         @Override

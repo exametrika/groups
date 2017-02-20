@@ -15,7 +15,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
-import com.exametrika.common.compartment.ICompartmentProcessor;
+import com.exametrika.common.compartment.ICompartmentTimerProcessor;
 import com.exametrika.common.io.ISerializationRegistrar;
 import com.exametrika.common.io.ISerializationRegistry;
 import com.exametrika.common.l10n.DefaultMessage;
@@ -63,7 +63,7 @@ import com.exametrika.common.utils.Strings;
  * @author Medvedev-A
  */
 public final class TcpTransport implements ITransport, ITcpChannelAcceptor, ITcpChannelListener, IFailureObserver, 
-    ISerializationRegistrar, IConnectionProvider, ICompartmentProcessor, INodeAccessTimeProvider
+    ISerializationRegistrar, IConnectionProvider, ICompartmentTimerProcessor, INodeAccessTimeProvider
 {
     public static final byte FLAG_PARALLEL = 0x1;
     public static final byte FLAG_LOW_PRIORITY = 0x2;

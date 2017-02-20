@@ -19,6 +19,7 @@ public final class MembershipSerializationRegistrar implements ISerializationReg
     public void register(ISerializationRegistry registry)
     {
         registry.register(new GroupSerializer());
+        registry.register(new GroupAddressSerializer());
         registry.register(new MembershipDeltaSerializer());
         registry.register(new MembershipSerializer());
         registry.register(new NodeSerializer());
@@ -28,6 +29,7 @@ public final class MembershipSerializationRegistrar implements ISerializationReg
     public void unregister(ISerializationRegistry registry)
     {
         registry.unregister(GroupSerializer.ID);
+        registry.unregister(GroupAddressSerializer.ID);
         registry.unregister(MembershipDeltaSerializer.ID);
         registry.unregister(MembershipSerializer.ID);
         registry.unregister(NodeSerializer.ID);

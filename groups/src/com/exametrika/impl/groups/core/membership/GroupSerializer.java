@@ -41,7 +41,7 @@ public final class GroupSerializer extends AbstractSerializer
         for (int i = 0; i < count; i++)
             members.add(deserialization.readTypedObject(Node.class));
         
-        return new Group(groupId, name, primary, members);
+        return new Group(new GroupAddress(groupId, name), primary, members);
     }
 
     @Override

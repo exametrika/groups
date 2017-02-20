@@ -8,7 +8,7 @@ import java.nio.ByteOrder;
 import java.util.List;
 
 import com.exametrika.common.compartment.ICompartment;
-import com.exametrika.common.compartment.ICompartmentProcessor;
+import com.exametrika.common.compartment.ICompartmentTimerProcessor;
 import com.exametrika.common.compartment.impl.Compartment;
 import com.exametrika.common.l10n.DefaultMessage;
 import com.exametrika.common.l10n.ILocalizedMessage;
@@ -40,7 +40,7 @@ import com.exametrika.common.utils.Strings;
  * @threadsafety This class and its methods are thread safe.
  * @author Medvedev-A
  */
-public final class RawDatabase implements IRawDatabase, ITimeService, ICompartmentProcessor
+public final class RawDatabase implements IRawDatabase, ITimeService, ICompartmentTimerProcessor
 {
     private static final IMessages messages = Messages.get(IMessages.class);
     private static final ILogger logger = Loggers.get(RawDatabase.class);
@@ -305,7 +305,7 @@ public final class RawDatabase implements IRawDatabase, ITimeService, ICompartme
                 Assert.isTrue(file.isDirectory());
             }
 
-            compartment.addProcessor(this);
+            compartment.addTimerProcessor(this);
             
             transactionLog.open();
         }
@@ -350,7 +350,7 @@ public final class RawDatabase implements IRawDatabase, ITimeService, ICompartme
             transactionLog.close();
             batchManager.clearCache();
 
-            compartment.removeProcessor(this);
+            compartment.removeTimerProcessor(this);
             
             stopped = true;
             

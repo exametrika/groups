@@ -5,6 +5,7 @@ package com.exametrika.tests.groups;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -28,11 +29,13 @@ import com.exametrika.common.io.ISerializationRegistry;
 import com.exametrika.common.io.impl.AbstractSerializer;
 import com.exametrika.common.messaging.IChannel;
 import com.exametrika.common.messaging.IDeliveryHandler;
+import com.exametrika.common.messaging.IFeed;
 import com.exametrika.common.messaging.ILiveNodeProvider;
 import com.exametrika.common.messaging.IMessage;
 import com.exametrika.common.messaging.IMessageFactory;
 import com.exametrika.common.messaging.IMessagePart;
 import com.exametrika.common.messaging.IReceiver;
+import com.exametrika.common.messaging.ISink;
 import com.exametrika.common.messaging.impl.Channel;
 import com.exametrika.common.messaging.impl.ChannelFactory;
 import com.exametrika.common.messaging.impl.ChannelFactory.FactoryParameters;
@@ -47,6 +50,7 @@ import com.exametrika.common.messaging.impl.protocols.failuredetection.INodeTrac
 import com.exametrika.common.messaging.impl.protocols.failuredetection.LiveNodeManager;
 import com.exametrika.common.messaging.impl.transports.ConnectionManager;
 import com.exametrika.common.messaging.impl.transports.tcp.TcpTransport;
+import com.exametrika.common.tasks.IFlowController;
 import com.exametrika.common.tests.Sequencer;
 import com.exametrika.common.utils.Assert;
 import com.exametrika.common.utils.ByteArray;
@@ -76,6 +80,8 @@ import com.exametrika.impl.groups.core.membership.MembershipManager;
 import com.exametrika.impl.groups.core.membership.MembershipTracker;
 import com.exametrika.impl.groups.core.membership.Memberships;
 import com.exametrika.impl.groups.core.multicast.FailureAtomicMulticastProtocol;
+import com.exametrika.impl.groups.core.multicast.FlowControlProtocol;
+import com.exametrika.impl.groups.core.multicast.RemoteFlowId;
 import com.exametrika.impl.groups.core.state.StateTransferClientProtocol;
 import com.exametrika.impl.groups.core.state.StateTransferServerProtocol;
 import com.exametrika.spi.groups.IDiscoveryStrategy;
@@ -117,6 +123,64 @@ public class MulticastProtocolTests
         checkMembership(channelFactory, Collections.<Integer>asSet());
     }
 
+    @Test
+    public void testPullableSender() throws Exception
+    {
+        // TODO: БЛОКИРОВАТЬ ОБЫЧНУЮ ПОСЫЛКУ, ПОСЛАТЬ С ОДНОГО ЧЕРЕЗ ПУЛ
+        Set<String> wellKnownAddresses = new ConcurrentHashMap<String, String>().keySet("");
+        TestChannelFactory channelFactory = new TestChannelFactory(new WellKnownAddressesDiscoveryStrategy(wellKnownAddresses));
+        createGroup(wellKnownAddresses, channelFactory, Collections.<Integer>asSet());
+         
+        Threads.sleep(10000);
+        
+        checkMembership(channelFactory, Collections.<Integer>asSet());
+    }
+    
+    @Test
+    public void testFlowControl() throws Exception
+    {
+        Set<String> wellKnownAddresses = new ConcurrentHashMap<String, String>().keySet("");
+        TestChannelFactory channelFactory = new TestChannelFactory(new WellKnownAddressesDiscoveryStrategy(wellKnownAddresses));
+        channelFactory.minLockQueueCapacity = 1000;
+        channelFactory.maxUnlockQueueCapacity = 100;
+        createGroup(wellKnownAddresses, channelFactory, Collections.<Integer>asSet());
+         
+        Threads.sleep(10000);
+        
+        checkMembership(channelFactory, Collections.<Integer>asSet());
+        boolean locked = false;
+        for (TestMessageSender sender : channelFactory.messageSenders)
+        {
+            if (sender.flow != null)
+                locked = true;
+        }
+        assertTrue(locked);
+    }
+    
+    @Test
+    public void testSendBeforeGroup() throws Exception
+    {
+        Set<String> wellKnownAddresses = new ConcurrentHashMap<String, String>().keySet("");
+        TestChannelFactory channelFactory = new TestChannelFactory(new WellKnownAddressesDiscoveryStrategy(wellKnownAddresses));
+        channelFactory.minLockQueueCapacity = 1000;
+        channelFactory.maxUnlockQueueCapacity = 100;
+        for (TestMessageSender sender : channelFactory.messageSenders)
+            sender.sendBeforeGroup = true;
+        
+        createGroup(wellKnownAddresses, channelFactory, Collections.<Integer>asSet());
+         
+        Threads.sleep(10000);
+        
+        checkMembership(channelFactory, Collections.<Integer>asSet());
+        boolean locked = false;
+        for (TestMessageSender sender : channelFactory.messageSenders)
+        {
+            if (sender.flow != null)
+                locked = true;
+        }
+        assertTrue(locked);
+    }
+    
     @Test
     public void testChangeMembership() throws Exception
     {
@@ -212,6 +276,7 @@ public class MulticastProtocolTests
     {
         IMembership membership = null;
         ByteArray state = null;
+        Integer receivedCount = null;
         for (int i = 0; i < COUNT; i++)
         {
             if (skipIndexes.contains(i))
@@ -236,8 +301,15 @@ public class MulticastProtocolTests
                 state = nodeState;
             else
                 assertThat(nodeState, is(state));
+            
+            int received = channelFactory.messageSenders.get(i).receivedCount;
+            if (receivedCount == null)
+                receivedCount = received;
+            else
+                assertThat(receivedCount, is(received));
         }
         
+        assertTrue(receivedCount > 0);
         assertThat(membership.getGroup().getMembers().size(), is(COUNT - skipIndexes.size()));
     }
     
@@ -385,13 +457,17 @@ public class MulticastProtocolTests
         }
     }
     
-    private class TestMessageSender extends AbstractProtocol implements IFlushParticipant
+    private class TestMessageSender extends AbstractProtocol implements IFlushParticipant, IFlowController<RemoteFlowId>
     {
         public boolean failOnFlush;
+        public boolean sendBeforeGroup;
         private final TestStateTransferFactory stateTransferFactory;
         private IMembership membership;
         private int index;
         private long count;
+        private boolean flowLocked;
+        private RemoteFlowId flow;
+        private int receivedCount;
 
         public TestMessageSender(int index, String channelName, IMessageFactory messageFactory, TestStateTransferFactory stateTransferFactory)
         {
@@ -440,7 +516,13 @@ public class MulticastProtocolTests
         @Override
         public void onTimer(long currentTime)
         {
-            if (membership != null && count < SEND_COUNT)
+            if (sendBeforeGroup)
+            {
+                if (!flowLocked && count < SEND_COUNT)
+                    getSender().send(getMessageFactory().create(Memberships.CORE_GROUP_ADDRESS, 
+                        new TestBufferMessagePart(index, count++)));
+            }
+            else if (!flowLocked && membership != null && count < SEND_COUNT)
                 getSender().send(getMessageFactory().create(membership.getGroup().getAddress(), 
                     new TestBufferMessagePart(index, count++)));
         }
@@ -466,9 +548,23 @@ public class MulticastProtocolTests
                 ByteArray buffer = stateTransferFactory.state;
                 long counter = Bytes.readLong(buffer.getBuffer(), buffer.getOffset());
                 Bytes.writeLong(buffer.getBuffer(), buffer.getOffset(), counter + (part.index + 1) * part.value);
+                receivedCount++;
             }
             else
                 receiver.receive(message);
+        }
+
+        @Override
+        public void lockFlow(RemoteFlowId flow)
+        {
+            flowLocked = true;
+            this.flow = flow;
+        }
+
+        @Override
+        public void unlockFlow(RemoteFlowId flow)
+        {
+            flowLocked = false;
         }
     }
     
@@ -497,6 +593,22 @@ public class MulticastProtocolTests
         public void onDelivered(IMessage message)
         {
             delivered = true;
+        }
+    }
+    
+    public static class TestFeed implements IFeed
+    {
+        private long count;
+        
+        @Override
+        public void feed(ISink sink)
+        {
+            while (true)
+            {
+                IMessage message = sink.getMessageFactory().create(sink.getDestination(), new TestBufferMessagePart(0, count++));
+                if (!sink.send(message))
+                    break;
+            }
         }
     }
     
@@ -576,6 +688,16 @@ public class MulticastProtocolTests
             
             TestStateTransferFactory stateTransferFactory = new TestStateTransferFactory();
             stateTransferFactories.add(stateTransferFactory);
+            
+            TestMessageSender testSender = new TestMessageSender(messageSenders.size(), channelName, messageFactory, stateTransferFactory);
+            protocols.add(testSender);
+            messageSenders.add(testSender);
+            
+            FlowControlProtocol flowControlProtocol = new FlowControlProtocol(channelName, messageFactory, membershipManager);
+            protocols.add(flowControlProtocol);
+            failureDetectionListeners.add(flowControlProtocol);
+            flowControlProtocol.setFailureDetector(failureDetectionProtocol);
+            
             StateTransferClientProtocol stateTransferClientProtocol = new StateTransferClientProtocol(channelName,
                 messageFactory, membershipManager, stateTransferFactory, stateStore, serializationRegistry, 
                 maxStateTransferPeriod, stateSizeThreshold);
@@ -588,10 +710,7 @@ public class MulticastProtocolTests
                 messageFactory, membershipManager, failureDetectionProtocol, stateTransferFactory, stateStore, serializationRegistry, 
                 saveSnapshotPeriod, transferLogRecordPeriod, transferLogMessagesCount, minLockQueueCapacity);
             protocols.add(stateTransferServerProtocol);
-            
-            TestMessageSender testSender = new TestMessageSender(messageSenders.size(), channelName, messageFactory, stateTransferFactory);
-            protocols.add(testSender);
-            messageSenders.add(testSender);
+            stateTransferServerProtocol.setFlowController(flowControlProtocol);
             
             TestDeliveryHandler deliveryHandler = new TestDeliveryHandler();
             deliveryHandlers.add(deliveryHandler);
@@ -602,6 +721,9 @@ public class MulticastProtocolTests
                 serializationRegistry);
             protocols.add(multicastProtocol);
             failureDetectionListeners.add(multicastProtocol);
+            multicastProtocol.setRemoteFlowController(flowControlProtocol);
+            multicastProtocol.setLocalFlowController(testSender);
+            flowControlProtocol.setFlowController(multicastProtocol);
             
             FlushParticipantProtocol flushParticipantProtocol = new FlushParticipantProtocol(channelName, messageFactory, 
                 Arrays.<IFlushParticipant>asList(stateTransferClientProtocol, stateTransferServerProtocol, multicastProtocol,
@@ -635,14 +757,11 @@ public class MulticastProtocolTests
             FailureDetectionProtocol failureDetectionProtocol = protocolStack.find(FailureDetectionProtocol.class);
             failureDetectionProtocol.setFailureObserver(transport);
             failureDetectionProtocol.setChannelReconnector((IChannelReconnector)channel);
-            channel.getCompartment().addProcessor(membershipTracker);
+            channel.getCompartment().addTimerProcessor(membershipTracker);
             
             GroupNodeTrackingStrategy strategy = (GroupNodeTrackingStrategy)protocolStack.find(HeartbeatProtocol.class).getNodeTrackingStrategy();
             strategy.setFailureDetector(failureDetectionProtocol);
             strategy.setMembershipManager((IMembershipManager)failureDetectionProtocol.getMembersipService());
-            
-            FailureAtomicMulticastProtocol multicastProtocol = protocolStack.find(FailureAtomicMulticastProtocol.class);
-            multicastProtocol.setFlowController(transport);
             
             StateTransferClientProtocol stateTransferClientProtocol = protocolStack.find(StateTransferClientProtocol.class);
             stateTransferClientProtocol.setChannelReconnector((IChannelReconnector)channel);
@@ -650,7 +769,9 @@ public class MulticastProtocolTests
             
             StateTransferServerProtocol stateTransferServerProtocol = protocolStack.find(StateTransferServerProtocol.class);
             stateTransferServerProtocol.setCompartment(channel.getCompartment());
-            stateTransferServerProtocol.setFlowController(transport);
+            
+            FailureAtomicMulticastProtocol multicastProtocol = protocolStack.find(FailureAtomicMulticastProtocol.class);
+            multicastProtocol.setCompartment(channel.getCompartment());
         }
         
         @Override

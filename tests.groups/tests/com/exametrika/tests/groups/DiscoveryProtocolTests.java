@@ -42,6 +42,7 @@ import com.exametrika.impl.groups.core.discovery.IGroupJoinStrategy;
 import com.exametrika.impl.groups.core.discovery.WellKnownAddressesDiscoveryStrategy;
 import com.exametrika.impl.groups.core.failuredetection.IFailureDetector;
 import com.exametrika.impl.groups.core.membership.Group;
+import com.exametrika.impl.groups.core.membership.GroupAddress;
 import com.exametrika.impl.groups.core.membership.Membership;
 import com.exametrika.impl.groups.core.membership.MembershipSerializationRegistrar;
 import com.exametrika.impl.groups.core.membership.Node;
@@ -212,7 +213,7 @@ public class DiscoveryProtocolTests
             channels[i] = channel;
         }
         
-        IMembership membership = new Membership(1, new Group(UUID.randomUUID(), "test", true, Arrays.asList(
+        IMembership membership = new Membership(1, new Group(new GroupAddress(UUID.randomUUID(), "test"), true, Arrays.asList(
             channelFactory.membershipServices.get(0).getLocalNode(), channelFactory.membershipServices.get(1).getLocalNode())));
         channelFactory.failureDetectors.get(0).currentCoordinator = membership.getGroup().getCoordinator();
         channelFactory.failureDetectors.get(0).healthyMembers = membership.getGroup().getMembers();
@@ -267,7 +268,7 @@ public class DiscoveryProtocolTests
             channels[i] = channel;
         }
         
-        IMembership membership = new Membership(1, new Group(UUID.randomUUID(), "test", true, Arrays.asList(
+        IMembership membership = new Membership(1, new Group(new GroupAddress(UUID.randomUUID(), "test"), true, Arrays.asList(
             channelFactory.membershipServices.get(0).getLocalNode(), channelFactory.membershipServices.get(1).getLocalNode())));
         channelFactory.failureDetectors.get(0).currentCoordinator = membership.getGroup().getCoordinator();
         channelFactory.failureDetectors.get(0).healthyMembers = membership.getGroup().getMembers();
@@ -326,7 +327,7 @@ public class DiscoveryProtocolTests
         }
 
         
-        IMembership membership = new Membership(1, new Group(UUID.randomUUID(), "test", true, Arrays.asList(
+        IMembership membership = new Membership(1, new Group(new GroupAddress(UUID.randomUUID(), "test"), true, Arrays.asList(
             channelFactory.membershipServices.get(0).getLocalNode(), channelFactory.membershipServices.get(1).getLocalNode())));
         channelFactory.failureDetectors.get(0).currentCoordinator = membership.getGroup().getCoordinator();
         channelFactory.failureDetectors.get(0).healthyMembers = membership.getGroup().getMembers();
@@ -393,7 +394,7 @@ public class DiscoveryProtocolTests
             channels[i] = channel;
         }
         
-        IMembership membership = new Membership(1, new Group(UUID.randomUUID(), "test", true, Arrays.asList(
+        IMembership membership = new Membership(1, new Group(new GroupAddress(UUID.randomUUID(), "test"), true, Arrays.asList(
             channelFactory.membershipServices.get(0).getLocalNode(), channelFactory.membershipServices.get(1).getLocalNode())));
         channelFactory.failureDetectors.get(0).currentCoordinator = membership.getGroup().getCoordinator();
         channelFactory.failureDetectors.get(0).healthyMembers = membership.getGroup().getMembers();

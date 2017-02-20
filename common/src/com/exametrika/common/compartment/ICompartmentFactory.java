@@ -38,6 +38,9 @@ public interface ICompartmentFactory
         /** Compartment dispatcher. */
         public ICompartmentDispatcher dispatcher = new SimpleCompartmentDispatcher();
         
+        /** List of compartment timer processors. */
+        public List<ICompartmentTimerProcessor> timerProcessors = new ArrayList<ICompartmentTimerProcessor>();
+        
         /** List of compartment processors. */
         public List<ICompartmentProcessor> processors = new ArrayList<ICompartmentProcessor>();
         

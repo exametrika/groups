@@ -9,7 +9,7 @@ import com.exametrika.api.groups.core.IGroupChannel;
 import com.exametrika.api.groups.core.IMembershipListener.LeaveReason;
 import com.exametrika.api.groups.core.IMembershipService;
 import com.exametrika.common.compartment.ICompartment;
-import com.exametrika.common.compartment.ICompartmentProcessor;
+import com.exametrika.common.compartment.ICompartmentTimerProcessor;
 import com.exametrika.common.messaging.IConnectionProvider;
 import com.exametrika.common.messaging.IMessageFactory;
 import com.exametrika.common.messaging.impl.Channel;
@@ -99,7 +99,7 @@ public class GroupChannel extends Channel implements IGroupChannel, IChannelReco
     
     private void waitGracefulClose()
     {
-        compartment.addProcessor(new ICompartmentProcessor()
+        compartment.addTimerProcessor(new ICompartmentTimerProcessor()
         {
             private long lastCheckTime;
             

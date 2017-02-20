@@ -33,24 +33,29 @@ import com.exametrika.impl.groups.core.failuredetection.IFailureDetector;
 public final class FlowControlProtocol extends AbstractProtocol implements IFailureDetectionListener, 
     IFlowController<RemoteFlowId>
 {
-    private final IFlowController<RemoteFlowId> flowController;
+    private IFlowController<RemoteFlowId> flowController;
     private IFailureDetector failureDetector;
     private final IMembershipService membershipService;
     private final Set<Pair<IAddress, UUID>> remoteLocks = new LinkedHashSet<Pair<IAddress, UUID>>();
     private final Map<Pair<IAddress, UUID>, LockFlowInfo> localLocks = new HashMap<Pair<IAddress, UUID>, LockFlowInfo>();
     
-    public FlowControlProtocol(String channelName, IMessageFactory messageFactory, IFlowController<RemoteFlowId> flowController,
-        IMembershipService membershipService)
+    public FlowControlProtocol(String channelName, IMessageFactory messageFactory, IMembershipService membershipService)
     {
         super(channelName, messageFactory);
        
-        Assert.notNull(flowController);
         Assert.notNull(membershipService);
         
-        this.flowController = flowController;
         this.membershipService = membershipService;
     }
 
+    public void setFlowController(IFlowController<RemoteFlowId> flowController)
+    {
+        Assert.notNull(flowController);
+        Assert.isNull(this.flowController);
+        
+        this.flowController = flowController;
+    }
+    
     public void setFailureDetector(IFailureDetector failureDetector)
     {
         Assert.notNull(failureDetector);

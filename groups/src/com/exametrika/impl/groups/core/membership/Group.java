@@ -30,17 +30,16 @@ public final class Group implements IGroup
     private final List<INode> members;
     private final Map<UUID, INode> membersByIdMap;
     private final Map<IAddress, INode> membersByAddressMap;
-    private final IAddress address;
+    private final GroupAddress address;
 
-    public Group(UUID id, String name, boolean primary, List<INode> members)
+    public Group(GroupAddress address, boolean primary, List<INode> members)
     {
-        Assert.notNull(id);
-        Assert.notNull(name);
+        Assert.notNull(address);
         Assert.notNull(members);
         Assert.isTrue(!members.isEmpty());
 
-        this.id = id;
-        this.name = name;
+        this.id = address.getId();
+        this.name = address.getName();
         this.primary = primary;
         this.coordinator = members.get(0);
         this.members = Immutables.wrap(members);
@@ -55,7 +54,7 @@ public final class Group implements IGroup
         
         this.membersByIdMap = membersByIdMap;
         this.membersByAddressMap = membersByAddressMap;
-        this.address = new GroupAddress(id, name);
+        this.address = address;
     }
 
     @Override
@@ -71,7 +70,7 @@ public final class Group implements IGroup
     }
 
     @Override
-    public IAddress getAddress()
+    public GroupAddress getAddress()
     {
         return address;
     }

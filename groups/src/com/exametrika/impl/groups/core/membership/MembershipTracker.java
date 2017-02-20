@@ -5,7 +5,7 @@ package com.exametrika.impl.groups.core.membership;
 
 import com.exametrika.api.groups.core.IMembership;
 import com.exametrika.api.groups.core.INode;
-import com.exametrika.common.compartment.ICompartmentProcessor;
+import com.exametrika.common.compartment.ICompartmentTimerProcessor;
 import com.exametrika.common.utils.Assert;
 import com.exametrika.impl.groups.core.channel.IGracefulCloseStrategy;
 import com.exametrika.impl.groups.core.discovery.INodeDiscoverer;
@@ -20,7 +20,7 @@ import com.exametrika.impl.groups.core.membership.Memberships.MembershipDeltaInf
  * @threadsafety This class and its methods are not thread safe.
  * @author Medvedev-A
  */
-public final class MembershipTracker implements ICompartmentProcessor, IGracefulCloseStrategy
+public final class MembershipTracker implements ICompartmentTimerProcessor, IGracefulCloseStrategy
 {
     private final long trackPeriod;
     private final IMembershipManager membershipManager;

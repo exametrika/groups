@@ -49,6 +49,7 @@ import com.exametrika.common.messaging.impl.protocols.failuredetection.INodeTrac
 import com.exametrika.common.messaging.impl.protocols.failuredetection.LiveNodeManager;
 import com.exametrika.common.messaging.impl.transports.ConnectionManager;
 import com.exametrika.common.messaging.impl.transports.tcp.TcpTransport;
+import com.exametrika.common.tasks.IFlowController;
 import com.exametrika.common.tests.Sequencer;
 import com.exametrika.common.tests.Tests;
 import com.exametrika.common.utils.Assert;
@@ -76,6 +77,8 @@ import com.exametrika.impl.groups.core.membership.IPreparedMembershipListener;
 import com.exametrika.impl.groups.core.membership.MembershipManager;
 import com.exametrika.impl.groups.core.membership.MembershipTracker;
 import com.exametrika.impl.groups.core.membership.Memberships;
+import com.exametrika.impl.groups.core.multicast.FlowControlProtocol;
+import com.exametrika.impl.groups.core.multicast.RemoteFlowId;
 import com.exametrika.impl.groups.core.state.StateTransferClientProtocol;
 import com.exametrika.impl.groups.core.state.StateTransferServerProtocol;
 import com.exametrika.spi.groups.IDiscoveryStrategy;
@@ -663,7 +666,7 @@ public class StateTransferProtocolTests
         }
     }
     
-    private class TestMessageSender extends AbstractProtocol implements IFlushParticipant
+    private class TestMessageSender extends AbstractProtocol implements IFlushParticipant, IFlowController<RemoteFlowId>
     {
         public boolean failOnFlush;
         private final TestStateTransferFactory stateTransferFactory;
@@ -671,6 +674,7 @@ public class StateTransferProtocolTests
         private IFlush flush;
         private IMembership membership;
         private boolean disableSend;
+        private boolean flowLocked;
 
         public TestMessageSender(String channelName, IMessageFactory messageFactory, TestStateTransferFactory stateTransferFactory)
         {
@@ -721,7 +725,7 @@ public class StateTransferProtocolTests
         @Override
         public void onTimer(long currentTime)
         {
-            if (coordinator && flush == null && membership != null && !disableSend)
+            if (!flowLocked && coordinator && flush == null && membership != null && !disableSend)
             {
                 ByteArray buffer = stateTransferFactory.state.clone();
                 int counter = Bytes.readInt(buffer.getBuffer(), buffer.getOffset());
@@ -748,6 +752,18 @@ public class StateTransferProtocolTests
         protected void doReceive(IReceiver receiver, IMessage message)
         {
             receiver.receive(message);
+        }
+
+        @Override
+        public void lockFlow(RemoteFlowId flow)
+        {
+            flowLocked = true;
+        }
+
+        @Override
+        public void unlockFlow(RemoteFlowId flow)
+        {
+            flowLocked = false;
         }
     }
     
@@ -851,6 +867,14 @@ public class StateTransferProtocolTests
             protocols.add(testSender);
             messageSenders.add(testSender);
             
+            FlowControlProtocol flowControlProtocol = new FlowControlProtocol(channelName, messageFactory, 
+                membershipManager);
+            flowControlProtocol.setFlowController(testSender);
+            protocols.add(flowControlProtocol);
+            failureDetectionListeners.add(flowControlProtocol);
+            flowControlProtocol.setFailureDetector(failureDetectionProtocol);
+            
+            stateTransferServerProtocol.setFlowController(flowControlProtocol);
             FlushParticipantProtocol flushParticipantProtocol = new FlushParticipantProtocol(channelName, messageFactory, 
                 Arrays.<IFlushParticipant>asList(stateTransferClientProtocol, stateTransferServerProtocol, testSender), membershipManager, failureDetectionProtocol);
             protocols.add(flushParticipantProtocol);
@@ -876,7 +900,7 @@ public class StateTransferProtocolTests
             FailureDetectionProtocol failureDetectionProtocol = protocolStack.find(FailureDetectionProtocol.class);
             failureDetectionProtocol.setFailureObserver(transport);
             failureDetectionProtocol.setChannelReconnector((IChannelReconnector)channel);
-            channel.getCompartment().addProcessor(membershipTracker);
+            channel.getCompartment().addTimerProcessor(membershipTracker);
             
             GroupNodeTrackingStrategy strategy = (GroupNodeTrackingStrategy)protocolStack.find(HeartbeatProtocol.class).getNodeTrackingStrategy();
             strategy.setFailureDetector(failureDetectionProtocol);
@@ -888,7 +912,6 @@ public class StateTransferProtocolTests
             
             StateTransferServerProtocol stateTransferServerProtocol = protocolStack.find(StateTransferServerProtocol.class);
             stateTransferServerProtocol.setCompartment(channel.getCompartment());
-            stateTransferServerProtocol.setFlowController(transport);
         }
         
         @Override

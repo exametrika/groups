@@ -17,6 +17,7 @@ import com.exametrika.common.compartment.ICompartmentQueue;
 import com.exametrika.common.compartment.ICompartmentQueue.Event;
 import com.exametrika.common.compartment.ICompartmentSizeEstimator;
 import com.exametrika.common.compartment.ICompartmentTask;
+import com.exametrika.common.compartment.ICompartmentTimerProcessor;
 import com.exametrika.common.l10n.DefaultMessage;
 import com.exametrika.common.l10n.ILocalizedMessage;
 import com.exametrika.common.l10n.Messages;
@@ -47,6 +48,7 @@ public final class Compartment implements ICompartment, Runnable
     private final String name;
     private final Daemon mainThread;
     private final ICompartmentDispatcher dispatcher;
+    private volatile ArrayList<ICompartmentTimerProcessor> timerProcessors;
     private volatile ArrayList<ICompartmentProcessor> processors;
     private volatile long dispatchPeriod;
     private final ICompartmentQueue queue;
@@ -71,6 +73,7 @@ public final class Compartment implements ICompartment, Runnable
         Assert.notNull(parameters);
         Assert.notNull(parameters.name);
         Assert.notNull(parameters.dispatcher);
+        Assert.notNull(parameters.timerProcessors);
         Assert.notNull(parameters.processors);
         Assert.notNull(parameters.flowController);
         Assert.notNull(parameters.sizeEstimator);
@@ -81,6 +84,7 @@ public final class Compartment implements ICompartment, Runnable
         marker = Loggers.getMarker(name);
         dispatcher = parameters.dispatcher;
         dispatcher.setCompartment(this);
+        timerProcessors = new ArrayList<ICompartmentTimerProcessor>(parameters.timerProcessors);
         processors = new ArrayList<ICompartmentProcessor>(parameters.processors);
         dispatchPeriod = parameters.dispatchPeriod;
         minLockQueueCapacity = parameters.minLockQueueCapacity;
@@ -195,6 +199,26 @@ public final class Compartment implements ICompartment, Runnable
     }
     
     @Override
+    public synchronized void addTimerProcessor(ICompartmentTimerProcessor processor)
+    {
+        Assert.notNull(processor);
+        
+        ArrayList<ICompartmentTimerProcessor> processors = (ArrayList<ICompartmentTimerProcessor>)this.timerProcessors.clone();
+        processors.add(processor);
+        this.timerProcessors = processors;
+    }
+
+    @Override
+    public synchronized void removeTimerProcessor(ICompartmentTimerProcessor processor)
+    {
+        Assert.notNull(processor);
+        
+        ArrayList<ICompartmentTimerProcessor> processors = (ArrayList<ICompartmentTimerProcessor>)this.timerProcessors.clone();
+        processors.remove(processor);
+        this.timerProcessors = processors;
+    }
+
+    @Override
     public synchronized void addProcessor(ICompartmentProcessor processor)
     {
         Assert.notNull(processor);
@@ -213,7 +237,7 @@ public final class Compartment implements ICompartment, Runnable
         processors.remove(processor);
         this.processors = processors;
     }
-
+    
     @Override
     public void offer(ICompartmentTask task)
     {
@@ -290,6 +314,12 @@ public final class Compartment implements ICompartment, Runnable
         return group.execute(task);
     }
 
+    @Override
+    public void wakeup()
+    {
+        dispatcher.wakeup();
+    }
+    
     @Override
     public synchronized void start()
     {
@@ -440,13 +470,19 @@ public final class Compartment implements ICompartment, Runnable
                 Assert.error();
         }
         
+        if (!processors.isEmpty())
+        {
+            for (ICompartmentProcessor processor : processors)
+                processor.process();
+        }
+        
         long currentTime = getCurrentTime();
         
         if (lastTimerTime == 0)
             lastTimerTime = currentTime;
         else if (currentTime > lastTimerTime + dispatchPeriod)
         {
-            for (ICompartmentProcessor processor : processors)
+            for (ICompartmentTimerProcessor processor : timerProcessors)
                 processor.onTimer(currentTime);
             
             lastTimerTime = currentTime;

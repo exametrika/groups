@@ -30,6 +30,9 @@ import com.exametrika.impl.groups.core.failuredetection.IFailureDetector;
 import com.exametrika.impl.groups.core.flush.IFlush;
 import com.exametrika.impl.groups.core.flush.IFlushParticipant;
 import com.exametrika.impl.groups.core.membership.IMembershipManager;
+import com.exametrika.impl.groups.core.membership.Memberships;
+import com.exametrika.impl.groups.core.multicast.QueueCapacityController;
+import com.exametrika.impl.groups.core.multicast.RemoteFlowId;
 import com.exametrika.spi.groups.IStateStore;
 import com.exametrika.spi.groups.IStateTransferFactory;
 import com.exametrika.spi.groups.IStateTransferServer;
@@ -49,8 +52,6 @@ public final class StateTransferServerProtocol extends AbstractProtocol implemen
     private ICompartment compartment;
     private final ISerializationRegistry serializationRegistry;
     private final long saveSnapshotPeriod;
-    private final int minLockQueueCapacity;
-    private IFlowController<IAddress> flowController;
     private StateTransfer stateTransfer;
     private StoreStateSaveTask stateSaveTask;
     private long lastSaveSnapshotTime;
@@ -62,9 +63,8 @@ public final class StateTransferServerProtocol extends AbstractProtocol implemen
     private final int transferLogMessagesCount;
     private final IStateTransferServer server;
     private boolean snapshotRequest;
-    private int queueCapacity;
-    private boolean flowLocked;
-
+    private final QueueCapacityController capacityController;
+    
     public StateTransferServerProtocol(String channelName, IMessageFactory messageFactory, IMembershipManager membershipManager, 
         IFailureDetector failureDetector, IStateTransferFactory stateTransferFactory, IStateStore stateStore,
         ISerializationRegistry serializationRegistry,
@@ -85,8 +85,9 @@ public final class StateTransferServerProtocol extends AbstractProtocol implemen
         this.transferLogRecordPeriod = transferLogRecordPeriod;
         this.transferLogMessagesCount = transferLogMessagesCount;
         this.serializationRegistry = serializationRegistry;
-        this.minLockQueueCapacity = minLockQueueCapacity;
         this.server = stateTransferFactory.createServer();
+        this.capacityController = new QueueCapacityController(minLockQueueCapacity, 0, Memberships.CORE_GROUP_ADDRESS, 
+            Memberships.CORE_GROUP_ID);
     }
 
     public void setCompartment(ICompartment compartment)
@@ -97,12 +98,9 @@ public final class StateTransferServerProtocol extends AbstractProtocol implemen
         this.compartment = compartment;
     }
     
-    public void setFlowController(IFlowController<IAddress> flowController)
+    public void setFlowController(IFlowController<RemoteFlowId> flowController)
     {
-        Assert.notNull(flowController);
-        Assert.isNull(this.flowController);
-        
-        this.flowController = flowController;
+        capacityController.setFlowController(flowController);
     }
     
     @Override
@@ -273,13 +271,7 @@ public final class StateTransferServerProtocol extends AbstractProtocol implemen
             pendingMessages = new ArrayList<IMessage>();
         
         pendingMessages.add(message);
-        
-        queueCapacity += message.getSize();
-        if (!flowLocked && queueCapacity >= minLockQueueCapacity)
-        {
-            flowLocked = true;
-            flowController.lockFlow(message.getSource());
-        }
+        capacityController.addCapacity(message.getSource(), message.getSize());
     }
 
     private void deliverPendingMessages()
@@ -292,13 +284,7 @@ public final class StateTransferServerProtocol extends AbstractProtocol implemen
                 receive(message);
             
             pendingMessages = null;
-            
-            queueCapacity = 0;
-            if (flowLocked)
-            {
-                flowLocked = false;
-                flowController.unlockFlow(null);
-            }
+            capacityController.clearCapacity();
         }
         
         if (flush != null && !processing)
