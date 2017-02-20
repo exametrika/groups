@@ -278,6 +278,8 @@ public class ChannelFactory
         compartmentParameters.dispatcher = transportParameters.dispatcher;
         compartmentParameters.timerProcessors.add(transport);
         compartmentParameters.timerProcessors.add(protocolStack);
+        compartmentParameters.processors.add(lowLocal);
+        compartmentParameters.processors.add(highLocal);
         compartmentParameters.flowController = new NoFlowController();
         compartmentParameters.minLockQueueCapacity = factoryParameters.compartmentMinLockQueueCapacity;
         compartmentParameters.minLockQueueCapacity = factoryParameters.compartmentMinLockQueueCapacity;

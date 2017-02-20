@@ -99,7 +99,7 @@ import com.exametrika.tests.groups.MembershipManagerTests.PropertyProviderMock;
  */
 public class MulticastProtocolTests
 {
-    private static final int COUNT = 10;
+    private static final int COUNT = 2;// TODO:10;
     private static final long SEND_COUNT = Long.MAX_VALUE;
     private GroupChannel[] channels = new GroupChannel[COUNT];
     private Sequencer flushSequencer = new Sequencer();
@@ -126,11 +126,17 @@ public class MulticastProtocolTests
     @Test
     public void testPullableSender() throws Exception
     {
-        // TODO: БЛОКИРОВАТЬ ОБЫЧНУЮ ПОСЫЛКУ, ПОСЛАТЬ С ОДНОГО ЧЕРЕЗ ПУЛ
         Set<String> wellKnownAddresses = new ConcurrentHashMap<String, String>().keySet("");
         TestChannelFactory channelFactory = new TestChannelFactory(new WellKnownAddressesDiscoveryStrategy(wellKnownAddresses));
+        for (TestMessageSender sender : channelFactory.messageSenders)
+            sender.send = false;
+        
         createGroup(wellKnownAddresses, channelFactory, Collections.<Integer>asSet());
          
+        TestFeed feed = new TestFeed();
+        ISink sink = channels[0].register(Memberships.CORE_GROUP_ADDRESS, feed);
+        sink.setReady(true);
+        
         Threads.sleep(10000);
         
         checkMembership(channelFactory, Collections.<Integer>asSet());
@@ -461,6 +467,7 @@ public class MulticastProtocolTests
     {
         public boolean failOnFlush;
         public boolean sendBeforeGroup;
+        public boolean send = true;
         private final TestStateTransferFactory stateTransferFactory;
         private IMembership membership;
         private int index;
@@ -516,6 +523,9 @@ public class MulticastProtocolTests
         @Override
         public void onTimer(long currentTime)
         {
+            if (!send)
+                return;
+            
             if (sendBeforeGroup)
             {
                 if (!flowLocked && count < SEND_COUNT)
@@ -772,6 +782,7 @@ public class MulticastProtocolTests
             
             FailureAtomicMulticastProtocol multicastProtocol = protocolStack.find(FailureAtomicMulticastProtocol.class);
             multicastProtocol.setCompartment(channel.getCompartment());
+            channel.getCompartment().addProcessor(multicastProtocol);
         }
         
         @Override
