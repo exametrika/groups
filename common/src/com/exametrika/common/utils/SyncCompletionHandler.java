@@ -47,7 +47,8 @@ public final class SyncCompletionHandler implements ICompletionHandler
     
     public synchronized <T> T await(long timeout)
     {
-        while (!completed)
+        long startTime = Times.getCurrentTime();
+        while (!completed && Times.getCurrentTime() < startTime + timeout)
         {
             try
             {
@@ -58,6 +59,9 @@ public final class SyncCompletionHandler implements ICompletionHandler
                 throw new ThreadInterruptedException(e);
             }
         }
+        
+        if (!completed)
+            throw new TimeoutException();
         
         if (error != null)
         {

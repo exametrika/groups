@@ -116,6 +116,7 @@ public class MulticastProtocolTests
     {
         Set<String> wellKnownAddresses = new ConcurrentHashMap<String, String>().keySet("");
         TestChannelFactory channelFactory = new TestChannelFactory(new WellKnownAddressesDiscoveryStrategy(wellKnownAddresses));
+        channelFactory.messageSenders.get(0).send = true;
         createGroup(wellKnownAddresses, channelFactory, Collections.<Integer>asSet());
          
         Threads.sleep(10000);
@@ -124,12 +125,23 @@ public class MulticastProtocolTests
     }
 
     @Test
-    public void testPullableSender() throws Exception
+    public void testMultipleMulticast() throws Exception
     {
         Set<String> wellKnownAddresses = new ConcurrentHashMap<String, String>().keySet("");
         TestChannelFactory channelFactory = new TestChannelFactory(new WellKnownAddressesDiscoveryStrategy(wellKnownAddresses));
         for (TestMessageSender sender : channelFactory.messageSenders)
-            sender.send = false;
+            sender.send = true;
+        createGroup(wellKnownAddresses, channelFactory, Collections.<Integer>asSet());
+         
+        Threads.sleep(10000);
+        
+        checkMembership(channelFactory, Collections.<Integer>asSet());
+    }
+    @Test
+    public void testPullableSender() throws Exception
+    {
+        Set<String> wellKnownAddresses = new ConcurrentHashMap<String, String>().keySet("");
+        TestChannelFactory channelFactory = new TestChannelFactory(new WellKnownAddressesDiscoveryStrategy(wellKnownAddresses));
         
         createGroup(wellKnownAddresses, channelFactory, Collections.<Integer>asSet());
          
@@ -149,6 +161,8 @@ public class MulticastProtocolTests
         TestChannelFactory channelFactory = new TestChannelFactory(new WellKnownAddressesDiscoveryStrategy(wellKnownAddresses));
         channelFactory.minLockQueueCapacity = 1000;
         channelFactory.maxUnlockQueueCapacity = 100;
+        for (TestMessageSender sender : channelFactory.messageSenders)
+            sender.send = true;
         createGroup(wellKnownAddresses, channelFactory, Collections.<Integer>asSet());
          
         Threads.sleep(10000);
@@ -171,7 +185,10 @@ public class MulticastProtocolTests
         channelFactory.minLockQueueCapacity = 1000;
         channelFactory.maxUnlockQueueCapacity = 100;
         for (TestMessageSender sender : channelFactory.messageSenders)
+        {
+            sender.send = true;
             sender.sendBeforeGroup = true;
+        }
         
         createGroup(wellKnownAddresses, channelFactory, Collections.<Integer>asSet());
          
@@ -192,6 +209,8 @@ public class MulticastProtocolTests
     {
         Set<String> wellKnownAddresses = new ConcurrentHashMap<String, String>().keySet("");
         TestChannelFactory channelFactory = new TestChannelFactory(new WellKnownAddressesDiscoveryStrategy(wellKnownAddresses));
+        for (TestMessageSender sender : channelFactory.messageSenders)
+            sender.send = true;
         createGroup(wellKnownAddresses, channelFactory, Collections.<Integer>asSet(0, 1));
          
         Threads.sleep(10000);
@@ -213,6 +232,8 @@ public class MulticastProtocolTests
     {
         Set<String> wellKnownAddresses = new ConcurrentHashMap<String, String>().keySet("");
         TestChannelFactory channelFactory = new TestChannelFactory(new WellKnownAddressesDiscoveryStrategy(wellKnownAddresses));
+        for (TestMessageSender sender : channelFactory.messageSenders)
+            sender.send = true;
         createGroup(wellKnownAddresses, channelFactory, Collections.<Integer>asSet(0, 1));
          
         Threads.sleep(10000);
@@ -237,6 +258,8 @@ public class MulticastProtocolTests
     {
         Set<String> wellKnownAddresses = new ConcurrentHashMap<String, String>().keySet("");
         TestChannelFactory channelFactory = new TestChannelFactory(new WellKnownAddressesDiscoveryStrategy(wellKnownAddresses));
+        for (TestMessageSender sender : channelFactory.messageSenders)
+            sender.send = true;
         createGroup(wellKnownAddresses, channelFactory, Collections.<Integer>asSet(0, 1));
          
         Threads.sleep(10000);
@@ -467,7 +490,7 @@ public class MulticastProtocolTests
     {
         public boolean failOnFlush;
         public boolean sendBeforeGroup;
-        public boolean send = true;
+        public boolean send;
         private final TestStateTransferFactory stateTransferFactory;
         private IMembership membership;
         private int index;
@@ -475,13 +498,16 @@ public class MulticastProtocolTests
         private boolean flowLocked;
         private RemoteFlowId flow;
         private int receivedCount;
+        private TestChannelFactory channelFactory;
 
-        public TestMessageSender(int index, String channelName, IMessageFactory messageFactory, TestStateTransferFactory stateTransferFactory)
+        public TestMessageSender(int index, String channelName, IMessageFactory messageFactory, 
+            TestStateTransferFactory stateTransferFactory, TestChannelFactory channelFactory)
         {
             super(channelName, messageFactory);
             
             this.index = index;
             this.stateTransferFactory = stateTransferFactory;
+            this.channelFactory = channelFactory;
         }
         
         @Override
@@ -699,7 +725,8 @@ public class MulticastProtocolTests
             TestStateTransferFactory stateTransferFactory = new TestStateTransferFactory();
             stateTransferFactories.add(stateTransferFactory);
             
-            TestMessageSender testSender = new TestMessageSender(messageSenders.size(), channelName, messageFactory, stateTransferFactory);
+            TestMessageSender testSender = new TestMessageSender(messageSenders.size(), channelName, messageFactory, 
+                stateTransferFactory, this);
             protocols.add(testSender);
             messageSenders.add(testSender);
             

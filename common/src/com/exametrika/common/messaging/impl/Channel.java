@@ -30,6 +30,7 @@ import com.exametrika.common.messaging.impl.protocols.failuredetection.LiveNodeM
 import com.exametrika.common.messaging.impl.transports.ITransport;
 import com.exametrika.common.tasks.IFlowController;
 import com.exametrika.common.utils.Assert;
+import com.exametrika.common.utils.SyncCompletionHandler;
 
 /**
  * The {@link Channel} represents a message-oriented channel.
@@ -40,6 +41,7 @@ import com.exametrika.common.utils.Assert;
 public class Channel implements IChannel
 {
     private static final IMessages messages = Messages.get(IMessages.class);
+    private static final long TIMEOUT = 10000;
     protected final ILogger logger = Loggers.get(Channel.class);
     protected final IMarker marker;
     protected final LiveNodeManager liveNodeManager;
@@ -166,35 +168,84 @@ public class Channel implements IChannel
     }
 
     @Override
-    public synchronized void start()
+    public void start()
     {
-        Assert.checkState(!started);
+        synchronized (this)
+        {
+            Assert.checkState(!started);
+            
+            started = true;
+        }
         
-        started = true;
-        protocolStack.start();
-        transport.start();
         compartment.start();
-        liveNodeManager.start();
         channelObserver.start();
-        doStart();
+        
+        final SyncCompletionHandler startHandler = new SyncCompletionHandler();
+        compartment.offer(new Runnable()
+        {
+            @Override
+            public void run()
+            {
+                try
+                {
+                    protocolStack.start();
+                    transport.start();
+                    
+                    liveNodeManager.start();
+                    
+                    doStart();
+                    
+                    startHandler.onSucceeded(null);
+                }
+                catch (Throwable e)
+                {
+                    startHandler.onFailed(e);
+                }
+            }
+        });
+        startHandler.await(TIMEOUT);
         
         if (logger.isLogEnabled(LogLevel.DEBUG))
             logger.log(LogLevel.DEBUG, marker, messages.channelStarted());
     }
 
     @Override
-    public synchronized void stop()
+    public void stop()
     {
-        if (!started || stopped)
-            return;
+        synchronized (this)
+        {
+            if (!started || stopped)
+                return;
+            
+            stopped = true;
+        }
         
-        stopped = true;
-        protocolStack.stop();
-        transport.stop();
+        final SyncCompletionHandler stopHandler = new SyncCompletionHandler();
+        compartment.offer(new Runnable()
+        {
+            @Override
+            public void run()
+            {
+                try
+                {
+                    protocolStack.stop();
+                    transport.stop();
+                    liveNodeManager.stop();
+                    
+                    doStop();
+                    
+                    stopHandler.onSucceeded(null);
+                }
+                catch (Throwable e)
+                {
+                    stopHandler.onFailed(e);
+                }
+            }
+        });
+        stopHandler.await(TIMEOUT);
+        
         channelObserver.stop();
-        liveNodeManager.stop();
         compartment.stop();
-        doStop();
         
         if (logger.isLogEnabled(LogLevel.DEBUG))
             logger.log(LogLevel.DEBUG, marker, messages.channelStopped());
