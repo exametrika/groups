@@ -9,47 +9,27 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.File;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 
 import org.junit.After;
 import org.junit.Test;
 
 import com.exametrika.api.groups.core.IGroup;
+import com.exametrika.api.groups.core.IGroupChannel;
 import com.exametrika.api.groups.core.IMembership;
-import com.exametrika.api.groups.core.IMembershipListener;
-import com.exametrika.common.compartment.ICompartment;
 import com.exametrika.common.io.IDeserialization;
 import com.exametrika.common.io.ISerialization;
-import com.exametrika.common.io.ISerializationRegistry;
 import com.exametrika.common.io.impl.AbstractSerializer;
 import com.exametrika.common.messaging.IChannel;
 import com.exametrika.common.messaging.IDeliveryHandler;
 import com.exametrika.common.messaging.IFeed;
-import com.exametrika.common.messaging.ILiveNodeProvider;
 import com.exametrika.common.messaging.IMessage;
-import com.exametrika.common.messaging.IMessageFactory;
 import com.exametrika.common.messaging.IMessagePart;
 import com.exametrika.common.messaging.IReceiver;
 import com.exametrika.common.messaging.ISink;
-import com.exametrika.common.messaging.impl.Channel;
-import com.exametrika.common.messaging.impl.ChannelFactory;
-import com.exametrika.common.messaging.impl.ChannelFactory.FactoryParameters;
-import com.exametrika.common.messaging.impl.ChannelFactory.Parameters;
-import com.exametrika.common.messaging.impl.message.MessageFactory;
-import com.exametrika.common.messaging.impl.protocols.AbstractProtocol;
-import com.exametrika.common.messaging.impl.protocols.ProtocolStack;
-import com.exametrika.common.messaging.impl.protocols.failuredetection.ChannelObserver;
-import com.exametrika.common.messaging.impl.protocols.failuredetection.HeartbeatProtocol;
-import com.exametrika.common.messaging.impl.protocols.failuredetection.IFailureObserver;
-import com.exametrika.common.messaging.impl.protocols.failuredetection.INodeTrackingStrategy;
-import com.exametrika.common.messaging.impl.protocols.failuredetection.LiveNodeManager;
-import com.exametrika.common.messaging.impl.transports.ConnectionManager;
-import com.exametrika.common.messaging.impl.transports.tcp.TcpTransport;
 import com.exametrika.common.tasks.IFlowController;
 import com.exametrika.common.tests.Sequencer;
 import com.exametrika.common.utils.Assert;
@@ -61,36 +41,18 @@ import com.exametrika.common.utils.Files;
 import com.exametrika.common.utils.IOs;
 import com.exametrika.common.utils.Threads;
 import com.exametrika.impl.groups.core.channel.GroupChannel;
-import com.exametrika.impl.groups.core.channel.IChannelReconnector;
-import com.exametrika.impl.groups.core.channel.IGracefulCloseStrategy;
-import com.exametrika.impl.groups.core.discovery.DiscoveryProtocol;
+import com.exametrika.impl.groups.core.channel.GroupChannelFactory;
+import com.exametrika.impl.groups.core.channel.GroupChannelFactory.GroupFactoryParameters;
+import com.exametrika.impl.groups.core.channel.GroupChannelFactory.GroupParameters;
 import com.exametrika.impl.groups.core.discovery.WellKnownAddressesDiscoveryStrategy;
-import com.exametrika.impl.groups.core.exchange.DataExchangeProtocol;
-import com.exametrika.impl.groups.core.exchange.IDataExchangeProvider;
-import com.exametrika.impl.groups.core.failuredetection.FailureDetectionProtocol;
-import com.exametrika.impl.groups.core.failuredetection.GroupNodeTrackingStrategy;
-import com.exametrika.impl.groups.core.failuredetection.IFailureDetectionListener;
-import com.exametrika.impl.groups.core.flush.FlushCoordinatorProtocol;
-import com.exametrika.impl.groups.core.flush.FlushParticipantProtocol;
 import com.exametrika.impl.groups.core.flush.IFlush;
 import com.exametrika.impl.groups.core.flush.IFlushParticipant;
-import com.exametrika.impl.groups.core.membership.IMembershipManager;
-import com.exametrika.impl.groups.core.membership.IPreparedMembershipListener;
-import com.exametrika.impl.groups.core.membership.MembershipManager;
-import com.exametrika.impl.groups.core.membership.MembershipTracker;
 import com.exametrika.impl.groups.core.membership.Memberships;
-import com.exametrika.impl.groups.core.multicast.FailureAtomicMulticastProtocol;
-import com.exametrika.impl.groups.core.multicast.FlowControlProtocol;
 import com.exametrika.impl.groups.core.multicast.RemoteFlowId;
-import com.exametrika.impl.groups.core.state.StateTransferClientProtocol;
-import com.exametrika.impl.groups.core.state.StateTransferServerProtocol;
-import com.exametrika.spi.groups.IDiscoveryStrategy;
 import com.exametrika.spi.groups.IStateStore;
 import com.exametrika.spi.groups.IStateTransferClient;
 import com.exametrika.spi.groups.IStateTransferFactory;
 import com.exametrika.spi.groups.IStateTransferServer;
-import com.exametrika.tests.common.messaging.ReceiverMock;
-import com.exametrika.tests.groups.MembershipManagerTests.PropertyProviderMock;
 
 /**
  * The {@link MulticastProtocolTests} are tests for flush.
@@ -99,11 +61,19 @@ import com.exametrika.tests.groups.MembershipManagerTests.PropertyProviderMock;
  */
 public class MulticastProtocolTests
 {
+    // TODO: подключить флаш партисипант через тестовую фабрику группового канала
     private static final int COUNT = 2;// TODO:10;
     private static final long SEND_COUNT = Long.MAX_VALUE;
-    private GroupChannel[] channels = new GroupChannel[COUNT];
+    private Set<String> wellKnownAddresses= new HashSet<String>();
+    private GroupFactoryParameters factoryParameters;
+    private List<GroupParameters> parameters = new ArrayList<GroupParameters>();
+    private IGroupChannel[] channels = new GroupChannel[COUNT];
+    private TestStateStore stateStore = new TestStateStore();
+    private List<TestStateTransferFactory> stateTransferFactories = new ArrayList<TestStateTransferFactory>();
+    private List<TestMessageSender> messageSenders = new ArrayList<TestMessageSender>();
+    private List<TestFlushParticipant> flushParticipants = new ArrayList<TestFlushParticipant>();
     private Sequencer flushSequencer = new Sequencer();
-    
+   
     @After
     public void tearDown()
     {
@@ -114,36 +84,32 @@ public class MulticastProtocolTests
     @Test
     public void testMulticast() throws Exception
     {
-        Set<String> wellKnownAddresses = new ConcurrentHashMap<String, String>().keySet("");
-        TestChannelFactory channelFactory = new TestChannelFactory(new WellKnownAddressesDiscoveryStrategy(wellKnownAddresses));
-        channelFactory.messageSenders.get(0).send = true;
-        createGroup(wellKnownAddresses, channelFactory, Collections.<Integer>asSet());
+        createParameters();
+        messageSenders.get(0).send = true;
+        createGroup(Collections.<Integer>asSet());
          
         Threads.sleep(10000);
         
-        checkMembership(channelFactory, Collections.<Integer>asSet());
+        checkMembership(Collections.<Integer>asSet());
     }
 
     @Test
-    public void testMultipleMulticast() throws Exception
+    public void testMultipleMulticasts() throws Exception
     {
-        Set<String> wellKnownAddresses = new ConcurrentHashMap<String, String>().keySet("");
-        TestChannelFactory channelFactory = new TestChannelFactory(new WellKnownAddressesDiscoveryStrategy(wellKnownAddresses));
-        for (TestMessageSender sender : channelFactory.messageSenders)
+        createParameters();
+        for (TestMessageSender sender : messageSenders)
             sender.send = true;
-        createGroup(wellKnownAddresses, channelFactory, Collections.<Integer>asSet());
+        createGroup(Collections.<Integer>asSet());
          
         Threads.sleep(10000);
         
-        checkMembership(channelFactory, Collections.<Integer>asSet());
+        checkMembership(Collections.<Integer>asSet());
     }
     @Test
     public void testPullableSender() throws Exception
     {
-        Set<String> wellKnownAddresses = new ConcurrentHashMap<String, String>().keySet("");
-        TestChannelFactory channelFactory = new TestChannelFactory(new WellKnownAddressesDiscoveryStrategy(wellKnownAddresses));
-        
-        createGroup(wellKnownAddresses, channelFactory, Collections.<Integer>asSet());
+        createParameters();
+        createGroup(Collections.<Integer>asSet());
          
         TestFeed feed = new TestFeed();
         ISink sink = channels[0].register(Memberships.CORE_GROUP_ADDRESS, feed);
@@ -151,25 +117,24 @@ public class MulticastProtocolTests
         
         Threads.sleep(10000);
         
-        checkMembership(channelFactory, Collections.<Integer>asSet());
+        checkMembership(Collections.<Integer>asSet());
     }
     
     @Test
     public void testFlowControl() throws Exception
     {
-        Set<String> wellKnownAddresses = new ConcurrentHashMap<String, String>().keySet("");
-        TestChannelFactory channelFactory = new TestChannelFactory(new WellKnownAddressesDiscoveryStrategy(wellKnownAddresses));
-        channelFactory.minLockQueueCapacity = 1000;
-        channelFactory.maxUnlockQueueCapacity = 100;
-        for (TestMessageSender sender : channelFactory.messageSenders)
+        createParameters();
+        factoryParameters.minLockQueueCapacity = 1000;
+        factoryParameters.maxUnlockQueueCapacity = 100;
+        for (TestMessageSender sender : messageSenders)
             sender.send = true;
-        createGroup(wellKnownAddresses, channelFactory, Collections.<Integer>asSet());
+        createGroup(Collections.<Integer>asSet());
          
         Threads.sleep(10000);
         
-        checkMembership(channelFactory, Collections.<Integer>asSet());
+        checkMembership(Collections.<Integer>asSet());
         boolean locked = false;
-        for (TestMessageSender sender : channelFactory.messageSenders)
+        for (TestMessageSender sender : messageSenders)
         {
             if (sender.flow != null)
                 locked = true;
@@ -180,23 +145,22 @@ public class MulticastProtocolTests
     @Test
     public void testSendBeforeGroup() throws Exception
     {
-        Set<String> wellKnownAddresses = new ConcurrentHashMap<String, String>().keySet("");
-        TestChannelFactory channelFactory = new TestChannelFactory(new WellKnownAddressesDiscoveryStrategy(wellKnownAddresses));
-        channelFactory.minLockQueueCapacity = 1000;
-        channelFactory.maxUnlockQueueCapacity = 100;
-        for (TestMessageSender sender : channelFactory.messageSenders)
+        createParameters();
+        factoryParameters.minLockQueueCapacity = 1000;
+        factoryParameters.maxUnlockQueueCapacity = 100;
+        for (TestMessageSender sender : messageSenders)
         {
             sender.send = true;
             sender.sendBeforeGroup = true;
         }
         
-        createGroup(wellKnownAddresses, channelFactory, Collections.<Integer>asSet());
+        createGroup(Collections.<Integer>asSet());
          
         Threads.sleep(10000);
         
-        checkMembership(channelFactory, Collections.<Integer>asSet());
+        checkMembership(Collections.<Integer>asSet());
         boolean locked = false;
-        for (TestMessageSender sender : channelFactory.messageSenders)
+        for (TestMessageSender sender : messageSenders)
         {
             if (sender.flow != null)
                 locked = true;
@@ -207,15 +171,14 @@ public class MulticastProtocolTests
     @Test
     public void testChangeMembership() throws Exception
     {
-        Set<String> wellKnownAddresses = new ConcurrentHashMap<String, String>().keySet("");
-        TestChannelFactory channelFactory = new TestChannelFactory(new WellKnownAddressesDiscoveryStrategy(wellKnownAddresses));
-        for (TestMessageSender sender : channelFactory.messageSenders)
+        createParameters();
+        for (TestMessageSender sender : messageSenders)
             sender.send = true;
-        createGroup(wellKnownAddresses, channelFactory, Collections.<Integer>asSet(0, 1));
+        createGroup(Collections.<Integer>asSet(0, 1));
          
         Threads.sleep(10000);
          
-        checkMembership(channelFactory, Collections.<Integer>asSet(0, 1));
+        checkMembership(Collections.<Integer>asSet(0, 1));
         
         channels[0].start();
         channels[1].start();
@@ -224,84 +187,79 @@ public class MulticastProtocolTests
         
         Threads.sleep(10000);
         
-        checkMembership(channelFactory, Collections.<Integer>asSet(COUNT - 2, COUNT - 1));
+        checkMembership(Collections.<Integer>asSet(COUNT - 2, COUNT - 1));
     }
     
     @Test
     public void testCoordinatorFailureBeforeFlush() throws Exception
     {
-        Set<String> wellKnownAddresses = new ConcurrentHashMap<String, String>().keySet("");
-        TestChannelFactory channelFactory = new TestChannelFactory(new WellKnownAddressesDiscoveryStrategy(wellKnownAddresses));
-        for (TestMessageSender sender : channelFactory.messageSenders)
+        createParameters();
+        for (TestMessageSender sender : messageSenders)
             sender.send = true;
-        createGroup(wellKnownAddresses, channelFactory, Collections.<Integer>asSet(0, 1));
+        createGroup(Collections.<Integer>asSet(0, 1));
          
         Threads.sleep(10000);
          
-        checkMembership(channelFactory, Collections.<Integer>asSet(0, 1));
+        checkMembership(Collections.<Integer>asSet(0, 1));
 
         channels[0].start();
         channels[1].start();
         
-        IGroup group = channelFactory.messageSenders.get(2).membership.getGroup();
+        IGroup group = flushParticipants.get(2).flush.getNewMembership().getGroup();
         int index = group.getMembers().indexOf(group.getCoordinator());
         Threads.sleep(1000);
         IOs.close(channels[index]);
         
         Threads.sleep(10000);
         
-        checkMembership(channelFactory, Collections.<Integer>asSet(index));
+        checkMembership(Collections.<Integer>asSet(index));
     }
     
     @Test
     public void testCoordinatorFailureAfterFlush() throws Exception
     {
-        Set<String> wellKnownAddresses = new ConcurrentHashMap<String, String>().keySet("");
-        TestChannelFactory channelFactory = new TestChannelFactory(new WellKnownAddressesDiscoveryStrategy(wellKnownAddresses));
-        for (TestMessageSender sender : channelFactory.messageSenders)
+        createParameters();
+        for (TestMessageSender sender : messageSenders)
             sender.send = true;
-        createGroup(wellKnownAddresses, channelFactory, Collections.<Integer>asSet(0, 1));
+        createGroup(Collections.<Integer>asSet(0, 1));
          
         Threads.sleep(10000);
          
-        checkMembership(channelFactory, Collections.<Integer>asSet(0, 1));
+        checkMembership(Collections.<Integer>asSet(0, 1));
 
-        failOnFlush(channelFactory);
+        failOnFlush();
         
         channels[0].start();
         channels[1].start();
         
         flushSequencer.waitAll(COUNT - 2, 5000, 0);
-        IGroup group = channelFactory.messageSenders.get(2).membership.getGroup();
+        IGroup group = flushParticipants.get(2).flush.getNewMembership().getGroup();
         int index = group.getMembers().indexOf(group.getCoordinator());
         
         IOs.close(channels[index]);
         
         Threads.sleep(10000);
         
-        checkMembership(channelFactory, Collections.<Integer>asSet(index));
+        checkMembership(Collections.<Integer>asSet(index));
     }
     
-    private void createGroup(Set<String> wellKnownAddresses, TestChannelFactory channelFactory, Set<Integer> skipIndexes)
+    private void createGroup(Set<Integer> skipIndexes)
     {
         for (int i = 0; i < COUNT; i++)
         {
-            Parameters parameters = new Parameters();
-            parameters.channelName = "test" + i;
-            parameters.clientPart = true;
-            parameters.serverPart = true;
-            parameters.receiver = new ReceiverMock();
-            IChannel channel = channelFactory.createChannel(parameters);
+            GroupChannelFactory channelFactory = new GroupChannelFactory(factoryParameters);
+            IGroupChannel channel = channelFactory.createChannel(parameters.get(i));
             if (!skipIndexes.contains(i))
             {
                 channel.start();
                 wellKnownAddresses.add(channel.getLiveNodeProvider().getLocalNode().getConnection());
             }
-            channels[i] = (GroupChannel)channel;
+            channel.getCompartment().execute(messageSenders.get(i));
+            channels[i] = channel;
         }
     }
 
-    private void checkMembership(TestChannelFactory channelFactory, Set<Integer> skipIndexes)
+    private void checkMembership(Set<Integer> skipIndexes)
     {
         IMembership membership = null;
         ByteArray state = null;
@@ -325,13 +283,13 @@ public class MulticastProtocolTests
             assertThat(membership.getGroup().findMember(channels[i].getMembershipService().getLocalNode().getId()), 
                 is(channels[i].getMembershipService().getLocalNode()));
             
-            ByteArray nodeState = channelFactory.stateTransferFactories.get(i).state;
+            ByteArray nodeState = stateTransferFactories.get(i).state;
             if (state == null)
                 state = nodeState;
             else
                 assertThat(nodeState, is(state));
             
-            int received = channelFactory.messageSenders.get(i).receivedCount;
+            int received = messageSenders.get(i).receivedCount;
             if (receivedCount == null)
                 receivedCount = received;
             else
@@ -340,6 +298,69 @@ public class MulticastProtocolTests
         
         assertTrue(receivedCount > 0);
         assertThat(membership.getGroup().getMembers().size(), is(COUNT - skipIndexes.size()));
+    }
+    
+    private void createFactoryParameters()
+    {
+        boolean debug = Debug.isDebug();
+        factoryParameters = new GroupFactoryParameters(debug);
+        if (!debug)
+        {
+            factoryParameters.heartbeatTrackPeriod = 100;
+            factoryParameters.heartbeatPeriod = 100;
+            factoryParameters.heartbeatStartPeriod = 300;
+            factoryParameters.heartbeatFailureDetectionPeriod = 1000;
+            factoryParameters.transportChannelTimeout = 1000;
+        }
+        factoryParameters.discoveryPeriod = 200;
+        factoryParameters.groupFormationPeriod = 2000;
+        factoryParameters.failureUpdatePeriod = 500;
+        factoryParameters.failureHistoryPeriod = 10000;
+        factoryParameters.maxShunCount = 3;
+        factoryParameters.flushTimeout = 10000;
+        factoryParameters.gracefulCloseTimeout = 10000;
+        factoryParameters.maxStateTransferPeriod = Integer.MAX_VALUE;
+        factoryParameters.stateSizeThreshold = 100000;
+        factoryParameters.saveSnapshotPeriod = 1000;
+        factoryParameters.transferLogRecordPeriod = 1000;
+        factoryParameters.transferLogMessagesCount = 2;
+        factoryParameters.minLockQueueCapacity = 10000000;
+        factoryParameters.dataExchangePeriod = 200;
+        factoryParameters.maxBundlingMessageSize = 1000;
+        factoryParameters.maxBundlingPeriod = 100;
+        factoryParameters.maxBundleSize = 10000;
+        factoryParameters.maxTotalOrderBundlingMessageCount = 10;
+        factoryParameters.maxUnacknowledgedPeriod = 100;
+        factoryParameters.maxUnacknowledgedMessageCount = 100;
+        factoryParameters.maxIdleReceiveQueuePeriod = 600000;
+        factoryParameters.maxUnlockQueueCapacity = 100000;
+    }
+    
+    private void createParameters()
+    {
+        createFactoryParameters();
+        for (int i = 0; i < COUNT; i++)
+        {
+            TestMessageSender sender = new TestMessageSender(i);
+            messageSenders.add(sender);
+            
+            TestStateTransferFactory stateTransferFactory = new TestStateTransferFactory();
+            stateTransferFactories.add(stateTransferFactory);
+            
+            GroupParameters parameters = new GroupParameters();
+            parameters.channelName = "test" + i;
+            parameters.clientPart = true;
+            parameters.serverPart = true;
+            parameters.receiver = sender;
+            parameters.discoveryStrategy = new WellKnownAddressesDiscoveryStrategy(wellKnownAddresses);
+            parameters.stateStore = stateStore;
+            parameters.stateTransferFactory = stateTransferFactory;
+            parameters.deliveryHandler = sender;
+            parameters.localFlowController = sender;
+            parameters.serializationRegistrars.add(new TestBufferMessagePartSerializer());
+            
+            this.parameters.add(parameters);
+        }
     }
     
     private ByteArray createBuffer(int base, int length)
@@ -351,10 +372,10 @@ public class MulticastProtocolTests
         return new ByteArray(buffer);
     }
     
-    private void failOnFlush(TestChannelFactory channelFactory)
+    private void failOnFlush()
     {
-        for (TestMessageSender sender : channelFactory.messageSenders)
-            sender.failOnFlush = true;
+        for (TestFlushParticipant participant : flushParticipants)
+            participant.failOnFlush = true;
     }
     
     private class TestStateTransferServer implements IStateTransferServer
@@ -486,29 +507,10 @@ public class MulticastProtocolTests
         }
     }
     
-    private class TestMessageSender extends AbstractProtocol implements IFlushParticipant, IFlowController<RemoteFlowId>
+    private class TestFlushParticipant implements IFlushParticipant
     {
         public boolean failOnFlush;
-        public boolean sendBeforeGroup;
-        public boolean send;
-        private final TestStateTransferFactory stateTransferFactory;
-        private IMembership membership;
-        private int index;
-        private long count;
-        private boolean flowLocked;
-        private RemoteFlowId flow;
-        private int receivedCount;
-        private TestChannelFactory channelFactory;
-
-        public TestMessageSender(int index, String channelName, IMessageFactory messageFactory, 
-            TestStateTransferFactory stateTransferFactory, TestChannelFactory channelFactory)
-        {
-            super(channelName, messageFactory);
-            
-            this.index = index;
-            this.stateTransferFactory = stateTransferFactory;
-            this.channelFactory = channelFactory;
-        }
+        private IFlush flush;
         
         @Override
         public boolean isFlushProcessingRequired()
@@ -524,7 +526,7 @@ public class MulticastProtocolTests
         @Override
         public void startFlush(IFlush flush)
         {
-            this.membership = flush.getNewMembership();
+            this.flush = flush;
             flush.grantFlush(this);
             if (failOnFlush)
                 flushSequencer.allowSingle();
@@ -545,49 +547,52 @@ public class MulticastProtocolTests
         public void endFlush()
         {
         }
+    }
+    
+    private class TestMessageSender implements IReceiver, IDeliveryHandler, IFlowController<RemoteFlowId>, Runnable
+    {
+        public boolean sendBeforeGroup;
+        public boolean send;
+        private int index;
+        private long count;
+        private boolean flowLocked;
+        private RemoteFlowId flow;
+        private int receivedCount;
+
+        public TestMessageSender(int index)
+        {
+            this.index = index;
+        }
         
         @Override
-        public void onTimer(long currentTime)
+        public void run()
         {
             if (!send)
                 return;
             
+            IGroupChannel channel = channels[index];
             if (sendBeforeGroup)
             {
                 if (!flowLocked && count < SEND_COUNT)
-                    getSender().send(getMessageFactory().create(Memberships.CORE_GROUP_ADDRESS, 
+                    channel.send(channel.getMessageFactory().create(Memberships.CORE_GROUP_ADDRESS, 
                         new TestBufferMessagePart(index, count++)));
             }
-            else if (!flowLocked && membership != null && count < SEND_COUNT)
-                getSender().send(getMessageFactory().create(membership.getGroup().getAddress(), 
+            else if (!flowLocked && channel.getMembershipService().getMembership() != null && count < SEND_COUNT)
+                channel.send(channel.getMessageFactory().create(Memberships.CORE_GROUP_ADDRESS, 
                     new TestBufferMessagePart(index, count++)));
         }
         
         @Override
-        public void register(ISerializationRegistry registry)
-        {
-            registry.register(new TestBufferMessagePartSerializer());
-        }
-
-        @Override
-        public void unregister(ISerializationRegistry registry)
-        {
-            registry.unregister(TestBufferMessagePartSerializer.ID);
-        }
-        
-        @Override
-        protected void doReceive(IReceiver receiver, IMessage message)
+        public void receive(IMessage message)
         {
             if (message.getPart() instanceof TestBufferMessagePart)
             {
                 TestBufferMessagePart part = message.getPart();
-                ByteArray buffer = stateTransferFactory.state;
+                ByteArray buffer = stateTransferFactories.get(index).state;
                 long counter = Bytes.readLong(buffer.getBuffer(), buffer.getOffset());
                 Bytes.writeLong(buffer.getBuffer(), buffer.getOffset(), counter + (part.index + 1) * part.value);
                 receivedCount++;
             }
-            else
-                receiver.receive(message);
         }
 
         @Override
@@ -602,33 +607,10 @@ public class MulticastProtocolTests
         {
             flowLocked = false;
         }
-    }
-    
-    private static FactoryParameters getFactoryParameters()
-    {
-        boolean debug = Debug.isDebug();
-        
-        FactoryParameters factoryParameters = new FactoryParameters(debug);
-        if (!debug)
-        {
-            factoryParameters.heartbeatTrackPeriod = 100;
-            factoryParameters.heartbeatPeriod = 100;
-            factoryParameters.heartbeatStartPeriod = 300;
-            factoryParameters.heartbeatFailureDetectionPeriod = 1000;
-            factoryParameters.transportChannelTimeout = 1000;
-        }
-        
-        return factoryParameters;
-    }
-    
-    public static class TestDeliveryHandler implements IDeliveryHandler
-    {
-        public boolean delivered;
 
         @Override
         public void onDelivered(IMessage message)
         {
-            delivered = true;
         }
     }
     
@@ -645,180 +627,6 @@ public class MulticastProtocolTests
                 if (!sink.send(message))
                     break;
             }
-        }
-    }
-    
-    private class TestChannelFactory extends ChannelFactory
-    {
-        private final IDiscoveryStrategy discoveryStrategy;
-        private final long discoveryPeriod = 200;
-        private final long groupFormationPeriod = 2000;
-        private long failureUpdatePeriod = 500;
-        private long failureHistoryPeriod = 10000;
-        private int maxShunCount = 3;
-        private long flushTimeout = 10000;
-        private long gracefulCloseTimeout = 10000;
-        private long maxStateTransferPeriod = Integer.MAX_VALUE;
-        private long stateSizeThreshold = 100000;
-        private long saveSnapshotPeriod = 1000;
-        private long transferLogRecordPeriod = 1000;
-        private int transferLogMessagesCount = 2;
-        private int minLockQueueCapacity = 10000000;
-        private long dataExchangePeriod = 200;
-        private List<TestStateTransferFactory> stateTransferFactories = new ArrayList<TestStateTransferFactory>();
-        private MembershipTracker membershipTracker;
-        private MembershipManager membershipManager;
-        private List<IGracefulCloseStrategy> gracefulCloseStrategies = new ArrayList<IGracefulCloseStrategy>();
-        private TestStateStore stateStore = new TestStateStore();
-        private List<TestMessageSender> messageSenders = new ArrayList<TestMessageSender>();
-        private List<StateTransferClientProtocol> clientProtocols = new ArrayList<StateTransferClientProtocol>();
-        private int maxBundlingMessageSize;
-        private long maxBundlingPeriod;
-        private int maxBundleSize;
-        private int maxTotalOrderBundlingMessageCount;
-        private long maxUnacknowledgedPeriod;
-        private int maxUnacknowledgedMessageCount;
-        private long maxIdleReceiveQueuePeriod;
-        private int maxUnlockQueueCapacity;
-        private List<IDeliveryHandler> deliveryHandlers = new ArrayList<IDeliveryHandler>();
-        
-        public TestChannelFactory(IDiscoveryStrategy discoveryStrategy)
-        {
-            super(getFactoryParameters());
-            this.discoveryStrategy = discoveryStrategy;
-            
-            boolean debug = Debug.isDebug();
-            int timeMultiplier = !debug ? 1 : 1000;
-            flushTimeout *= timeMultiplier;
-            gracefulCloseTimeout *= timeMultiplier;
-        }
-
-        @Override
-        protected INodeTrackingStrategy createNodeTrackingStrategy()
-        {
-            return new GroupNodeTrackingStrategy();
-        }
-        
-        @Override
-        protected void createProtocols(Parameters parameters, String channelName, IMessageFactory messageFactory, 
-            ISerializationRegistry serializationRegistry, ILiveNodeProvider liveNodeProvider, List<IFailureObserver> failureObservers, 
-            List<AbstractProtocol> protocols)
-        {
-            Set<IPreparedMembershipListener> preparedMembershipListeners = new HashSet<IPreparedMembershipListener>();
-            Set<IMembershipListener> membershipListeners = new HashSet<IMembershipListener>();
-            membershipManager = new MembershipManager("test", liveNodeProvider, new PropertyProviderMock(), 
-                preparedMembershipListeners, membershipListeners);
-
-            Set<IFailureDetectionListener> failureDetectionListeners = new HashSet<IFailureDetectionListener>();
-            FailureDetectionProtocol failureDetectionProtocol = new FailureDetectionProtocol(channelName, messageFactory, membershipManager, 
-                failureDetectionListeners, failureUpdatePeriod, failureHistoryPeriod, maxShunCount);
-            preparedMembershipListeners.add(failureDetectionProtocol);
-            failureObservers.add(failureDetectionProtocol);
-            
-            DiscoveryProtocol discoveryProtocol = new DiscoveryProtocol(channelName, messageFactory, membershipManager, 
-                failureDetectionProtocol, discoveryStrategy, liveNodeProvider, discoveryPeriod, 
-                groupFormationPeriod);
-            preparedMembershipListeners.add(discoveryProtocol);
-            membershipListeners.add(discoveryProtocol);
-            membershipManager.setNodeDiscoverer(discoveryProtocol);
-            
-            TestStateTransferFactory stateTransferFactory = new TestStateTransferFactory();
-            stateTransferFactories.add(stateTransferFactory);
-            
-            TestMessageSender testSender = new TestMessageSender(messageSenders.size(), channelName, messageFactory, 
-                stateTransferFactory, this);
-            protocols.add(testSender);
-            messageSenders.add(testSender);
-            
-            FlowControlProtocol flowControlProtocol = new FlowControlProtocol(channelName, messageFactory, membershipManager);
-            protocols.add(flowControlProtocol);
-            failureDetectionListeners.add(flowControlProtocol);
-            flowControlProtocol.setFailureDetector(failureDetectionProtocol);
-            
-            StateTransferClientProtocol stateTransferClientProtocol = new StateTransferClientProtocol(channelName,
-                messageFactory, membershipManager, stateTransferFactory, stateStore, serializationRegistry, 
-                maxStateTransferPeriod, stateSizeThreshold);
-            protocols.add(stateTransferClientProtocol);
-            discoveryProtocol.setGroupJoinStrategy(stateTransferClientProtocol);
-            failureDetectionListeners.add(stateTransferClientProtocol);
-            clientProtocols.add(stateTransferClientProtocol);
-            
-            StateTransferServerProtocol stateTransferServerProtocol = new StateTransferServerProtocol(channelName, 
-                messageFactory, membershipManager, failureDetectionProtocol, stateTransferFactory, stateStore, serializationRegistry, 
-                saveSnapshotPeriod, transferLogRecordPeriod, transferLogMessagesCount, minLockQueueCapacity);
-            protocols.add(stateTransferServerProtocol);
-            stateTransferServerProtocol.setFlowController(flowControlProtocol);
-            
-            TestDeliveryHandler deliveryHandler = new TestDeliveryHandler();
-            deliveryHandlers.add(deliveryHandler);
-            FailureAtomicMulticastProtocol multicastProtocol = new FailureAtomicMulticastProtocol(channelName, 
-                messageFactory, membershipManager, failureDetectionProtocol, maxBundlingMessageSize, maxBundlingPeriod, 
-                maxBundleSize, maxTotalOrderBundlingMessageCount, maxUnacknowledgedPeriod, maxUnacknowledgedMessageCount, 
-                maxIdleReceiveQueuePeriod, deliveryHandler, true, true, maxUnlockQueueCapacity, minLockQueueCapacity, 
-                serializationRegistry);
-            protocols.add(multicastProtocol);
-            failureDetectionListeners.add(multicastProtocol);
-            multicastProtocol.setRemoteFlowController(flowControlProtocol);
-            multicastProtocol.setLocalFlowController(testSender);
-            flowControlProtocol.setFlowController(multicastProtocol);
-            
-            FlushParticipantProtocol flushParticipantProtocol = new FlushParticipantProtocol(channelName, messageFactory, 
-                Arrays.<IFlushParticipant>asList(stateTransferClientProtocol, stateTransferServerProtocol, multicastProtocol,
-                    testSender), membershipManager, failureDetectionProtocol);
-            protocols.add(flushParticipantProtocol);
-            FlushCoordinatorProtocol flushCoordinatorProtocol = new FlushCoordinatorProtocol(channelName, messageFactory, 
-                membershipManager, failureDetectionProtocol, flushTimeout, flushParticipantProtocol);
-            failureDetectionListeners.add(flushCoordinatorProtocol);
-            protocols.add(flushCoordinatorProtocol);
-
-            DataExchangeProtocol dataExchangeProtocol = new DataExchangeProtocol(channelName, messageFactory, membershipManager,
-                failureDetectionProtocol, Arrays.<IDataExchangeProvider>asList(), dataExchangePeriod);
-            membershipListeners.add(dataExchangeProtocol);
-            protocols.add(dataExchangeProtocol);
-            failureDetectionListeners.add(dataExchangeProtocol);
-            
-            protocols.add(discoveryProtocol);
-            protocols.add(failureDetectionProtocol);
-            
-            membershipTracker = new MembershipTracker(1000, membershipManager, discoveryProtocol, 
-                failureDetectionProtocol, flushCoordinatorProtocol, null);
-            
-            gracefulCloseStrategies.add(flushCoordinatorProtocol);
-            gracefulCloseStrategies.add(flushParticipantProtocol);
-            gracefulCloseStrategies.add(membershipTracker);
-        }
-        
-        @Override
-        protected void wireProtocols(Channel channel, TcpTransport transport, ProtocolStack protocolStack)
-        {
-            FailureDetectionProtocol failureDetectionProtocol = protocolStack.find(FailureDetectionProtocol.class);
-            failureDetectionProtocol.setFailureObserver(transport);
-            failureDetectionProtocol.setChannelReconnector((IChannelReconnector)channel);
-            channel.getCompartment().addTimerProcessor(membershipTracker);
-            
-            GroupNodeTrackingStrategy strategy = (GroupNodeTrackingStrategy)protocolStack.find(HeartbeatProtocol.class).getNodeTrackingStrategy();
-            strategy.setFailureDetector(failureDetectionProtocol);
-            strategy.setMembershipManager((IMembershipManager)failureDetectionProtocol.getMembersipService());
-            
-            StateTransferClientProtocol stateTransferClientProtocol = protocolStack.find(StateTransferClientProtocol.class);
-            stateTransferClientProtocol.setChannelReconnector((IChannelReconnector)channel);
-            stateTransferClientProtocol.setCompartment(channel.getCompartment());
-            
-            StateTransferServerProtocol stateTransferServerProtocol = protocolStack.find(StateTransferServerProtocol.class);
-            stateTransferServerProtocol.setCompartment(channel.getCompartment());
-            
-            FailureAtomicMulticastProtocol multicastProtocol = protocolStack.find(FailureAtomicMulticastProtocol.class);
-            multicastProtocol.setCompartment(channel.getCompartment());
-            channel.getCompartment().addProcessor(multicastProtocol);
-        }
-        
-        @Override
-        protected Channel createChannel(String channelName, ChannelObserver channelObserver, LiveNodeManager liveNodeManager,
-            MessageFactory messageFactory, ProtocolStack protocolStack, TcpTransport transport,
-            ConnectionManager connectionManager, ICompartment compartment)
-        {
-            return new GroupChannel(channelName, liveNodeManager, channelObserver, protocolStack, transport, messageFactory, 
-                connectionManager, compartment, membershipManager, gracefulCloseStrategies, gracefulCloseTimeout);
         }
     }
 }

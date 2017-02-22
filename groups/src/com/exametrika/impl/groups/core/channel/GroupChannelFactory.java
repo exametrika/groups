@@ -9,6 +9,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import com.exametrika.api.groups.core.IGroupChannel;
 import com.exametrika.api.groups.core.IMembershipListener;
 import com.exametrika.common.compartment.ICompartment;
 import com.exametrika.common.io.ISerializationRegistry;
@@ -70,8 +71,8 @@ public class GroupChannelFactory extends ChannelFactory
     
     public static class GroupFactoryParameters extends FactoryParameters
     {
-        public final long discoveryPeriod = 500;
-        public final long groupFormationPeriod = 10000;
+        public long discoveryPeriod = 500;
+        public long groupFormationPeriod = 10000;
         public long failureUpdatePeriod = 500;
         public long failureHistoryPeriod = 600000;
         public int maxShunCount = 3;
@@ -84,15 +85,15 @@ public class GroupChannelFactory extends ChannelFactory
         public long transferLogRecordPeriod = 1000;
         public int transferLogMessagesCount = 2;
         public int minLockQueueCapacity = 10000000;
+        public int maxUnlockQueueCapacity = 100000;
         public long dataExchangePeriod = 200;
-        public int maxBundlingMessageSize;
-        public long maxBundlingPeriod;
-        public int maxBundleSize;
-        public int maxTotalOrderBundlingMessageCount;
-        public long maxUnacknowledgedPeriod;
-        public int maxUnacknowledgedMessageCount;
-        public long maxIdleReceiveQueuePeriod;
-        public int maxUnlockQueueCapacity;
+        public int maxBundlingMessageSize = 10000;
+        public long maxBundlingPeriod = 100;
+        public int maxBundleSize = 10000;
+        public int maxTotalOrderBundlingMessageCount = 10;
+        public long maxUnacknowledgedPeriod = 100;
+        public int maxUnacknowledgedMessageCount = 100;
+        public long maxIdleReceiveQueuePeriod = 600000;
         public IFlushCondition flushCondition;
         
         public GroupFactoryParameters()
@@ -112,7 +113,7 @@ public class GroupChannelFactory extends ChannelFactory
     
     public static class GroupParameters extends Parameters
     {
-        public IPropertyProvider propertyProvider= new SystemPropertyProvider();
+        public IPropertyProvider propertyProvider = new SystemPropertyProvider();
         public IDiscoveryStrategy discoveryStrategy;
         public IStateStore stateStore;
         public IStateTransferFactory stateTransferFactory;
@@ -128,6 +129,11 @@ public class GroupChannelFactory extends ChannelFactory
     public GroupChannelFactory(GroupFactoryParameters factoryParameters)
     {
         super(factoryParameters);
+    }
+    
+    public IGroupChannel createChannel(GroupParameters parameters)
+    {
+        return (IGroupChannel)super.createChannel(parameters);
     }
     
     @Override
