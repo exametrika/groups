@@ -30,6 +30,9 @@ import com.exametrika.common.messaging.IMessage;
 import com.exametrika.common.messaging.IMessagePart;
 import com.exametrika.common.messaging.IReceiver;
 import com.exametrika.common.messaging.ISink;
+import com.exametrika.common.messaging.impl.Channel;
+import com.exametrika.common.messaging.impl.protocols.ProtocolStack;
+import com.exametrika.common.messaging.impl.transports.tcp.TcpTransport;
 import com.exametrika.common.tasks.IFlowController;
 import com.exametrika.common.tests.Sequencer;
 import com.exametrika.common.utils.Assert;
@@ -45,6 +48,7 @@ import com.exametrika.impl.groups.core.channel.GroupChannelFactory;
 import com.exametrika.impl.groups.core.channel.GroupChannelFactory.GroupFactoryParameters;
 import com.exametrika.impl.groups.core.channel.GroupChannelFactory.GroupParameters;
 import com.exametrika.impl.groups.core.discovery.WellKnownAddressesDiscoveryStrategy;
+import com.exametrika.impl.groups.core.flush.FlushParticipantProtocol;
 import com.exametrika.impl.groups.core.flush.IFlush;
 import com.exametrika.impl.groups.core.flush.IFlushParticipant;
 import com.exametrika.impl.groups.core.membership.Memberships;
@@ -61,7 +65,6 @@ import com.exametrika.spi.groups.IStateTransferServer;
  */
 public class MulticastProtocolTests
 {
-    // TODO: подключить флаш партисипант через тестовую фабрику группового канала
     private static final int COUNT = 2;// TODO:10;
     private static final long SEND_COUNT = Long.MAX_VALUE;
     private Set<String> wellKnownAddresses= new HashSet<String>();
@@ -247,7 +250,7 @@ public class MulticastProtocolTests
     {
         for (int i = 0; i < COUNT; i++)
         {
-            GroupChannelFactory channelFactory = new GroupChannelFactory(factoryParameters);
+            TestGroupChannelFactory channelFactory = new TestGroupChannelFactory(factoryParameters);
             IGroupChannel channel = channelFactory.createChannel(parameters.get(i));
             if (!skipIndexes.contains(i))
             {
@@ -614,7 +617,7 @@ public class MulticastProtocolTests
         }
     }
     
-    public static class TestFeed implements IFeed
+    private static class TestFeed implements IFeed
     {
         private long count;
         
@@ -627,6 +630,23 @@ public class MulticastProtocolTests
                 if (!sink.send(message))
                     break;
             }
+        }
+    }
+    
+    private class TestGroupChannelFactory extends GroupChannelFactory
+    {
+        public TestGroupChannelFactory(GroupFactoryParameters factoryParameters)
+        {
+            super(factoryParameters);
+        }
+        
+        @Override
+        protected void wireProtocols(Channel channel, TcpTransport transport, ProtocolStack protocolStack)
+        {
+            FlushParticipantProtocol flushParticipantProtocol = protocolStack.find(FlushParticipantProtocol.class);
+            TestFlushParticipant flushParticipant = new TestFlushParticipant();
+            flushParticipants.add(flushParticipant);
+            flushParticipantProtocol.getParticipants().add(flushParticipant);
         }
     }
 }

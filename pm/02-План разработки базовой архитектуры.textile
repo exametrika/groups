@@ -1,0 +1,46 @@
+h1. План
+
+1-й этап:
+* GMS service
+  - discovery
+  - failure detection
+  - membership
+  - управление группами
+* worker node state transfer
+  - загрузка и созранение во внешнем хранилище
+  - перенос состояние при входев группу
+  - перенос состояние при миграции шардов
+* failure atomic multicast
+  - in group node-group failure atomic/safe multicast
+  - out group node-group failure atomic/safe multicast
+  - group-group failure atomic/safe multicast
+  - node pool-group/group-node pool unicast
+  - request-response anycast  
+  - request-response multicast
+  - read-your-write unicast
+* внешнее соединение с кластером
+
+2-й этап:
+* прикладные сервисы
+* поддержка доменов
+* поддержка несколькиз датацентров
+
+h1. Реализация
+
+Делаем в пакете cluster.
+
+GMS Discovery:
+* реализуются по аналогии с core DiscoveryProtocol'ом в варианте подключения к существующему кластеру, разделенные на клиентскую и серверную части
+* WorkerDiscoveryProtocol - инициация входа в кластер состороны рабочего узла
+* CoreDiscoveryProtocol - поддержка входа рабочего узла стороны core узла. Результат список новых рабочих узлов на координаторе core группы, готовых для входа в кластер
+
+GMS Failure detector:
+* CoreFailureDetectionProtocol - отслеживание и рассылка сбоев рабочиз узлов со стороны core узла
+* WorkerFailureDetectionProtocol - прием информации о сбоях и отслеживание core узлов
+
+Membership:
+* универсальная структура, которая по заданному типу позволяет получить данные членства этого типа (узлов, групп, маппинга рабочих на core узлы и др.)
+
+MembershipService:
+* формирование инсталляция нового членства по узлам кластера, а также механика уведомления о смене членства. Формирование идет на основе данныз сторонних провайдеров
+* реализуется несколькими компоннтами и протоколами отдельно для рабочиз и отдельно для core узлов

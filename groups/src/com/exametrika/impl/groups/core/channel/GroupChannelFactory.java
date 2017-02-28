@@ -210,9 +210,12 @@ public class GroupChannelFactory extends ChannelFactory
         multicastProtocol.setLocalFlowController(groupParameters.localFlowController);
         flowControlProtocol.setFlowController(multicastProtocol);
         
+        List<IFlushParticipant> flushParticipants = new ArrayList<IFlushParticipant>();
+        flushParticipants.add(stateTransferClientProtocol);
+        flushParticipants.add(stateTransferServerProtocol);
+        flushParticipants.add(multicastProtocol);
         FlushParticipantProtocol flushParticipantProtocol = new FlushParticipantProtocol(channelName, messageFactory, 
-            Arrays.<IFlushParticipant>asList(stateTransferClientProtocol, stateTransferServerProtocol, multicastProtocol),
-            membershipManager, failureDetectionProtocol);
+           flushParticipants, membershipManager, failureDetectionProtocol);
         protocols.add(flushParticipantProtocol);
         FlushCoordinatorProtocol flushCoordinatorProtocol = new FlushCoordinatorProtocol(channelName, messageFactory, 
             membershipManager, failureDetectionProtocol, groupFactoryParameters.flushTimeout, flushParticipantProtocol);
