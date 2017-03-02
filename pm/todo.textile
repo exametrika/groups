@@ -7,9 +7,8 @@
 --------------
 Base part:
 * cluster membership и все что с ним связано (по аналонии с простым)
-  - membership, change, delta, serializer
   - tracker, installing protocol (core, worker)
-  - providers (подлержать node membership для начала)
+  - providers (подлержать node membership, workerToCore membership для начала)
   - listener, event
 * failure detector
   - worker (failure node history, фильтрация сообщений от сбойных, send shun сбойным и reconnect on shun, сбои формируются на узле по новому членству)
@@ -27,5 +26,6 @@ Base part:
   - и еще нужно не запутаться при посылке сообщений между каналами, нужно иметь в протоколе соотв. сендера, а не просто посылать в свой стек
   - сейчас такая возможность есть, просто создаем общего tcp диспетчера и компартмент в канале связи на все транспорты и их стек протоколов
 * WorkerNodeChannel, CoreNodeChannel - каналы рабочего и core узлов
+* поддержать для узлов доп. свойства: роли, параметры производительности, метрики и др.
 --------------
-
+* CoreClusterMembershipProtocol - должен быть выше по стеку чем мультикаст

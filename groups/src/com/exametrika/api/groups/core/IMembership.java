@@ -5,7 +5,7 @@ package com.exametrika.api.groups.core;
 
 
 /**
- * The {@link IMembership} is a cluster membership.
+ * The {@link IMembership} is a group membership.
  * 
  * @threadsafety Implementations of this interface and its methods are thread safe.
  * @author Medvedev-A
@@ -27,7 +27,7 @@ public interface IMembership
      */
     IGroup getGroup();
 
-   @Override
+    @Override
     boolean equals(Object o);
     
     @Override

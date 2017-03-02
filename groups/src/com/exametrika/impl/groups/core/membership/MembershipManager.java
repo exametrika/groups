@@ -212,8 +212,6 @@ public final class MembershipManager implements IMembershipManager, ILifecycle
     {
         if (membership != null)
             uninstallMembership(LeaveReason.FORCEFUL_CLOSE);
-        
-        localNode = null;
     }
     
     @Override

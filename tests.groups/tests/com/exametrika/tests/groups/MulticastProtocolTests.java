@@ -643,6 +643,8 @@ public class MulticastProtocolTests
         @Override
         protected void wireProtocols(Channel channel, TcpTransport transport, ProtocolStack protocolStack)
         {
+            super.wireProtocols(channel, transport, protocolStack);
+            
             FlushParticipantProtocol flushParticipantProtocol = protocolStack.find(FlushParticipantProtocol.class);
             TestFlushParticipant flushParticipant = new TestFlushParticipant();
             flushParticipants.add(flushParticipant);

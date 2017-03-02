@@ -52,8 +52,8 @@ public final class Membership implements IMembership
         if (!(o instanceof Membership))
             return false;
 
-        Membership member = (Membership)o;
-        return id == member.id;
+        Membership membership = (Membership)o;
+        return id == membership.id;
     }
 
     @Override
