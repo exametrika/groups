@@ -53,6 +53,13 @@ public interface INode extends Comparable<INode>
      */
     Map<String, Object> getProperties();
     
+    /**
+     * Returns domain.
+     *
+     * @return domain
+     */
+    String getDomain();
+    
     @Override
     public abstract boolean equals(Object o);
     

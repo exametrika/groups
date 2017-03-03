@@ -16,17 +16,17 @@ import java.util.List;
 public interface IClusterMembershipChange
 {
     /**
-     * Returns membership element change.
+     * Finds domain by name.
      *
-     * @param changeClass change class
-     * @return membership element change
+     * @param name dimain name
+     * @return domain
      */
-    <T extends IClusterMembershipElementChange> T getChange(Class<T> changeClass);
+    IDomainMembershipChange findDomain(String name);
     
     /**
-     * Returns list of all membership elements changes.
+     * Returns list of all cluster domains.
      *
-     * @return list of all membership elements changes
+     * @return list of all cluster domains
      */
-    List<IClusterMembershipElementChange> getChanges();
+    List<IDomainMembershipChange> getDomains();
 }

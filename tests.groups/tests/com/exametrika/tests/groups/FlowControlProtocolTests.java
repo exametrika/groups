@@ -356,7 +356,7 @@ public class FlowControlProtocolTests
         public synchronized INode getLocalNode()
         {
             if (localNode == null)
-                localNode = new Node(name, provider.getLocalNode(), Collections.<String, Object>emptyMap());
+                localNode = new Node(name, provider.getLocalNode(), Collections.<String, Object>emptyMap(), "core");
             
             return localNode;
         }

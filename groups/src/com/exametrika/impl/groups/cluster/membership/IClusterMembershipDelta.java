@@ -30,9 +30,9 @@ public interface IClusterMembershipDelta
     boolean isFull();
     
     /**
-     * Returns list of all membership elements deltas.
+     * Returns list of all domain deltas.
      *
-     * @return list of all membership elements deltas
+     * @return list of all domain deltas
      */
-    List<IClusterMembershipElementDelta> getDeltas();
+    List<IDomainMembershipDelta> getDomains();
 }

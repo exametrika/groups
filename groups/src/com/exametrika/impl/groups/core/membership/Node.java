@@ -23,17 +23,20 @@ public final class Node implements INode
     private final String name;
     private final IAddress address;
     private final Map<String, Object> properties;
+    private final String domain;
 
-    public Node(String name, IAddress address, Map<String, Object> properties)
+    public Node(String name, IAddress address, Map<String, Object> properties, String domain)
     {
         Assert.notNull(name);
         Assert.notNull(address);
         Assert.notNull(properties);
+        Assert.notNull(domain);
 
         this.id = address.getId();
         this.name = name;
         this.address = address;
         this.properties = Immutables.wrap(properties);
+        this.domain = domain;
     }
 
     @Override
@@ -69,6 +72,12 @@ public final class Node implements INode
     }
     
     @Override
+    public String getDomain()
+    {
+        return domain;
+    }
+    
+    @Override
     public int compareTo(INode o)
     {
         return id.compareTo(o.getId());
@@ -96,6 +105,6 @@ public final class Node implements INode
     @Override
     public String toString()
     {
-        return name;
+        return name + "@" + domain;
     }
 }

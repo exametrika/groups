@@ -41,7 +41,7 @@ import com.exametrika.impl.groups.core.membership.IPreparedMembershipListener;
  * @threadsafety This class and its methods are not thread safe.
  * @author Medvedev-A
  */
-public final class CoreFailureDetectionProtocol extends AbstractProtocol implements IFailureDetector, IPreparedMembershipListener,
+public final class CoreFailureDetectionProtocol extends AbstractProtocol implements IWorkerFailureDetector, IPreparedMembershipListener,
     IFailureObserver
 {
     private static final IMessages messages = Messages.get(IMessages.class);

@@ -22,19 +22,19 @@ public interface IClusterMembership
     long getId();
 
     /**
-     * Returns membership element.
+     * Finds domain by name.
      *
-     * @param elementClass element class
-     * @return membership element
+     * @param name dimain name
+     * @return domain
      */
-    <T extends IClusterMembershipElement> T getElement(Class<T> elementClass);
+    IDomainMembership findDomain(String name);
     
     /**
-     * Returns list of all membership elements.
+     * Returns list of all cluster domains.
      *
-     * @return list of all membership elements
+     * @return list of all cluster domains
      */
-    List<IClusterMembershipElement> getElements();
+    List<IDomainMembership> getDomains();
 
     @Override
     boolean equals(Object o);

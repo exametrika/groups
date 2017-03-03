@@ -26,6 +26,7 @@ import com.exametrika.common.utils.Assert;
 import com.exametrika.common.utils.Exceptions;
 import com.exametrika.common.utils.ILifecycle;
 import com.exametrika.common.utils.Strings;
+import com.exametrika.impl.groups.core.membership.Memberships;
 import com.exametrika.impl.groups.core.membership.Node;
 import com.exametrika.spi.groups.IPropertyProvider;
 
@@ -168,7 +169,7 @@ public final class ClusterMembershipManager implements IClusterMembershipManager
         else
         {
             localNode = new Node(liveNodeProvider.getLocalNode().getName(), 
-                liveNodeProvider.getLocalNode(), propertyProvider.getProperties());
+                liveNodeProvider.getLocalNode(), propertyProvider.getProperties(), Memberships.CORE_DOMAIN);
         }
     }
     

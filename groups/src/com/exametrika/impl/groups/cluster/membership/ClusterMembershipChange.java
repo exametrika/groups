@@ -3,10 +3,12 @@
  */
 package com.exametrika.impl.groups.cluster.membership;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import com.exametrika.api.groups.cluster.IClusterMembershipChange;
-import com.exametrika.api.groups.cluster.IClusterMembershipElementChange;
+import com.exametrika.api.groups.cluster.IDomainMembershipChange;
 import com.exametrika.common.utils.Assert;
 import com.exametrika.common.utils.Immutables;
 import com.exametrika.common.utils.Strings;
@@ -19,38 +21,39 @@ import com.exametrika.common.utils.Strings;
  */
 public final class ClusterMembershipChange implements IClusterMembershipChange
 {
-    private final List<IClusterMembershipElementChange> changes;
+    private final List<IDomainMembershipChange> domains;
+    private final Map<String, IDomainMembershipChange> domainsMap;
 
-    public ClusterMembershipChange(List<IClusterMembershipElementChange> changes)
+    public ClusterMembershipChange(List<IDomainMembershipChange> domains)
     {
-        Assert.notNull(changes);
+        Assert.notNull(domains);
 
-        this.changes = Immutables.wrap(changes);
+        this.domains = Immutables.wrap(domains);
+        
+        Map<String, IDomainMembershipChange> domainsMap = new HashMap<String, IDomainMembershipChange>();
+        for (IDomainMembershipChange domain : domains)
+            domainsMap.put(domain.getName(), domain);
+        
+        this.domainsMap = domainsMap;
     }
 
     @Override
-    public <T extends IClusterMembershipElementChange> T getChange(Class<T> changeClass)
+    public IDomainMembershipChange findDomain(String name)
     {
-        Assert.notNull(changeClass);
+        Assert.notNull(name);
         
-        for (IClusterMembershipElementChange change : changes)
-        {
-            if (changeClass.isInstance(change))
-                return (T)change;
-        }
-        
-        return Assert.error();
+        return domainsMap.get(name);
     }
     
     @Override
-    public List<IClusterMembershipElementChange> getChanges()
+    public List<IDomainMembershipChange> getDomains()
     {
-        return changes;
+        return domains;
     }
 
     @Override
     public String toString()
     {
-        return Strings.toString(changes, false);
+        return Strings.toString(domains, false);
     }
 }

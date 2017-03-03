@@ -20,6 +20,7 @@ public final class ClusterMembershipSerializationRegistrar implements ISerializa
     public void register(ISerializationRegistry registry)
     {
         registry.register(new ClusterMembershipDeltaSerializer());
+        registry.register(new DomainMembershipDeltaSerializer());
         registry.register(new NodeMembershipDeltaSerializer());
         registry.register(new WorkerToCoreMembershipDeltaSerializer());
         registry.register(new NodeSerializer());
@@ -30,6 +31,7 @@ public final class ClusterMembershipSerializationRegistrar implements ISerializa
     public void unregister(ISerializationRegistry registry)
     {
         registry.unregister(ClusterMembershipDeltaSerializer.ID);
+        registry.unregister(DomainMembershipDeltaSerializer.ID);
         registry.unregister(NodeMembershipDeltaSerializer.ID);
         registry.unregister(WorkerToCoreMembershipDeltaSerializer.ID);
         registry.unregister(NodeSerializer.ID);

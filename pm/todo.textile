@@ -7,9 +7,7 @@
 --------------
 Base part:
 * cluster membership и все что с ним связано (по аналонии с простым)
-  - tracker, installing protocol (core, worker)
   - providers (подлержать node membership, workerToCore membership для начала)
-  - listener, event
 * failure detector
   - worker (failure node history, фильтрация сообщений от сбойных, send shun сбойным и reconnect on shun, сбои формируются на узле по новому членству)
   - core 

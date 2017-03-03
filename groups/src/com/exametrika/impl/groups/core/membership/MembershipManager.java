@@ -202,7 +202,7 @@ public final class MembershipManager implements IMembershipManager, ILifecycle
         Assert.checkState(nodeDiscoverer != null);
         
         localNode = new Node(liveNodeProvider.getLocalNode().getName(), 
-            liveNodeProvider.getLocalNode(), propertyProvider.getProperties());
+            liveNodeProvider.getLocalNode(), propertyProvider.getProperties(), Memberships.CORE_DOMAIN);
         
         nodeDiscoverer.startDiscovery();
     }

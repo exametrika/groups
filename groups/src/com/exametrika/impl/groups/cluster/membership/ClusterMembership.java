@@ -3,10 +3,12 @@
  */
 package com.exametrika.impl.groups.cluster.membership;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import com.exametrika.api.groups.cluster.IClusterMembership;
-import com.exametrika.api.groups.cluster.IClusterMembershipElement;
+import com.exametrika.api.groups.cluster.IDomainMembership;
 import com.exametrika.common.l10n.DefaultMessage;
 import com.exametrika.common.l10n.ILocalizedMessage;
 import com.exametrika.common.l10n.Messages;
@@ -24,15 +26,22 @@ public final class ClusterMembership implements IClusterMembership
 {
     private static final IMessages messages = Messages.get(IMessages.class);
     private final long id;
-    private final List<IClusterMembershipElement> elements;
+    private final List<IDomainMembership> domains;
+    private final Map<String, IDomainMembership> domainsMap;
 
-    public ClusterMembership(long id, List<IClusterMembershipElement> elements)
+    public ClusterMembership(long id, List<IDomainMembership> domains)
     {
         Assert.isTrue(id > 0);
-        Assert.notNull(elements);
+        Assert.notNull(domains);
 
         this.id = id;
-        this.elements = Immutables.wrap(elements);
+        this.domains = Immutables.wrap(domains);
+        
+        Map<String, IDomainMembership> domainsMap = new HashMap<String, IDomainMembership>();
+        for (IDomainMembership domain : domains)
+            domainsMap.put(domain.getName(), domain);
+        
+        this.domainsMap = domainsMap;
     }
 
     @Override
@@ -42,23 +51,17 @@ public final class ClusterMembership implements IClusterMembership
     }
 
     @Override
-    public <T extends IClusterMembershipElement> T getElement(Class<T> elementClass)
+    public IDomainMembership findDomain(String name)
     {
-        Assert.notNull(elementClass);
+        Assert.notNull(name);
         
-        for (IClusterMembershipElement element : elements)
-        {
-            if (elementClass.isInstance(element))
-                return (T)element;
-        }
-        
-        return Assert.error();
+        return domainsMap.get(name);
     }
     
     @Override
-    public List<IClusterMembershipElement> getElements()
+    public List<IDomainMembership> getDomains()
     {
-        return elements;
+        return domains;
     }
 
     @Override
@@ -83,12 +86,12 @@ public final class ClusterMembership implements IClusterMembership
     @Override
     public String toString()
     {
-        return messages.toString(id, Strings.toString(elements, true)).toString();
+        return messages.toString(id, Strings.toString(domains, true)).toString();
     }
     
     private interface IMessages
     {
-        @DefaultMessage("id : {0}, elements: \n{1}")
+        @DefaultMessage("id : {0}, domains: \n{1}")
         ILocalizedMessage toString(long id, String elements);
     }
 }

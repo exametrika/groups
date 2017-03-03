@@ -44,7 +44,9 @@ public final class NodeSerializer extends AbstractSerializer
             properties.put(key, value);
         }
         
-        return new Node(name, address, properties);
+        String domain = deserialization.readString();
+        
+        return new Node(name, address, properties, domain);
     }
 
     @Override
@@ -61,5 +63,7 @@ public final class NodeSerializer extends AbstractSerializer
             serialization.writeString(entry.getKey());
             serialization.writeObject(entry.getValue());
         }
+        
+        serialization.writeString(node.getDomain());
     }
 }

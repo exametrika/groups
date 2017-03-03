@@ -29,6 +29,7 @@ public final class Memberships
 {
     public static final UUID CORE_GROUP_ID = UUID.fromString("d2ea2d73-c7ee-492b-a532-7a81fc74fe8c");
     public static final String CORE_GROUP_NAME = "core"; 
+    public static final String CORE_DOMAIN = "core"; 
     public static final GroupAddress CORE_GROUP_ADDRESS = new GroupAddress(CORE_GROUP_ID, CORE_GROUP_NAME);
     
     public static class MembershipDeltaInfo

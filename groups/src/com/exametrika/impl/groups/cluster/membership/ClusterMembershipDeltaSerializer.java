@@ -33,11 +33,11 @@ public final class ClusterMembershipDeltaSerializer extends AbstractSerializer
         long newMembershipId = deserialization.readLong();
         boolean full = deserialization.readBoolean();
         int count = deserialization.readInt();
-        List<IClusterMembershipElementDelta> deltas = new ArrayList<IClusterMembershipElementDelta>(count);
+        List<IDomainMembershipDelta> domains = new ArrayList<IDomainMembershipDelta>(count);
         for (int i = 0; i < count; i++)
-            deltas.add(deserialization.<IClusterMembershipElementDelta>readObject());
+            domains.add(deserialization.<IDomainMembershipDelta>readObject());
         
-        return new ClusterMembershipDelta(newMembershipId, full, deltas);
+        return new ClusterMembershipDelta(newMembershipId, full, domains);
     }
 
     @Override
@@ -47,8 +47,8 @@ public final class ClusterMembershipDeltaSerializer extends AbstractSerializer
 
         serialization.writeLong(delta.getId());
         serialization.writeBoolean(delta.isFull());
-        serialization.writeInt(delta.getDeltas().size());
-        for (IClusterMembershipElementDelta elementDelta : delta.getDeltas())
+        serialization.writeInt(delta.getDomains().size());
+        for (IDomainMembershipDelta elementDelta : delta.getDomains())
             serialization.writeObject(elementDelta);
     }
 }
