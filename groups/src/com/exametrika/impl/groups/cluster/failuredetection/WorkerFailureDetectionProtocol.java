@@ -319,8 +319,8 @@ public final class WorkerFailureDetectionProtocol extends AbstractProtocol
         else if (message.getPart() instanceof FailureUpdateMessagePart)
         {
             FailureUpdateMessagePart part = message.getPart();
-            addFailedMembers(part.getFailedMembers());
-            addLeftMembers(part.getLeftMembers());
+            addFailedMembers(part.takeFailedNodes());
+            addLeftMembers(part.takeLeftNodes());
         }
         else
             receiver.receive(message);

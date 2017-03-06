@@ -18,16 +18,16 @@ import com.exametrika.api.groups.core.INode;
 public interface IWorkerFailureDetector
 {
     /**
-     * Returns list of group members of current membership, whose failure has been detected.
+     * Takes list of cluster nodes, whose failure has been detected.
      *
-     * @return list of failed members
+     * @return list of failed nodes
      */
-    Set<INode> getFailedMembers();
+    Set<INode> takeFailedNodes();
     
     /**
-     * Returns list of group members of current membership, which intentionally left the group.
+     * Returns list of cluster nodes, which intentionally left the group.
      *
-     * @return list of left members
+     * @return list of left nodes
      */
-    Set<INode> getLeftMembers();
+    Set<INode> takeLeftNodes();
 }

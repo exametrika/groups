@@ -117,13 +117,13 @@ public final class CoreFailureDetectionProtocol extends AbstractProtocol impleme
     }
     
     @Override
-    public Set<INode> getFailedMembers()
+    public Set<INode> takeFailedNodes()
     {
         return failedMembers;
     }
 
     @Override
-    public Set<INode> getLeftMembers()
+    public Set<INode> takeLeftNodes()
     {
         return leftMembers;
     }
@@ -345,8 +345,8 @@ public final class CoreFailureDetectionProtocol extends AbstractProtocol impleme
         else if (message.getPart() instanceof FailureUpdateMessagePart)
         {
             FailureUpdateMessagePart part = message.getPart();
-            addFailedMembers(part.getFailedMembers());
-            addLeftMembers(part.getLeftMembers());
+            addFailedMembers(part.takeFailedNodes());
+            addLeftMembers(part.takeLeftNodes());
         }
         else
             receiver.receive(message);

@@ -19,13 +19,6 @@ import com.exametrika.api.groups.cluster.IClusterMembershipElementChange;
 public interface IClusterMembershipProvider
 {
     /**
-     * Does provider have membership changes to install?
-     *
-     * @return true if provider has membership changes
-     */
-    boolean hasChanges();
-    
-    /**
      * Returns membership deltas with domain name as key by given membership and provider state.
      *
      * @param membership membership with domain name as key or null if membership is not set, i.e full delta is calculated against empty membership 
@@ -40,6 +33,14 @@ public interface IClusterMembershipProvider
      * @return empty membership delta
      */
     IClusterMembershipElementDelta createEmptyDelta();
+    
+    /**
+     * Is membership empty?
+     *
+     * @param membership membership
+     * @return true if membership is empty
+     */
+    boolean isEmptyMembership(IClusterMembershipElement membership);
     
     /**
      * Creates full membership delta based on given membership.

@@ -86,9 +86,11 @@ public final class CoreClusterMembershipProtocol extends AbstractClusterMembersh
         if (!canInstallMembership(currentTime))
             return;
         
-        installing = true;
-        
         ClusterMembershipDelta delta = createCoreDelta();
+        if (delta == null)
+            return;
+        
+        installing = true;
         send(messageFactory.create(Memberships.CORE_GROUP_ADDRESS, new ClusterMembershipMessagePart(delta)));
     }
 
@@ -145,6 +147,9 @@ public final class CoreClusterMembershipProtocol extends AbstractClusterMembersh
                 com.exametrika.common.utils.Collections.set((ArrayList)list, i, entry.getValue());
             }
         }
+        
+        if (domainDeltas.isEmpty())
+            return null;
         
         List<IDomainMembershipDelta> domains = new ArrayList<IDomainMembershipDelta>();
         for (Map.Entry<String, List<IClusterMembershipElementDelta>> entry : domainDeltas.entrySet())
@@ -232,12 +237,7 @@ public final class CoreClusterMembershipProtocol extends AbstractClusterMembersh
         if (!failureDetector.getFailedMembers().isEmpty() || !failureDetector.getLeftMembers().isEmpty())
             return false;
         
-        for (IClusterMembershipProvider provider : membershipProviders)
-        {
-            if (provider.hasChanges())
-                return true;
-        }
         
-        return false;
+        return true;
     }
 }

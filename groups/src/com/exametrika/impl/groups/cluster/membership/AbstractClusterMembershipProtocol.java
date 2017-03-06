@@ -4,7 +4,9 @@
 package com.exametrika.impl.groups.cluster.membership;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import com.exametrika.api.groups.cluster.IClusterMembership;
 import com.exametrika.api.groups.cluster.IClusterMembershipElement;
@@ -73,6 +75,7 @@ public abstract class AbstractClusterMembershipProtocol extends AbstractProtocol
             }
             
             List<IDomainMembership> domains = new ArrayList<IDomainMembership>();
+            Set<String> domainNames = new HashSet<String>();
             List<IDomainMembershipChange> domainsChanges = new ArrayList<IDomainMembershipChange>();
             for (IDomainMembershipDelta domainDelta : part.getDelta().getDomains())
             {
@@ -103,11 +106,31 @@ public abstract class AbstractClusterMembershipProtocol extends AbstractProtocol
                 
                 IDomainMembership domain = new DomainMembership(domainDelta.getName(), elements);
                 domains.add(domain);
+                domainNames.add(domain.getName());
                 
                 if (oldMembership != null)
                 {
                     IDomainMembershipChange domainChange = new DomainMembershipChange(domainDelta.getName(), changes);
                     domainsChanges.add(domainChange);
+                }
+            }
+            
+            if (oldMembership != null)
+            {
+                for (IDomainMembership oldDomain : oldMembership.getDomains())
+                {
+                    if (!domainNames.contains(oldDomain.getName()))
+                    {
+                        boolean empty = true;
+                        for (int i = 0; i < membershipProviders.size(); i++)
+                        {
+                            if (!membershipProviders.get(i).isEmptyMembership(oldDomain.getElements().get(i)))
+                                break;
+                        }
+                        
+                        if (!empty)
+                            domains.add(oldDomain);
+                    }
                 }
             }
             
