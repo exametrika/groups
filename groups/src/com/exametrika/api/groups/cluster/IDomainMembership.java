@@ -22,12 +22,12 @@ public interface IDomainMembership
     String getName();
     
     /**
-     * Returns membership element.
+     * Finds membership element.
      *
      * @param elementClass element class
-     * @return membership element
+     * @return membership element or null if element is not found
      */
-    <T extends IClusterMembershipElement> T getElement(Class<T> elementClass);
+    <T extends IClusterMembershipElement> T findElement(Class<T> elementClass);
     
     /**
      * Returns list of all membership elements.

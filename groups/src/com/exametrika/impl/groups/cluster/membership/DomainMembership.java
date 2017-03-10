@@ -42,7 +42,7 @@ public final class DomainMembership implements IDomainMembership
     }
     
     @Override
-    public <T extends IClusterMembershipElement> T getElement(Class<T> elementClass)
+    public <T extends IClusterMembershipElement> T findElement(Class<T> elementClass)
     {
         Assert.notNull(elementClass);
         
@@ -52,7 +52,7 @@ public final class DomainMembership implements IDomainMembership
                 return (T)element;
         }
         
-        return Assert.error();
+        return null;
     }
     
     @Override

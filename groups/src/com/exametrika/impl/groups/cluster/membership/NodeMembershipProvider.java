@@ -5,18 +5,17 @@ package com.exametrika.impl.groups.cluster.membership;
 
 import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
 import com.exametrika.api.groups.cluster.IClusterMembershipElement;
 import com.exametrika.api.groups.cluster.IClusterMembershipElementChange;
+import com.exametrika.api.groups.cluster.IDomainMembership;
 import com.exametrika.api.groups.core.INode;
 import com.exametrika.common.utils.Assert;
-import com.exametrika.common.utils.Immutables;
+import com.exametrika.common.utils.Pair;
 import com.exametrika.impl.groups.cluster.discovery.IWorkerNodeDiscoverer;
 import com.exametrika.impl.groups.cluster.failuredetection.IWorkerFailureDetector;
 
@@ -30,6 +29,9 @@ public final class NodeMembershipProvider implements IClusterMembershipProvider
 {
     private final IWorkerNodeDiscoverer nodeDiscoverer;
     private final IWorkerFailureDetector failureDetector;
+    private Set<INode> discoveredNodes;
+    private Set<INode> failedNodes;
+    private Set<INode> leftNodes;
     
     public NodeMembershipProvider(IWorkerNodeDiscoverer nodeDiscoverer, IWorkerFailureDetector failureDetector)
     {
@@ -41,71 +43,88 @@ public final class NodeMembershipProvider implements IClusterMembershipProvider
     }
     
     @Override
-    public Map<String, IClusterMembershipElementDelta> getDeltas(Map<String, IClusterMembershipElement> membership)
+    public Set<String> getDomains()
     {
-        Set<INode> discoveredNodes = nodeDiscoverer.takeDiscoveredNodes();
-        Set<INode> failedNodes = failureDetector.takeFailedNodes();
-        Set<INode> leftNodes = failureDetector.takeLeftNodes();
+        discoveredNodes = nodeDiscoverer.takeDiscoveredNodes();
+        failedNodes = failureDetector.takeFailedNodes();
+        leftNodes = failureDetector.takeLeftNodes();
         
+        Set<String> domains = new LinkedHashSet<String>();
+        for (INode node : discoveredNodes)
+            domains.add(node.getDomain());
+        for (INode node : failedNodes)
+            domains.add(node.getDomain());
+        for (INode node : leftNodes)
+            domains.add(node.getDomain());
+        
+        return domains;
+    }
+    
+    @Override
+    public Pair<IClusterMembershipElement, IClusterMembershipElementDelta> getDelta(IDomainMembership newDomainMembership,
+        IDomainMembershipDelta domainMembershipDelta, IDomainMembership oldDomainMembership, IClusterMembershipElement oldMembership)
+    {
         if (discoveredNodes.isEmpty() && failedNodes.isEmpty() && leftNodes.isEmpty())
-            return java.util.Collections.emptyMap();
+            return new Pair<IClusterMembershipElement, IClusterMembershipElementDelta>(oldMembership, null);
         
-        Map<String, NodeMembershipDelta> map = new LinkedHashMap<String, NodeMembershipDelta>();
+        NodeMembership oldNodeMembership = (NodeMembership)oldMembership;
+        Set<INode> joinedNodes = new LinkedHashSet<INode>();
         for (INode node : discoveredNodes)
         {
-            NodeMembership oldNodeMembership = null;
-            if (membership != null)
-                oldNodeMembership = (NodeMembership)membership.get(node.getDomain());
             if (oldNodeMembership != null && oldNodeMembership.findNode(node.getId()) != null)
                 continue;
             
-            NodeMembershipDelta delta = map.get(node.getDomain());
-            if (delta == null)
-            {
-                delta = new NodeMembershipDelta(new LinkedHashSet<INode>(), new LinkedHashSet<UUID>(), new LinkedHashSet<UUID>());
-                map.put(node.getDomain(), delta);
-            }
-            
-            Immutables.unwrap(delta.getJoinedNodes()).add(node);
+            joinedNodes.add(node);
         }
         
+        Set<UUID> failedNodeIds = new LinkedHashSet<UUID>();
         for (INode node : failedNodes)
         {
-            NodeMembership oldNodeMembership = null;
-            if (membership != null)
-                oldNodeMembership = (NodeMembership)membership.get(node.getDomain());
             if (oldNodeMembership == null || oldNodeMembership.findNode(node.getId()) == null)
                 continue;
             
-            NodeMembershipDelta delta = map.get(node.getDomain());
-            if (delta == null)
-            {
-                delta = new NodeMembershipDelta(new LinkedHashSet<INode>(), new LinkedHashSet<UUID>(), new LinkedHashSet<UUID>());
-                map.put(node.getDomain(), delta);
-            }
-            
-            Immutables.unwrap(delta.getFailedNodes()).add(node.getId());
+            failedNodeIds.add(node.getId());
         }
         
+        Set<UUID> leftNodeIds = new LinkedHashSet<UUID>();
         for (INode node : leftNodes)
         {
-            NodeMembership oldNodeMembership = null;
-            if (membership != null)
-                oldNodeMembership = (NodeMembership)membership.get(node.getDomain());
             if (oldNodeMembership == null || oldNodeMembership.findNode(node.getId()) == null)
                 continue;
             
-            NodeMembershipDelta delta = map.get(node.getDomain());
-            if (delta == null)
+            leftNodeIds.add(node.getId());
+        }
+        IClusterMembershipElementDelta delta = null;
+        if (!joinedNodes.isEmpty() || !failedNodeIds.isEmpty() || !leftNodeIds.isEmpty())
+            delta = new NodeMembershipDelta(joinedNodes, leftNodeIds, failedNodeIds);
+        
+        NodeMembership newNodeMembership = oldNodeMembership;
+        if (delta != null)
+        {
+            List<INode> nodes = new ArrayList<INode>();
+            if (oldNodeMembership != null)
             {
-                delta = new NodeMembershipDelta(new LinkedHashSet<INode>(), new LinkedHashSet<UUID>(), new LinkedHashSet<UUID>());
-                map.put(node.getDomain(), delta);
+                for (INode node : oldNodeMembership.getNodes())
+                {
+                    if (!failedNodeIds.contains(node.getId()) && !leftNodeIds.contains(node.getId()))
+                        nodes.add(node);
+                }
             }
             
-            Immutables.unwrap(delta.getLeftNodes()).add(node.getId());
+            nodes.addAll(joinedNodes);
+            
+            newNodeMembership = new NodeMembership(nodes);
         }
         
-        return (Map)map;
+        return new Pair<IClusterMembershipElement, IClusterMembershipElementDelta>(newNodeMembership, delta);
+    }
+    
+    @Override
+    public void clearState()
+    {
+        discoveredNodes = null;
+        failedNodes = null;
+        leftNodes = null;
     }
     
     @Override
@@ -146,7 +165,7 @@ public final class NodeMembershipProvider implements IClusterMembershipProvider
     }
     
     @Override
-    public IClusterMembershipElement createMembership(IClusterMembershipElementDelta delta,
+    public IClusterMembershipElement createMembership(IDomainMembership newDomainMembership, IClusterMembershipElementDelta delta,
         IClusterMembershipElement oldMembership)
     {
         Assert.notNull(delta);
@@ -171,7 +190,7 @@ public final class NodeMembershipProvider implements IClusterMembershipProvider
     }
 
     @Override
-    public IClusterMembershipElementChange createChange(IClusterMembershipElementDelta delta,
+    public IClusterMembershipElementChange createChange(IDomainMembership newDomainMembership, IClusterMembershipElementDelta delta,
         IClusterMembershipElement oldMembership)
     {
         Assert.notNull(delta);
@@ -194,7 +213,7 @@ public final class NodeMembershipProvider implements IClusterMembershipProvider
     }
 
     @Override
-    public IClusterMembershipElementChange createChange(IClusterMembershipElement newMembership,
+    public IClusterMembershipElementChange createChange(IDomainMembership newDomainMembership, IClusterMembershipElement newMembership,
         IClusterMembershipElement oldMembership)
     {
         Assert.notNull(newMembership);

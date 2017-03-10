@@ -5,9 +5,8 @@ package com.exametrika.impl.groups.cluster.membership;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 import com.exametrika.api.groups.cluster.IClusterMembership;
@@ -18,6 +17,7 @@ import com.exametrika.api.groups.core.INode;
 import com.exametrika.common.messaging.IMessageFactory;
 import com.exametrika.common.messaging.ISender;
 import com.exametrika.common.utils.Assert;
+import com.exametrika.common.utils.Pair;
 import com.exametrika.impl.groups.core.channel.IGracefulCloseStrategy;
 import com.exametrika.impl.groups.core.failuredetection.IFailureDetector;
 import com.exametrika.impl.groups.core.flush.IFlushManager;
@@ -98,7 +98,8 @@ public final class CoreClusterMembershipProtocol extends AbstractClusterMembersh
     protected void onInstalled(IClusterMembership newMembership, ClusterMembershipDelta coreDelta)
     {
         installing = false;
-        WorkerToCoreMembership mapping = newMembership.findDomain(Memberships.CORE_DOMAIN).getElement(WorkerToCoreMembership.class);
+        WorkerToCoreMembership mapping = newMembership.findDomain(Memberships.CORE_DOMAIN).findElement(WorkerToCoreMembership.class);
+        Assert.notNull(mapping);
         Set<INode> workerNodes = mapping.findWorkerNodes(membershipManager.getLocalNode());
         if (workerNodes == null || workerNodes.isEmpty())
         {
@@ -123,52 +124,58 @@ public final class CoreClusterMembershipProtocol extends AbstractClusterMembersh
     private ClusterMembershipDelta createCoreDelta()
     {
         IClusterMembership oldMembership = clusterMembershipManager.getMembership();
-        Map<String, List<IClusterMembershipElementDelta>> domainDeltas = new LinkedHashMap<String, List<IClusterMembershipElementDelta>>();
-        for (int i= 0; i < membershipProviders.size(); i++)
+        
+        Set<String> domainNames = new LinkedHashSet<String>();
+        if (oldMembership != null)
         {
-            Map<String, IClusterMembershipElement> elements = null;
-            elements = new LinkedHashMap<String, IClusterMembershipElement>();
+            for (IDomainMembership domainMembership : oldMembership.getDomains())
+                domainNames.add(domainMembership.getName());
+        }
+        
+        for (int i = 0; i < membershipProviders.size(); i++)
+            domainNames.addAll(membershipProviders.get(i).getDomains());
+        
+        List<IDomainMembershipDelta> domainDeltas = new ArrayList<IDomainMembershipDelta>();
+        for (String domainName : domainNames)
+        {
+            IDomainMembership oldDomainMembership = null;
             if (oldMembership != null)
-            {
-                for (IDomainMembership domain : oldMembership.getDomains())
-                    elements.put(domain.getName(), domain.getElements().get(i));
-            }
+                oldDomainMembership = oldMembership.findDomain(domainName);
             
-            Map<String, IClusterMembershipElementDelta> deltas = membershipProviders.get(i).getDeltas(elements);
+            List<IClusterMembershipElement> elements = new ArrayList<IClusterMembershipElement>();
+            IDomainMembership newDomainMembership = new DomainMembership(domainName, elements);
             
-            for (Map.Entry<String, IClusterMembershipElementDelta> entry : deltas.entrySet())
+            boolean empty = true;
+            List<IClusterMembershipElementDelta> deltas = new ArrayList<IClusterMembershipElementDelta>();
+            DomainMembershipDelta domainMembershipDelta = new DomainMembershipDelta(domainName, deltas);
+            for (int i = 0; i < membershipProviders.size(); i++)
             {
-                List<IClusterMembershipElementDelta> list = domainDeltas.get(entry.getKey());
-                if (list == null)
+                Pair<IClusterMembershipElement, IClusterMembershipElementDelta> pair = membershipProviders.get(i).getDelta(
+                    newDomainMembership, domainMembershipDelta, oldDomainMembership, oldDomainMembership != null ? oldDomainMembership.getElements().get(i) : null);
+                
+                elements.add(pair.getKey());
+                
+                if (pair.getValue() != null)
                 {
-                    list = new ArrayList<IClusterMembershipElementDelta>();
-                    domainDeltas.put(entry.getKey(), list);
+                    deltas.add(pair.getValue());
+                    empty = false;
                 }
-                com.exametrika.common.utils.Collections.set((ArrayList)list, i, entry.getValue());
+                else
+                    deltas.add(membershipProviders.get(i).createEmptyDelta());
             }
+            
+            if (!empty)
+                domainDeltas.add(domainMembershipDelta);
         }
         
         if (domainDeltas.isEmpty())
             return null;
         
-        List<IDomainMembershipDelta> domains = new ArrayList<IDomainMembershipDelta>();
-        for (Map.Entry<String, List<IClusterMembershipElementDelta>> entry : domainDeltas.entrySet())
-        {
-            List<IClusterMembershipElementDelta> list = entry.getValue();
-            for (int i = 0; i < membershipProviders.size(); i++)
-            {
-                if (com.exametrika.common.utils.Collections.get(list, i) == null)
-                    com.exametrika.common.utils.Collections.set((ArrayList)list, i, membershipProviders.get(i).createEmptyDelta());
-            }
-            
-            domains.add(new DomainMembershipDelta(entry.getKey(), list));
-        }
-        
         ClusterMembershipDelta delta;
         if (oldMembership == null)
-            delta = new ClusterMembershipDelta(1, true, domains);
+            delta = new ClusterMembershipDelta(1, true, domainDeltas);
         else
-            delta = new ClusterMembershipDelta(oldMembership.getId(), false, domains);
+            delta = new ClusterMembershipDelta(oldMembership.getId(), false, domainDeltas);
         return delta;
     }
     
@@ -236,7 +243,6 @@ public final class CoreClusterMembershipProtocol extends AbstractClusterMembersh
         
         if (!failureDetector.getFailedMembers().isEmpty() || !failureDetector.getLeftMembers().isEmpty())
             return false;
-        
         
         return true;
     }

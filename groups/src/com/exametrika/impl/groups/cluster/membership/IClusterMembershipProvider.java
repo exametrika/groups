@@ -3,10 +3,12 @@
  */
 package com.exametrika.impl.groups.cluster.membership;
 
-import java.util.Map;
+import java.util.Set;
 
 import com.exametrika.api.groups.cluster.IClusterMembershipElement;
 import com.exametrika.api.groups.cluster.IClusterMembershipElementChange;
+import com.exametrika.api.groups.cluster.IDomainMembership;
+import com.exametrika.common.utils.Pair;
 
 
 /**
@@ -19,14 +21,31 @@ import com.exametrika.api.groups.cluster.IClusterMembershipElementChange;
 public interface IClusterMembershipProvider
 {
     /**
-     * Returns membership deltas with domain name as key by given membership and provider state.
+     * Returns list of domains, used in {@link #getDelta}.
      *
-     * @param membership membership with domain name as key or null if membership is not set, i.e full delta is calculated against empty membership 
-     *        (used for sending to new nodes)
-     * @return membership deltas with domain name as key
+     * @return list of domains, used in {@link #getDelta}
      */
-    Map<String, IClusterMembershipElementDelta> getDeltas(Map<String, IClusterMembershipElement> membership);
+    Set<String> getDomains();
+    
+    /**
+     * Returns membership delta by given old membership and provider state.
+     *
+     * @param newDomainMembership new domain membership
+     * @param domainMembershipDelta domain membership delta
+     * @param oldDomainMembership old domain membership or null if old domain membership is not set
+     * @param oldMembership old membership or null if membership is not set, i.e full delta is calculated against empty membership 
+     *        (used for sending to new nodes)
+     * @return pair of new membership and membership delta, new membership can be null if delta is null and old membership is null,
+     *         delta can be null if nothing changed in provider
+     */
+    Pair<IClusterMembershipElement, IClusterMembershipElementDelta> getDelta(IDomainMembership newDomainMembership,
+        IDomainMembershipDelta domainMembershipDelta, IDomainMembership oldDomainMembership, IClusterMembershipElement oldMembership);
 
+    /**
+     * Clears provider state processed by {@link #getDelta}.
+     */
+    void clearState();
+    
     /**
      * Creates empty membership delta.
      *
@@ -57,27 +76,33 @@ public interface IClusterMembershipProvider
     /**
      * Creates new membership by delta and old membership.
      *
+     * @param newDomainMembership new domain membership (partially built)
      * @param delta membership delta
      * @param oldMembership old membership, can be null (if delta is full)
      * @return new membership
      */
-    IClusterMembershipElement createMembership(IClusterMembershipElementDelta delta, IClusterMembershipElement oldMembership);
+    IClusterMembershipElement createMembership(IDomainMembership newDomainMembership, IClusterMembershipElementDelta delta,
+        IClusterMembershipElement oldMembership);
     
     /**
      * Creates membership change by delta and old membership.
      *
+     * @param newDomainMembership new domain membership (partially built)
      * @param delta delta
      * @param oldMembership old membership
      * @return membership change
      */
-    IClusterMembershipElementChange createChange(IClusterMembershipElementDelta delta, IClusterMembershipElement oldMembership);
+    IClusterMembershipElementChange createChange(IDomainMembership newDomainMembership, IClusterMembershipElementDelta delta, 
+        IClusterMembershipElement oldMembership);
     
     /**
      * Creates membership change between new and old memberships.
      *
+     * @param newDomainMembership new domain membership (partially built)
      * @param newMembership new membership
      * @param oldMembership old membership
      * @return membership change
      */
-    IClusterMembershipElementChange createChange(IClusterMembershipElement newMembership, IClusterMembershipElement oldMembership);
+    IClusterMembershipElementChange createChange(IDomainMembership newDomainMembership, IClusterMembershipElement newMembership, 
+        IClusterMembershipElement oldMembership);
 }

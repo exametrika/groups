@@ -5,11 +5,16 @@ package com.exametrika.impl.groups.cluster.membership;
 
 import java.util.HashMap;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 
 import com.exametrika.api.groups.cluster.IClusterMembershipElement;
 import com.exametrika.api.groups.core.INode;
+import com.exametrika.common.l10n.DefaultMessage;
+import com.exametrika.common.l10n.ILocalizedMessage;
+import com.exametrika.common.l10n.Messages;
 import com.exametrika.common.utils.Assert;
 import com.exametrika.common.utils.Immutables;
 import com.exametrika.common.utils.Strings;
@@ -22,14 +27,25 @@ import com.exametrika.common.utils.Strings;
  */
 public final class WorkerToCoreMembership implements IClusterMembershipElement
 {
+    private static final IMessages messages = Messages.get(IMessages.class);
+    private final List<INode> coreNodes;
+    private final Map<UUID, INode> coreNodesMap;
     private final Map<INode, INode> coreByWorkerMap;
     private final Map<INode, Set<INode>> workersByCoreMap;
 
-    public WorkerToCoreMembership(Map<INode, INode> coreByWorkerMap)
+    public WorkerToCoreMembership(List<INode> coreNodes, Map<INode, INode> coreByWorkerMap)
     {
+        Assert.notNull(coreNodes);
         Assert.notNull(coreByWorkerMap);
 
+        this.coreNodes = Immutables.wrap(coreNodes);
         this.coreByWorkerMap = Immutables.wrap(coreByWorkerMap);
+        
+        Map<UUID, INode> coreNodesMap = new HashMap<UUID, INode>();
+        for (INode coreNode : coreNodes)
+            coreNodesMap.put(coreNode.getId(), coreNode);
+        
+        this.coreNodesMap = coreNodesMap;
         
         Map<INode, Set<INode>> workersByCoreMap = new HashMap<INode, Set<INode>>();
         for (Map.Entry<INode, INode> entry : coreByWorkerMap.entrySet())
@@ -49,6 +65,18 @@ public final class WorkerToCoreMembership implements IClusterMembershipElement
         this.workersByCoreMap = workersByCoreMap;
     }
 
+    public List<INode> getCoreNodes()
+    {
+        return coreNodes;
+    }
+    
+    public INode findCoreNode(UUID nodeId)
+    {
+        Assert.notNull(nodeId);
+        
+        return coreNodesMap.get(nodeId);
+    }
+    
     public Map<INode, INode> getCoreByWorkerMap()
     {
         return coreByWorkerMap;
@@ -71,6 +99,12 @@ public final class WorkerToCoreMembership implements IClusterMembershipElement
     @Override
     public String toString()
     {
-        return Strings.toString(workersByCoreMap.entrySet(), false);
+        return messages.toString(coreNodes.toString(), Strings.toString(workersByCoreMap.entrySet(), true)).toString();
+    }
+    
+    private interface IMessages
+    {
+        @DefaultMessage("core nodes : {0}\nworkers by core: \n{1}")
+        ILocalizedMessage toString(String coreNodes, String workersByCore);
     }
 }

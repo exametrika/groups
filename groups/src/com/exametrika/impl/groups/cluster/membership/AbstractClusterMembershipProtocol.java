@@ -85,9 +85,13 @@ public abstract class AbstractClusterMembershipProtocol extends AbstractProtocol
                     oldDomain = oldMembership.findDomain(domainDelta.getName());
                 List<IClusterMembershipElement> elements = new ArrayList<IClusterMembershipElement>();
                 List<IClusterMembershipElementChange> changes = new ArrayList<IClusterMembershipElementChange>();
+                IDomainMembership domain = new DomainMembership(domainDelta.getName(), elements);
+                domains.add(domain);
+                domainNames.add(domain.getName());
+                
                 for (int i= 0; i < membershipProviders.size(); i++)
                 {
-                    IClusterMembershipElement element = membershipProviders.get(i).createMembership(domainDelta.getDeltas().get(i),
+                    IClusterMembershipElement element = membershipProviders.get(i).createMembership(domain, domainDelta.getDeltas().get(i),
                         (oldDomain != null && !part.getDelta().isFull()) ? oldDomain.getElements().get(i) : null);
                     elements.add(element);
                     
@@ -95,18 +99,14 @@ public abstract class AbstractClusterMembershipProtocol extends AbstractProtocol
                     {
                         IClusterMembershipElementChange change;
                         if (!part.getDelta().isFull())
-                            change = membershipProviders.get(i).createChange(domainDelta.getDeltas().get(i),
+                            change = membershipProviders.get(i).createChange(domain, domainDelta.getDeltas().get(i),
                                 oldDomain.getElements().get(i));
                         else
-                            change = membershipProviders.get(i).createChange(element, oldDomain.getElements().get(i));
+                            change = membershipProviders.get(i).createChange(domain, element, oldDomain.getElements().get(i));
                         
                         changes.add(change);
                     }
                 }
-                
-                IDomainMembership domain = new DomainMembership(domainDelta.getName(), elements);
-                domains.add(domain);
-                domainNames.add(domain.getName());
                 
                 if (oldMembership != null)
                 {

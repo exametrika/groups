@@ -23,6 +23,14 @@ public interface IDomainMembershipDelta
     String getName();
     
     /**
+     * Finds membership element delta.
+     *
+     * @param deltaClass element delta class
+     * @return membership element delta or null if delta is not found
+     */
+    <T extends IClusterMembershipElementDelta> T findDelta(Class<T> deltaClass);
+    
+    /**
      * Returns list of all membership elements deltas.
      *
      * @return list of all membership elements deltas

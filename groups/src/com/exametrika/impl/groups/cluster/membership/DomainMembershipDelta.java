@@ -40,6 +40,20 @@ public final class DomainMembershipDelta implements IDomainMembershipDelta
     }
     
     @Override
+    public <T extends IClusterMembershipElementDelta> T findDelta(Class<T> deltaClass)
+    {
+        Assert.notNull(deltaClass);
+        
+        for (IClusterMembershipElementDelta delta : deltas)
+        {
+            if (deltaClass.isInstance(delta))
+                return (T)delta;
+        }
+        
+        return null;
+    }
+    
+    @Override
     public List<IClusterMembershipElementDelta> getDeltas()
     {
         return deltas;
