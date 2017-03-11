@@ -42,3 +42,49 @@ Base part:
 * доделать failure detector
 * WorkerNodeChannel, CoreNodeChannel - каналы рабочего и core узлов
 * поддержать для узлов доп. свойства: роли, параметры производительности, метрики и др.
+-------------
+Создание адреса:
+* TcpAddressSerializer - сериализация/десериализация
+* TcpChannelHandshaker.deserialize - установка remoteAddress connection'а(connection.setRemoteAddress). InetSocketAddress устанавливается:
+  - для серверного соединения из данных, полученных с клиента
+  - для клиентского из remoteInetAddress соединения
+* TcpAddress.start инициализация локального адреса (TcpTransport.localNode)
+  - для сервера - из локального inet адреса сервера
+  - для клиента - из локального хоста и нулевого порта
+* TcpTransport.createClientConnection инициализация локального адреса  клиентского соединения (connection.setLocalAddress)
+  - для сервера - локальный адрес
+  - для клиента - локальный адрес tcp канала
+* MembershipManagerTests
+
+Использование ITcpAddress.getAddress:
+* TcpAddressSerializer - сериализация/десериализация
+* TcpChannelHandshaker
+  - .disconnect - дисконнект дубликатов
+  - .serialize - сериализация инет адреса клиентского соединения
+* TcpConnection
+  - .dump
+  - .setRemoteAddress
+* TcpTransport
+  - addServerConnection - проверка дубликатов
+  - connect, disconnect, dumpConnection, getLastReadTime, getLastWriteTime, lockFlow, unlockFlow, onNodesFailed, onNodesLeft, register, send - поиск соединения и проверка на локальное соединение
+  - connect, register, send - создание клиентского соединения
+* FailureChannelTests  
+  
+Использование IAddress.getConnection: 
+* добавить  параметр id в getConnection
+* LiveNodeManager - start, onNodesConnected, onNodesFailed, onNodesLeft - - редактирование мапки адрес по строке соединения
+  - регистрировать для всех строк соединения адреса, они уникальны
+* ConnectionManager - connect/disconnect - получение строки 
+соединения для определения провайдера коннекторов  
+  - ConnectionManager - используется в Channel, ProtocolStack и всех его протоколах для каноникализации и установки соединений
+  - нужно связать с transportId
+* тесты
+  
+Transport.localNode:
+* в транспорте для установки локального адреса соединения
+* для установки локального узла LiveNodeManager'а, который испооьзуется везде в протоколах
+
+TcpConnection
+- localAddress - используется при десериализации собщений, при детектировании дубликатов и при сериализации в хендшейкере
+- remoteAddress/remoteInetAddress - используется [Todo:]
+[TODO: IMessage.getSource/.getDestination - передача в качестве данных другим узлам - вощможны проблемы при использовании клиентскиз адресов, к ним нельзя приконнектиться, нужна серверная версия адреса]
