@@ -19,6 +19,7 @@ import com.exametrika.common.l10n.Messages;
 import com.exametrika.common.log.ILogger;
 import com.exametrika.common.log.LogLevel;
 import com.exametrika.common.log.Loggers;
+import com.exametrika.common.messaging.impl.transports.UnicastAddress;
 import com.exametrika.common.net.ITcpChannelHandshaker;
 import com.exametrika.common.net.ITcpPacketChannel;
 import com.exametrika.common.net.TcpPacket;
@@ -185,7 +186,7 @@ public final class TcpChannelHandshaker implements ITcpChannelHandshaker<TcpPack
                 if ((flags & TcpTransport.FLAG_DISCONNECT_REQUEST) == TcpTransport.FLAG_DISCONNECT_REQUEST || 
                     (flags & TcpTransport.FLAG_DUPLICATE) == TcpTransport.FLAG_DUPLICATE)
                 {
-                    if (TcpAddress.compare(connection.getLocalAddress().getAddress(), connection.getRemoteInetAddress()) < 0)
+                    if (TcpUtils.compare(connection.getLocalInetAddress(), connection.getRemoteInetAddress()) < 0)
                     {
                         state = State.DISCONNECTING_SEND;
                         logState();
@@ -231,7 +232,7 @@ public final class TcpChannelHandshaker implements ITcpChannelHandshaker<TcpPack
 
         if (connection.isClient())
         {
-            InetSocketAddress localAddress = connection.getLocalAddress().getAddress();
+            InetSocketAddress localAddress = connection.getLocalInetAddress();
             serialization.writeInt(localAddress.getPort());
             serialization.writeByteArray(new ByteArray(localAddress.getAddress().getAddress()));
         }
@@ -249,6 +250,8 @@ public final class TcpChannelHandshaker implements ITcpChannelHandshaker<TcpPack
         UUID id = Serializers.readUUID(deserialization);
         String name = deserialization.readString();
 
+        UnicastAddress remoteAddress = new UnicastAddress(id, name);
+        InetSocketAddress inetAddress;
         if (!connection.isClient())
         {
             int port = deserialization.readInt();
@@ -256,9 +259,8 @@ public final class TcpChannelHandshaker implements ITcpChannelHandshaker<TcpPack
 
             try
             {
-                TcpAddress remoteAddress = new TcpAddress(id, new InetSocketAddress(
-                    InetAddress.getByAddress(addressData.toByteArray()), port), name);
-                connection.setRemoteAddress(remoteAddress);
+                
+                inetAddress = new InetSocketAddress(InetAddress.getByAddress(addressData.toByteArray()), port);
             }
             catch (UnknownHostException e)
             {
@@ -266,7 +268,10 @@ public final class TcpChannelHandshaker implements ITcpChannelHandshaker<TcpPack
             }
         }
         else
-            connection.setRemoteAddress(new TcpAddress(id, connection.getRemoteInetAddress(), name));
+            inetAddress = connection.getRemoteInetAddress();
+        
+        remoteAddress.setAddress(connection.getTransportId(), inetAddress, TcpUtils.getCanonicalConnectionAddress(inetAddress));
+        connection.setRemoteAddress(remoteAddress);
     }
 
     private enum State

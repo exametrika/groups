@@ -23,11 +23,19 @@ public interface IAddress extends Comparable<IAddress>
     String getName();
     
     /**
+     * Returns number of transport addresses in this address.
+     *
+     * @return number of transport addresses in this address
+     */
+    int getCount();
+    
+    /**
      * Returns canonicalized connection address.
      *
+     * @param transportId transport identifier
      * @return canonicalized connection address
      */
-    String getConnection();
+    String getConnection(int transportId);
     
     /**
      * Returns address unique identifier.

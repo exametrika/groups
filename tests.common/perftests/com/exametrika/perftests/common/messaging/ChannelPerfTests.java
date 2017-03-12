@@ -190,7 +190,7 @@ public class ChannelPerfTests
             client.register(server.getLiveNodeProvider().getLocalNode(), feed);
         }
 
-        client.connect(server.getLiveNodeProvider().getLocalNode().getConnection());
+        client.connect(server.getLiveNodeProvider().getLocalNode().getConnection(0));
         
         connectionSequencer.waitAll(2, CONNECT_TIMEOUT, 0, "Connection.");
     }

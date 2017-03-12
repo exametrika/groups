@@ -42,8 +42,7 @@ public class LiveNodeManagerTests
     {
         channelObserver = new ChannelObserver("test");
         manager = new LiveNodeManager("test", Arrays.<IFailureObserver>asList(channelObserver), channelObserver);
-        localNode = new TestAddress(UUID.randomUUID(), "local");
-        manager.setLocalNode(localNode);
+        localNode = manager.getLocalNode();
         
         manager.start();
         channelObserver.start();
@@ -96,7 +95,7 @@ public class LiveNodeManagerTests
         
         Thread.sleep(100);
         
-        assertThat(manager.getId(), is(4l));
+        assertThat(manager.getId(), is(5l));
         assertThat(manager.getLiveNodes(), is((List)Arrays.asList(localNode)));
         assertThat(manager.isLive(test1), is(false));
         assertThat(manager.isLive(test2), is(false));
@@ -105,7 +104,7 @@ public class LiveNodeManagerTests
         assertThat(manager.findById(test2.getId()), nullValue());
         assertThat(manager.findByName(test2.getName()), nullValue());
         
-        assertThat(listener.failed, is(Arrays.asList(test1)));
+        assertThat(listener.failed, is(Arrays.asList(test1, test1)));
         assertThat(listener.disconnected, is(Arrays.asList(test2)));
         
         listener.connected.clear();
@@ -118,7 +117,7 @@ public class LiveNodeManagerTests
         
         Thread.sleep(100);
         
-        assertThat(manager.getId(), is(5l));
+        assertThat(manager.getId(), is(6l));
         assertThat(listener.connected.isEmpty(), is(true));
         assertThat(listener.failed.isEmpty(), is(true));
         assertThat(listener.disconnected.isEmpty(), is(true));
@@ -129,7 +128,7 @@ public class LiveNodeManagerTests
         
         Thread.sleep(100);
         
-        assertThat(manager.getId(), is(5l));
+        assertThat(manager.getId(), is(7l));
     }
     
     public static class TestChannelListener implements IChannelListener

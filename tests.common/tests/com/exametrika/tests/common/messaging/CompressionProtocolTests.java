@@ -60,11 +60,9 @@ public class CompressionProtocolTests
         receiver = new ReceiverMock();
         node = new TestAddress(UUID.randomUUID(), "node");
         node2 = new TestAddress(UUID.randomUUID(), "node2");
-        localNode = new TestAddress(UUID.randomUUID(), "local");
-        
         
         LiveNodeManager manager = new LiveNodeManager("test", Arrays.<IFailureObserver>asList(new ChannelObserver("test")), new ChannelObserver("test"));
-        manager.setLocalNode(localNode);
+        localNode = manager.setLocalNode(0, "", "");
         
         registry = new SerializationRegistry();
 

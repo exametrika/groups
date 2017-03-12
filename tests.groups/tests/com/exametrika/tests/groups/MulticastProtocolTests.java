@@ -255,7 +255,7 @@ public class MulticastProtocolTests
             if (!skipIndexes.contains(i))
             {
                 channel.start();
-                wellKnownAddresses.add(channel.getLiveNodeProvider().getLocalNode().getConnection());
+                wellKnownAddresses.add(channel.getLiveNodeProvider().getLocalNode().getConnection(0));
             }
             channel.getCompartment().execute(messageSenders.get(i));
             channels[i] = channel;
@@ -324,7 +324,7 @@ public class MulticastProtocolTests
         factoryParameters.gracefulCloseTimeout = 10000;
         factoryParameters.maxStateTransferPeriod = Integer.MAX_VALUE;
         factoryParameters.stateSizeThreshold = 100000;
-        factoryParameters.saveSnapshotPeriod = 1000;
+        factoryParameters.saveSnapshotPeriod = 10000;
         factoryParameters.transferLogRecordPeriod = 1000;
         factoryParameters.transferLogMessagesCount = 2;
         factoryParameters.minLockQueueCapacity = 10000000;

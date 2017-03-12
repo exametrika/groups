@@ -7,6 +7,7 @@ import com.exametrika.common.messaging.IFeed;
 import com.exametrika.common.messaging.IMessage;
 import com.exametrika.common.messaging.IMessageFactory;
 import com.exametrika.common.messaging.ISink;
+import com.exametrika.common.messaging.impl.transports.UnicastAddress;
 import com.exametrika.common.net.ITcpChannel;
 import com.exametrika.common.utils.Assert;
 
@@ -19,14 +20,14 @@ import com.exametrika.common.utils.Assert;
 public final class TcpSink implements ISink
 {
     private TcpConnection connection;
-    private final TcpAddress destination;
+    private final UnicastAddress destination;
     private final IFeed feed;
     private final ITcpSendQueue sendQueue;
     private final IMessageFactory messageFactory;
     private volatile boolean valid = true;
     private volatile boolean ready = true;
 
-    public TcpSink(TcpConnection connection, TcpAddress destination, IFeed feed, ITcpSendQueue sendQueue, 
+    public TcpSink(TcpConnection connection, UnicastAddress destination, IFeed feed, ITcpSendQueue sendQueue, 
         IMessageFactory messageFactory)
     {
         Assert.notNull(connection);
@@ -60,7 +61,7 @@ public final class TcpSink implements ISink
     }
     
     @Override
-    public TcpAddress getDestination()
+    public UnicastAddress getDestination()
     {
         return destination;
     }

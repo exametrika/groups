@@ -270,7 +270,7 @@ public class ChannelFactory
         
         Map<String, IConnectionProvider> connectionProviders = new HashMap<String, IConnectionProvider>();
         connectionProviders.put("tcp", transport);
-        ConnectionManager connectionManager = new ConnectionManager(connectionProviders);
+        ConnectionManager connectionManager = new ConnectionManager(transportParameters.transportId, connectionProviders);
 
         ICompartmentFactory.Parameters compartmentParameters = new ICompartmentFactory.Parameters();
         compartmentParameters.name = transportParameters.channelName;

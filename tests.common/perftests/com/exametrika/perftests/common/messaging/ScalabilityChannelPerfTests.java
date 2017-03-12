@@ -206,7 +206,7 @@ public class ScalabilityChannelPerfTests
                 feeds[i] = new TestFeed(streamOriented, compressed, buffer);
                 clients[i].register(server.getLiveNodeProvider().getLocalNode(), feeds[i]);
             }
-            clients[i].connect(server.getLiveNodeProvider().getLocalNode().getConnection());
+            clients[i].connect(server.getLiveNodeProvider().getLocalNode().getConnection(0));
         }
         
         while (true)

@@ -13,7 +13,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.UUID;
 
 import com.exametrika.common.compartment.ICompartmentTimerProcessor;
 import com.exametrika.common.io.ISerializationRegistrar;
@@ -38,6 +37,9 @@ import com.exametrika.common.messaging.impl.protocols.failuredetection.IFailureO
 import com.exametrika.common.messaging.impl.protocols.failuredetection.ILocalNodeAware;
 import com.exametrika.common.messaging.impl.protocols.failuredetection.INodeAccessTimeProvider;
 import com.exametrika.common.messaging.impl.transports.ITransport;
+import com.exametrika.common.messaging.impl.transports.InetSocketAddressSerializer;
+import com.exametrika.common.messaging.impl.transports.UnicastAddress;
+import com.exametrika.common.messaging.impl.transports.UnicastAddressSerializer;
 import com.exametrika.common.net.ITcpChannel;
 import com.exametrika.common.net.ITcpChannelAcceptor;
 import com.exametrika.common.net.ITcpChannelListener;
@@ -76,6 +78,7 @@ public final class TcpTransport implements ITransport, ITcpChannelAcceptor, ITcp
     private final ILogger logger = Loggers.get(TcpTransport.class);
     private final IMarker marker;
     private final Parameters parameters;
+    private final int transportId;
     private final TcpNioDispatcher dispatcher;
     private final ITcpIncomingMessageHandler incomingMessageHandler;
     private final ITcpSocketChannelFactory socketChannelFactory;
@@ -87,13 +90,14 @@ public final class TcpTransport implements ITransport, ITcpChannelAcceptor, ITcp
     private volatile boolean started;
     private volatile boolean stopped;
     private boolean requestToStop;
-    private TcpAddress localNode;
+    private UnicastAddress localNode;
     private long lastUpdateTime;
     private final Map<InetSocketAddress, TcpConnection> connections = new LinkedHashMap<InetSocketAddress, TcpConnection>();
     private final List<TcpConnection> closedConnections = new LinkedList<TcpConnection>();
 
     public static class Parameters
     {
+        public int transportId;
         public String channelName;
         public TcpNioDispatcher dispatcher;
         public IReceiver receiver;
@@ -140,6 +144,7 @@ public final class TcpTransport implements ITransport, ITcpChannelAcceptor, ITcp
         Assert.isTrue(parameters.clientPart || parameters.serverPart);
         
         this.parameters = parameters;
+        this.transportId = parameters.transportId;
         this.socketChannelFactory = parameters.socketChannelFactory;
         marker = Loggers.getMarker(parameters.channelName);
         timerPeriod = parameters.timerPeriod;
@@ -171,6 +176,11 @@ public final class TcpTransport implements ITransport, ITcpChannelAcceptor, ITcp
             parameters.receiver, parameters.serializationRegistry);
     }
 
+    public int getTransportId()
+    {
+        return transportId;
+    }
+    
     public ITimeService getTimeService()
     {
         return dispatcher;
@@ -189,11 +199,6 @@ public final class TcpTransport implements ITransport, ITcpChannelAcceptor, ITcp
         this.flowController = flowController;
     }
     
-    public static String getCanonicalConnectionAddress(InetSocketAddress address)
-    {
-        return "tcp://" + address.getAddress().getCanonicalHostName() + ":" + address.getPort();
-    }
-    
     public synchronized boolean addServerConnection(TcpConnection serverConnection)
     {
         if (parameters.clientPart)
@@ -210,7 +215,7 @@ public final class TcpTransport implements ITransport, ITcpChannelAcceptor, ITcp
                     return false;
                 }
                 
-                if (TcpAddress.compare(serverConnection.getLocalAddress().getAddress(), clientConnection.getRemoteInetAddress()) < 0)
+                if (TcpUtils.compare(serverConnection.getLocalInetAddress(), clientConnection.getRemoteInetAddress()) < 0)
                 {
                     serverConnection.setDuplicateSend(null);
                     return false;
@@ -239,16 +244,16 @@ public final class TcpTransport implements ITransport, ITcpChannelAcceptor, ITcp
         if (!started || stopped)
             return;
         
-        Assert.isInstanceOf(TcpAddress.class, message.getDestination());
+        Assert.isInstanceOf(UnicastAddress.class, message.getDestination());
         
-        TcpAddress address = (TcpAddress)message.getDestination();
+        UnicastAddress address = (UnicastAddress)message.getDestination();
         
         TcpConnection connection;
         synchronized (this)
         {
-            connection = connections.get(address.getAddress());
+            connection = connections.get(address.getAddress(transportId));
             if (connection == null && parameters.clientPart)
-                connection = createClientConnection(address.getAddress(), address);
+                connection = createClientConnection(address.<InetSocketAddress>getAddress(transportId), address);
         }
         
         if (connection != null && !connection.isClosed())
@@ -261,17 +266,17 @@ public final class TcpTransport implements ITransport, ITcpChannelAcceptor, ITcp
     public ISink register(IAddress destination, IFeed feed)
     {
         Assert.checkState(started && !stopped);
-        Assert.isInstanceOf(TcpAddress.class, destination);
+        Assert.isInstanceOf(UnicastAddress.class, destination);
         Assert.notNull(feed);
         
-        TcpAddress address = (TcpAddress)destination;
+        UnicastAddress address = (UnicastAddress)destination;
         
         TcpConnection connection;
         synchronized (this)
         {
-            connection = connections.get(address.getAddress());
+            connection = connections.get(address.getAddress(transportId));
             if (connection == null && parameters.clientPart)
-                connection = createClientConnection(address.getAddress(), address);
+                connection = createClientConnection(address.<InetSocketAddress>getAddress(transportId), address);
         }
         
         if (connection != null && !connection.isClosed())
@@ -352,10 +357,10 @@ public final class TcpTransport implements ITransport, ITcpChannelAcceptor, ITcp
     {
         for (IAddress node : nodes)
         {
-            if (!(node instanceof TcpAddress))
+            if (!(node instanceof UnicastAddress))
                 continue;
             
-            TcpConnection connection = connections.get(((TcpAddress)node).getAddress());
+            TcpConnection connection = connections.get(((UnicastAddress)node).getAddress(transportId));
             if (connection != null)
                 connection.close();
         }
@@ -366,10 +371,10 @@ public final class TcpTransport implements ITransport, ITcpChannelAcceptor, ITcp
     {
         for (IAddress node : nodes)
         {
-            if (!(node instanceof TcpAddress))
+            if (!(node instanceof UnicastAddress))
                 continue;
             
-            TcpConnection connection = connections.get(((TcpAddress)node).getAddress());
+            TcpConnection connection = connections.get(((UnicastAddress)node).getAddress(transportId));
             if (connection != null)
                 connection.disconnect();
         }
@@ -379,7 +384,7 @@ public final class TcpTransport implements ITransport, ITcpChannelAcceptor, ITcp
     public void connect(String nodeAddress)
     {
         InetSocketAddress address = getInetAddress(nodeAddress);
-        if (stopped || (localNode != null && localNode.getAddress().equals(address)))
+        if (stopped || (localNode != null && localNode.getAddress(transportId).equals(address)))
             return;
         
         synchronized (this)
@@ -395,17 +400,17 @@ public final class TcpTransport implements ITransport, ITcpChannelAcceptor, ITcp
     {
         if (!started || stopped)
             return;
-        Assert.isInstanceOf(TcpAddress.class, nodeAddress);
+        Assert.isInstanceOf(UnicastAddress.class, nodeAddress);
         
-        TcpAddress address = (TcpAddress)nodeAddress;
+        UnicastAddress address = (UnicastAddress)nodeAddress;
         if (address.equals(localNode))
             return;
         
         synchronized (this)
         {
-            TcpConnection connection = connections.get(address.getAddress());
+            TcpConnection connection = connections.get(address.getAddress(transportId));
             if (connection == null && parameters.clientPart)
-                createClientConnection(address.getAddress(), address);
+                createClientConnection(address.<InetSocketAddress>getAddress(transportId), address);
         }
     }
     
@@ -413,7 +418,7 @@ public final class TcpTransport implements ITransport, ITcpChannelAcceptor, ITcp
     public void disconnect(String nodeAddress)
     {
         InetSocketAddress address = getInetAddress(nodeAddress);
-        if (stopped || (localNode != null && localNode.getAddress().equals(address)))
+        if (stopped || (localNode != null && localNode.getAddress(transportId).equals(address)))
             return;
         
         synchronized (this)
@@ -429,15 +434,15 @@ public final class TcpTransport implements ITransport, ITcpChannelAcceptor, ITcp
     {
         if (!started || stopped)
             return;
-        Assert.isInstanceOf(TcpAddress.class, nodeAddress);
+        Assert.isInstanceOf(UnicastAddress.class, nodeAddress);
         
-        TcpAddress address = (TcpAddress)nodeAddress;
+        UnicastAddress address = (UnicastAddress)nodeAddress;
         if (address.equals(localNode))
             return;
         
         synchronized (this)
         {
-            TcpConnection connection = connections.get(address.getAddress());
+            TcpConnection connection = connections.get(address.getAddress(transportId));
             if (connection != null)
                 connection.disconnect();
         }
@@ -447,7 +452,7 @@ public final class TcpTransport implements ITransport, ITcpChannelAcceptor, ITcp
     public String canonicalize(String nodeAddress)
     {
         InetSocketAddress address = getInetAddress(nodeAddress);
-        return getCanonicalConnectionAddress(address);
+        return TcpUtils.getCanonicalConnectionAddress(address);
     }
     
     @Override
@@ -456,12 +461,12 @@ public final class TcpTransport implements ITransport, ITcpChannelAcceptor, ITcp
         if (!started || stopped)
             return 0;
         
-        Assert.isInstanceOf(TcpAddress.class, node);
-        TcpAddress address = (TcpAddress)node;
+        Assert.isInstanceOf(UnicastAddress.class, node);
+        UnicastAddress address = (UnicastAddress)node;
         
         synchronized (this)
         {
-            TcpConnection connection = connections.get(address.getAddress());
+            TcpConnection connection = connections.get(address.getAddress(transportId));
             if (connection != null)
                 return connection.getChannel().getLastReadTime();
         }
@@ -475,12 +480,12 @@ public final class TcpTransport implements ITransport, ITcpChannelAcceptor, ITcp
         if (!started || stopped)
             return 0;
         
-        Assert.isInstanceOf(TcpAddress.class, node);
-        TcpAddress address = (TcpAddress)node;
+        Assert.isInstanceOf(UnicastAddress.class, node);
+        UnicastAddress address = (UnicastAddress)node;
         
         synchronized (this)
         {
-            TcpConnection connection = connections.get(address.getAddress());
+            TcpConnection connection = connections.get(address.getAddress(transportId));
             if (connection != null)
                 return connection.getChannel().getLastWriteTime();
         }
@@ -493,12 +498,12 @@ public final class TcpTransport implements ITransport, ITcpChannelAcceptor, ITcp
         if (!started || stopped)
             return;
         
-        Assert.isInstanceOf(TcpAddress.class, node);
-        TcpAddress address = (TcpAddress)node;
+        Assert.isInstanceOf(UnicastAddress.class, node);
+        UnicastAddress address = (UnicastAddress)node;
         
         synchronized (this)
         {
-            TcpConnection connection = connections.get(address.getAddress());
+            TcpConnection connection = connections.get(address.getAddress(transportId));
             if (connection != null)
                 connection.dump();
         }
@@ -535,6 +540,7 @@ public final class TcpTransport implements ITransport, ITcpChannelAcceptor, ITcp
         
         started = true;
         
+        InetSocketAddress inetAddress;
         if (parameters.serverPart)
         {
             ITcpServer.Parameters serverParameters = new ITcpServer.Parameters();
@@ -547,14 +553,13 @@ public final class TcpTransport implements ITransport, ITcpChannelAcceptor, ITcp
             serverParameters.adminFilter = parameters.adminFilter;
             serverParameters.socketChannelFactory = socketChannelFactory;
             server = dispatcher.createServer(serverParameters);
-            localNode = new TcpAddress(UUID.randomUUID(), server.getLocalAddress(), parameters.channelName);
+            inetAddress = server.getLocalAddress();
         }
         else
         {
             try
             {
-                localNode = new TcpAddress(UUID.randomUUID(), new InetSocketAddress(InetAddress.getLocalHost(), 0),
-                    parameters.channelName);
+                inetAddress = new InetSocketAddress(InetAddress.getLocalHost(), 0);
             }
             catch (UnknownHostException e)
             {
@@ -562,7 +567,7 @@ public final class TcpTransport implements ITransport, ITcpChannelAcceptor, ITcp
             }
         }
         
-        parameters.localNodeInitializer.setLocalNode(localNode);
+        localNode = parameters.localNodeInitializer.setLocalNode(transportId, inetAddress, TcpUtils.getCanonicalConnectionAddress(inetAddress));
 
         if (logger.isLogEnabled(LogLevel.DEBUG))
             logger.log(LogLevel.DEBUG, marker, messages.transportStarted());
@@ -599,13 +604,15 @@ public final class TcpTransport implements ITransport, ITcpChannelAcceptor, ITcp
     @Override
     public void register(ISerializationRegistry registry)
     {
-        registry.register(new TcpAddressSerializer());
+        registry.register(new UnicastAddressSerializer());
+        registry.register(new InetSocketAddressSerializer());
     }
 
     @Override
     public void unregister(ISerializationRegistry registry)
     {
-        registry.unregister(TcpAddressSerializer.ID);
+        registry.unregister(UnicastAddressSerializer.ID);
+        registry.unregister(InetSocketAddressSerializer.ID);
     }
 
     @Override
@@ -615,14 +622,14 @@ public final class TcpTransport implements ITransport, ITcpChannelAcceptor, ITcp
         
         if (flow != null)
         {
-            Assert.isInstanceOf(TcpAddress.class, flow);
+            Assert.isInstanceOf(UnicastAddress.class, flow);
             
-            TcpAddress address = (TcpAddress)flow;
+            UnicastAddress address = (UnicastAddress)flow;
             
             TcpConnection connection;
             synchronized (this)
             {
-                connection = connections.get(address.getAddress());
+                connection = connections.get(address.getAddress(transportId));
                 if (connection != null)
                     connection.lockFlow();
             }
@@ -644,14 +651,14 @@ public final class TcpTransport implements ITransport, ITcpChannelAcceptor, ITcp
         
         if (flow != null)
         {
-            Assert.isInstanceOf(TcpAddress.class, flow);
+            Assert.isInstanceOf(UnicastAddress.class, flow);
             
-            TcpAddress address = (TcpAddress)flow;
+            UnicastAddress address = (UnicastAddress)flow;
             
             TcpConnection connection;
             synchronized (this)
             {
-                connection = connections.get(address.getAddress());
+                connection = connections.get(address.getAddress(transportId));
                 if (connection != null)
                     connection.unlockFlow();
             }
@@ -690,7 +697,7 @@ public final class TcpTransport implements ITransport, ITcpChannelAcceptor, ITcp
         return channelParameters;
     }
     
-    private TcpConnection createClientConnection(InetSocketAddress address, TcpAddress nodeAddress)
+    private TcpConnection createClientConnection(InetSocketAddress address, UnicastAddress nodeAddress)
     {
         ITcpPacketChannel.Parameters channelParameters = createChannelParameters(true);
         TcpConnection connection = (TcpConnection)channelParameters.data;
@@ -713,7 +720,12 @@ public final class TcpTransport implements ITransport, ITcpChannelAcceptor, ITcp
             if (parameters.serverPart)
                 connection.setLocalAddress(localNode);
             else
-                connection.setLocalAddress(new TcpAddress(localNode.getId(), channel.getLocalAddress(), parameters.channelName));
+            {
+                UnicastAddress localAddress = new UnicastAddress(localNode.getId(), parameters.channelName);
+                localAddress.setAddress(transportId, channel.getLocalAddress(), 
+                    TcpUtils.getCanonicalConnectionAddress(channel.getLocalAddress()));
+                connection.setLocalAddress(localAddress);
+            }
         }
         catch (ChannelException e)
         {

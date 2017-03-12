@@ -20,9 +20,15 @@ public final class GroupAddress extends AbstractAddress implements IAddress
     {
         super(id, name);
     }
-    
+
     @Override
-    public String getConnection()
+    public int getCount()
+    {
+        return 1;
+    }
+
+    @Override
+    public String getConnection(int transportId)
     {
         return "group://" + getName();
     }

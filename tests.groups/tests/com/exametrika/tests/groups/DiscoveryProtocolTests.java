@@ -81,7 +81,7 @@ public class DiscoveryProtocolTests
             parameters.receiver = new ReceiverMock();
             IChannel channel = channelFactory.createChannel(parameters);
             channel.start();
-            wellKnownAddresses.add(channel.getLiveNodeProvider().getLocalNode().getConnection());
+            wellKnownAddresses.add(channel.getLiveNodeProvider().getLocalNode().getConnection(0));
             channels[i] = channel;
         }
         
@@ -129,7 +129,7 @@ public class DiscoveryProtocolTests
             if (i < COUNT - 2)
             {
                 channel.start();
-                wellKnownAddresses.add(channel.getLiveNodeProvider().getLocalNode().getConnection());
+                wellKnownAddresses.add(channel.getLiveNodeProvider().getLocalNode().getConnection(0));
             }
             channels[i] = channel;
         }
@@ -142,9 +142,9 @@ public class DiscoveryProtocolTests
         IOs.close(channels[0]);
         IOs.close(channels[1]);
         channels[COUNT - 2].start();
-        wellKnownAddresses.add(channels[COUNT - 2].getLiveNodeProvider().getLocalNode().getConnection());
+        wellKnownAddresses.add(channels[COUNT - 2].getLiveNodeProvider().getLocalNode().getConnection(0));
         channels[COUNT - 1].start();
-        wellKnownAddresses.add(channels[COUNT - 1].getLiveNodeProvider().getLocalNode().getConnection());
+        wellKnownAddresses.add(channels[COUNT - 1].getLiveNodeProvider().getLocalNode().getConnection(0));
         
         Threads.sleep(channelFactory.groupFormationPeriod + 2000);
         
@@ -183,7 +183,7 @@ public class DiscoveryProtocolTests
         parameters.receiver = new ReceiverMock();
         IChannel channel = channelFactory.createChannel(parameters);
         channel.start();
-        wellKnownAddresses.add(channel.getLiveNodeProvider().getLocalNode().getConnection());
+        wellKnownAddresses.add(channel.getLiveNodeProvider().getLocalNode().getConnection(0));
         channels[0] = channel;
 
         DiscoveryProtocol protocol = channelFactory.protocols.get(0); 
@@ -220,7 +220,7 @@ public class DiscoveryProtocolTests
         channelFactory.failureDetectors.get(1).currentCoordinator = membership.getGroup().getCoordinator();
         channelFactory.failureDetectors.get(1).healthyMembers = membership.getGroup().getMembers();
 
-        wellKnownAddresses.add(membership.getGroup().getCoordinator().getAddress().getConnection());
+        wellKnownAddresses.add(membership.getGroup().getCoordinator().getAddress().getConnection(0));
         
         channelFactory.protocols.get(0).onPreparedMembershipChanged(null, membership, null);
         channelFactory.protocols.get(1).onPreparedMembershipChanged(null, membership, null);
@@ -275,7 +275,7 @@ public class DiscoveryProtocolTests
         channelFactory.failureDetectors.get(1).currentCoordinator = membership.getGroup().getCoordinator();
         channelFactory.failureDetectors.get(1).healthyMembers = membership.getGroup().getMembers();
 
-        wellKnownAddresses.add(membership.getGroup().getMembers().get(1).getAddress().getConnection());
+        wellKnownAddresses.add(membership.getGroup().getMembers().get(1).getAddress().getConnection(0));
         
         channelFactory.protocols.get(0).onPreparedMembershipChanged(null, membership, null);
         channelFactory.protocols.get(1).onPreparedMembershipChanged(null, membership, null);
@@ -321,7 +321,7 @@ public class DiscoveryProtocolTests
             if (i < 2)
             {
                 channel.start();
-                wellKnownAddresses.add(channel.getLiveNodeProvider().getLocalNode().getConnection());
+                wellKnownAddresses.add(channel.getLiveNodeProvider().getLocalNode().getConnection(0));
             }
             channels[i] = channel;
         }
@@ -340,7 +340,7 @@ public class DiscoveryProtocolTests
         for (int i = 2; i < COUNT; i++)
         {
             channels[i].start();
-            wellKnownAddresses.add(channels[i].getLiveNodeProvider().getLocalNode().getConnection());
+            wellKnownAddresses.add(channels[i].getLiveNodeProvider().getLocalNode().getConnection(0));
         }
 
         for (DiscoveryProtocol protocol : channelFactory.protocols)
@@ -389,7 +389,7 @@ public class DiscoveryProtocolTests
             if (i < 2)
             {
                 channel.start();
-                wellKnownAddresses.add(channel.getLiveNodeProvider().getLocalNode().getConnection());
+                wellKnownAddresses.add(channel.getLiveNodeProvider().getLocalNode().getConnection(0));
             }
             channels[i] = channel;
         }
@@ -401,7 +401,7 @@ public class DiscoveryProtocolTests
         channelFactory.failureDetectors.get(1).currentCoordinator = membership.getGroup().getCoordinator();
         channelFactory.failureDetectors.get(1).healthyMembers = membership.getGroup().getMembers();
 
-        wellKnownAddresses.add(membership.getGroup().getCoordinator().getAddress().getConnection());
+        wellKnownAddresses.add(membership.getGroup().getCoordinator().getAddress().getConnection(0));
         
         channelFactory.protocols.get(0).onPreparedMembershipChanged(null, membership, null);
         channelFactory.protocols.get(1).onPreparedMembershipChanged(null, membership, null);
@@ -409,7 +409,7 @@ public class DiscoveryProtocolTests
         for (int i = 2; i < COUNT; i++)
         {
             channels[i].start();
-            wellKnownAddresses.add(channels[i].getLiveNodeProvider().getLocalNode().getConnection());
+            wellKnownAddresses.add(channels[i].getLiveNodeProvider().getLocalNode().getConnection(0));
         }
 
         for (DiscoveryProtocol protocol : channelFactory.protocols)

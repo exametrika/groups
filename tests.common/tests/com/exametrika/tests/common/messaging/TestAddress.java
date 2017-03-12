@@ -20,9 +20,15 @@ public class TestAddress extends AbstractAddress
     {
         super(id, name);
     }
-    
+
     @Override
-    public String getConnection()
+    public int getCount()
+    {
+        return 1;
+    }
+
+    @Override
+    public String getConnection(int transportId)
     {
         return getName();
     }

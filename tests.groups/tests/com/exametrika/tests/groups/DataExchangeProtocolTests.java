@@ -197,7 +197,7 @@ public class DataExchangeProtocolTests
             if (!skipIndexes.contains(i))
             {
                 channel.start();
-                wellKnownAddresses.add(channel.getLiveNodeProvider().getLocalNode().getConnection());
+                wellKnownAddresses.add(channel.getLiveNodeProvider().getLocalNode().getConnection(0));
             }
             channels[i] = (GroupChannel)channel;
         }

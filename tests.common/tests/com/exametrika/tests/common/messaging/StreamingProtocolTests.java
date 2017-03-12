@@ -72,7 +72,6 @@ public class StreamingProtocolTests
     @Before
     public void setUp() throws Throwable
     {
-        member1 = new TestAddress(UUID.randomUUID(), "member1");
         member2 = new TestAddress(UUID.randomUUID(), "member2");
         member3 = new TestAddress(UUID.randomUUID(), "member3");
         member4 = new TestAddress(UUID.randomUUID(), "member4");
@@ -84,7 +83,7 @@ public class StreamingProtocolTests
         pullableSender = new PullableSenderMock();
         channelObserver = new ChannelObserver("test");
         liveNodeManager = new LiveNodeManager("test", Arrays.<IFailureObserver>asList(channelObserver), channelObserver);
-        liveNodeManager.setLocalNode(member1);
+        member1 = liveNodeManager.getLocalNode();
         liveNodeManager.onNodesConnected(Collections.singleton(member2));
         liveNodeManager.onNodesConnected(Collections.singleton(member3));
         liveNodeManager.onNodesConnected(Collections.singleton(member4));

@@ -58,12 +58,11 @@ public class CompositeProtocolTests
     {
         ICompartmentFactory.Parameters parameters = new ICompartmentFactory.Parameters();
         Compartment compartment = new Compartment(parameters);
-        IAddress member1 = new TestAddress(UUID.randomUUID(), "member1");
         IAddress member2 = new TestAddress(UUID.randomUUID(), "member2");
         
         ChannelObserver channelObserver = new ChannelObserver("test");
-        LiveNodeManager liveNodeManager = new LiveNodeManager("test", Arrays.<IFailureObserver>asList(channelObserver), channelObserver);
-        liveNodeManager.setLocalNode(member1);
+        LiveNodeManager liveNodeManager = new LiveNodeManager("member1", Arrays.<IFailureObserver>asList(channelObserver), channelObserver);
+        IAddress member1 = liveNodeManager.setLocalNode(0, "", "");
         liveNodeManager.onNodesConnected(Collections.singleton(member2));
         
         SerializationRegistry registry = new SerializationRegistry();

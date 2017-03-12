@@ -182,6 +182,13 @@ public final class FlushCoordinatorProtocol extends AbstractProtocol implements 
     }
     
     @Override
+    public void stop()
+    {
+        stopped = true;
+        super.stop();
+    }
+    
+    @Override
     public void onTimer(long currentTime)
     {
         if (!flushCoordinator || stopped)

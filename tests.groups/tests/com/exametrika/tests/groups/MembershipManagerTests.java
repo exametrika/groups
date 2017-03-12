@@ -7,7 +7,6 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 
-import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -28,8 +27,7 @@ import com.exametrika.api.groups.core.INode;
 import com.exametrika.api.groups.core.MembershipEvent;
 import com.exametrika.common.messaging.IAddress;
 import com.exametrika.common.messaging.ILiveNodeProvider;
-import com.exametrika.common.messaging.impl.transports.tcp.TcpAddress;
-import com.exametrika.common.tests.Tests;
+import com.exametrika.common.messaging.impl.transports.UnicastAddress;
 import com.exametrika.common.utils.MapBuilder;
 import com.exametrika.impl.groups.core.discovery.INodeDiscoverer;
 import com.exametrika.impl.groups.core.failuredetection.IFailureDetector;
@@ -61,9 +59,9 @@ public class MembershipManagerTests
     @Test
     public void testNode()
     {
-        IAddress local = new TcpAddress(new UUID(1, 1), new InetSocketAddress("localhost", 9090), "test");
+        IAddress local = new UnicastAddress(new UUID(1, 1), "test");
         Node node = new Node(local.getName(), local, Collections.<String, Object>singletonMap("key", "value"), "core");
-        Node node2 = new Node(local.getName(), new TcpAddress(new UUID(0, 0), new InetSocketAddress("localhost", 9090), "test"), 
+        Node node2 = new Node(local.getName(), new UnicastAddress(new UUID(0, 0), "test"), 
             Collections.<String, Object>singletonMap("key", "value"), "core");
         assertThat(node, is(node));
         assertThat(!node.equals(node2), is(true));
@@ -74,8 +72,8 @@ public class MembershipManagerTests
     @Test
     public void testGroup()
     {
-        IAddress address1 = new TcpAddress(UUID.randomUUID(), new InetSocketAddress("localhost", 9090), "test1");
-        IAddress address2 = new TcpAddress(UUID.randomUUID(), new InetSocketAddress("localhost", 9090), "test2");
+        IAddress address1 = new UnicastAddress(UUID.randomUUID(), "test1");
+        IAddress address2 = new UnicastAddress(UUID.randomUUID(), "test2");
         Node node1 = new Node(address1.getName(), address1, Collections.<String, Object>singletonMap("key", "value"), "core");
         Node node2 = new Node(address2.getName(), address2, Collections.<String, Object>singletonMap("key", "value"), "core");
         
@@ -94,8 +92,8 @@ public class MembershipManagerTests
     @Test
     public void testMembership()
     {
-        IAddress address1 = new TcpAddress(UUID.randomUUID(), new InetSocketAddress("localhost", 9090), "test1");
-        IAddress address2 = new TcpAddress(UUID.randomUUID(), new InetSocketAddress("localhost", 9090), "test2");
+        IAddress address1 = new UnicastAddress(UUID.randomUUID(), "test1");
+        IAddress address2 = new UnicastAddress(UUID.randomUUID(), "test2");
         Node node1 = new Node(address1.getName(), address1, Collections.<String, Object>singletonMap("key", "value"), "core");
         Node node2 = new Node(address2.getName(), address2, Collections.<String, Object>singletonMap("key", "value"), "core");
         
@@ -110,11 +108,11 @@ public class MembershipManagerTests
     @Test
     public void testMemberships()
     {
-        IAddress address1 = new TcpAddress(UUID.randomUUID(), new InetSocketAddress("localhost", 9090), "test1");
-        IAddress address2 = new TcpAddress(UUID.randomUUID(), new InetSocketAddress("localhost", 9090), "test2");
-        IAddress address3 = new TcpAddress(UUID.randomUUID(), new InetSocketAddress("localhost", 9090), "test3");
-        IAddress address4 = new TcpAddress(UUID.randomUUID(), new InetSocketAddress("localhost", 9090), "test4");
-        IAddress address5 = new TcpAddress(UUID.randomUUID(), new InetSocketAddress("localhost", 9090), "test5");
+        IAddress address1 = new UnicastAddress(UUID.randomUUID(), "test1");
+        IAddress address2 = new UnicastAddress(UUID.randomUUID(), "test2");
+        IAddress address3 = new UnicastAddress(UUID.randomUUID(), "test3");
+        IAddress address4 = new UnicastAddress(UUID.randomUUID(), "test4");
+        IAddress address5 = new UnicastAddress(UUID.randomUUID(), "test5");
         Node node1 = new Node(address1.getName(), address1, Collections.<String, Object>singletonMap("key", "value"), "core");
         Node node2 = new Node(address2.getName(), address2, Collections.<String, Object>singletonMap("key", "value"), "core");
         Node node3 = new Node(address3.getName(), address3, Collections.<String, Object>singletonMap("key", "value"), "core");
@@ -180,10 +178,10 @@ public class MembershipManagerTests
         FlushManagerMock flushManager = new FlushManagerMock();
         MembershipTracker tracker = new MembershipTracker(1000, membershipManager, nodeDiscoverer, failureDetector, flushManager, null);
         
-        INode discoveredNode1 = new Node("test", new TcpAddress(UUID.randomUUID(), 
-            new InetSocketAddress("localhost", 9090), "test"), Collections.<String, Object>emptyMap(), "core");
-        INode discoveredNode2 = new Node("test", new TcpAddress(UUID.randomUUID(), 
-            new InetSocketAddress("localhost", 9090), "test"), Collections.<String, Object>emptyMap(), "core");
+        INode discoveredNode1 = new Node("test", new UnicastAddress(UUID.randomUUID(), 
+            "test"), Collections.<String, Object>emptyMap(), "core");
+        INode discoveredNode2 = new Node("test", new UnicastAddress(UUID.randomUUID(), 
+            "test"), Collections.<String, Object>emptyMap(), "core");
         nodeDiscoverer.canFormGroup = true;
         nodeDiscoverer.discoveredNodes.add(discoveredNode1);
         tracker.onTimer(1);
@@ -240,9 +238,9 @@ public class MembershipManagerTests
         assertThat(manager.getLocalNode().getName(), is(liveNodeProvider.getLocalNode().getName()));
         assertThat(manager.getLocalNode().getProperties(), is(Collections.<String, Object>singletonMap("key", "value")));
         
-        IAddress address1 = new TcpAddress(UUID.randomUUID(), new InetSocketAddress("localhost", 9090), "test1");
+        IAddress address1 = new UnicastAddress(UUID.randomUUID(), "test1");
         Node node1 = new Node(address1.getName(), address1, Collections.<String, Object>singletonMap("key", "value"), "core");
-        IAddress address2 = new TcpAddress(UUID.randomUUID(), new InetSocketAddress("localhost", 9090), "test2");
+        IAddress address2 = new UnicastAddress(UUID.randomUUID(), "test2");
         Node node2 = new Node(address2.getName(), address2, Collections.<String, Object>singletonMap("key", "value"), "core");
         Group group = new Group(new GroupAddress(UUID.randomUUID(), "test"), true, Arrays.<INode>asList(manager.getLocalNode(), node1));
         Membership membership = new Membership(1, group);
@@ -284,7 +282,6 @@ public class MembershipManagerTests
         assertThat(listener.leaveReason, is(LeaveReason.GRACEFUL_CLOSE));
         
         manager.stop();
-        assertThat(Tests.get(manager, "localNode") == null, is(true));
     }
     
     private static class PreparedMembershipListenerMock implements IPreparedMembershipListener
@@ -341,7 +338,7 @@ public class MembershipManagerTests
     
     private static class LiveNodeProviderMock implements ILiveNodeProvider
     {
-        private IAddress localNode = new TcpAddress(UUID.randomUUID(), new InetSocketAddress("localhost", 9090), "test");
+        private IAddress localNode = new UnicastAddress(UUID.randomUUID(), "test");
         
         @Override
         public long getId()
@@ -388,8 +385,8 @@ public class MembershipManagerTests
     
     private static class MembershipManagerMock implements IMembershipManager
     {
-        private INode localNode = new Node("test", new TcpAddress(UUID.randomUUID(), 
-            new InetSocketAddress("localhost", 9090), "test"), Collections.<String, Object>emptyMap(), "core");
+        private INode localNode = new Node("test", new UnicastAddress(UUID.randomUUID(), 
+            "test"), Collections.<String, Object>emptyMap(), "core");
         private IMembership membership;
         private IMembership preparedMembership;
             

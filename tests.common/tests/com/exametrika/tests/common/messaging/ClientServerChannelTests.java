@@ -112,7 +112,7 @@ public class ClientServerChannelTests
             clients[i].start();
             
             feeds[i].sink = clients[i].register(server.getLiveNodeProvider().getLocalNode(), feeds[i]);
-            clients[i].connect(server.getLiveNodeProvider().getLocalNode().getConnection());
+            clients[i].connect(server.getLiveNodeProvider().getLocalNode().getConnection(0));
         }
         
         connectionSequencer.waitAll(COUNT * 2, CONNECT_TIMEOUT, 0, "Connection.");

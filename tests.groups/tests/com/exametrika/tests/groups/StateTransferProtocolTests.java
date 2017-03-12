@@ -419,7 +419,7 @@ public class StateTransferProtocolTests
             if (!skipIndexes.contains(i))
             {
                 channel.start();
-                wellKnownAddresses.add(channel.getLiveNodeProvider().getLocalNode().getConnection());
+                wellKnownAddresses.add(channel.getLiveNodeProvider().getLocalNode().getConnection(0));
             }
             channels[i] = (GroupChannel)channel;
         }
@@ -796,7 +796,7 @@ public class StateTransferProtocolTests
         private long gracefulCloseTimeout = 10000;
         private long maxStateTransferPeriod = Integer.MAX_VALUE;
         private long stateSizeThreshold = 100000;
-        private long saveSnapshotPeriod = 1000;
+        private long saveSnapshotPeriod = 10000;
         private long transferLogRecordPeriod = 1000;
         private int transferLogMessagesCount = 2;
         private int minLockQueueCapacity = 10000000;

@@ -20,6 +20,7 @@ import com.exametrika.common.log.LogLevel;
 import com.exametrika.common.log.Loggers;
 import com.exametrika.common.messaging.IAddress;
 import com.exametrika.common.messaging.ILiveNodeProvider;
+import com.exametrika.common.messaging.impl.transports.UnicastAddress;
 import com.exametrika.common.utils.Assert;
 import com.exametrika.common.utils.ILifecycle;
 import com.exametrika.common.utils.Immutables;
@@ -38,7 +39,7 @@ public final class LiveNodeManager implements IFailureObserver, IConnectionObser
     private final IConnectionObserver connectionObserver;
     private final IMarker marker;
     private volatile long id;
-    private volatile IAddress localNode;
+    private final UnicastAddress localNode;
     private volatile List<IAddress> liveNodes = new ArrayList<IAddress>();
     private volatile HashMap<UUID, IAddress> liveNodesById = new HashMap<UUID, IAddress>();
     private volatile HashMap<String, IAddress> liveNodesByName = new HashMap<String, IAddress>();
@@ -51,6 +52,7 @@ public final class LiveNodeManager implements IFailureObserver, IConnectionObser
 
         this.failureObservers = failureObservers;
         this.connectionObserver = connectionObserver;
+        this.localNode = new UnicastAddress(UUID.randomUUID(), channelName);
         this.marker = Loggers.getMarker(channelName);
     }
 
@@ -110,12 +112,10 @@ public final class LiveNodeManager implements IFailureObserver, IConnectionObser
     }
     
     @Override
-    public void setLocalNode(IAddress node)
+    public UnicastAddress setLocalNode(int transportId, Object address, String connection)
     {
-        Assert.notNull(node);
-        Assert.isNull(this.localNode);
-        
-        this.localNode = node;
+        localNode.setAddress(transportId, address, connection);
+        return localNode;
     }
     
     @Override
@@ -137,7 +137,8 @@ public final class LiveNodeManager implements IFailureObserver, IConnectionObser
                 liveNodes.add(node);
                 liveNodesById.put(node.getId(), node);
                 liveNodesByName.put(node.getName(), node);
-                liveNodesByConnection.put(node.getConnection(), node);
+                for (int i = 0; i < node.getCount(); i++)
+                    liveNodesByConnection.put(node.getConnection(i), node);
                 changedNodes.add(node);
             }
             
@@ -174,7 +175,8 @@ public final class LiveNodeManager implements IFailureObserver, IConnectionObser
                 liveNodes.remove(node);
                 liveNodesById.remove(node.getId());
                 liveNodesByName.remove(node.getName());
-                liveNodesByConnection.remove(node.getConnection());
+                for (int i = 0; i < node.getCount(); i++)
+                    liveNodesByConnection.remove(node.getConnection(i));
                 changedNodes.add(node);
             }
             
@@ -212,7 +214,8 @@ public final class LiveNodeManager implements IFailureObserver, IConnectionObser
                 liveNodes.remove(node);
                 liveNodesById.remove(node.getId());
                 liveNodesByName.remove(node.getName());
-                liveNodesByConnection.remove(node.getConnection());
+                for (int i = 0; i < node.getCount(); i++)
+                    liveNodesByConnection.remove(node.getConnection(i));
                 changedNodes.add(node);
             }
             
@@ -243,7 +246,8 @@ public final class LiveNodeManager implements IFailureObserver, IConnectionObser
         liveNodes.add(localNode);
         liveNodesById.put(localNode.getId(), localNode);
         liveNodesByName.put(localNode.getName(), localNode);
-        liveNodesByConnection.put(localNode.getConnection(), localNode);
+        for (int i = 0; i < localNode.getCount(); i++)
+            liveNodesByConnection.put(localNode.getConnection(i), localNode);
         
         this.liveNodes = liveNodes;
         this.liveNodesById = liveNodesById;

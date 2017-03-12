@@ -22,12 +22,14 @@ import com.exametrika.common.utils.InvalidArgumentException;
 public final class ConnectionManager implements IConnectionProvider
 {
     private static final IMessages messages = Messages.get(IMessages.class);
+    private final int transportId;
     private final Map<String, IConnectionProvider> providers;
 
-    public ConnectionManager(Map<String, IConnectionProvider> providers)
+    public ConnectionManager(int transportId, Map<String, IConnectionProvider> providers)
     {
         Assert.notNull(providers);
         
+        this.transportId = transportId;
         this.providers = providers;
     }
     
@@ -62,7 +64,7 @@ public final class ConnectionManager implements IConnectionProvider
     {
         Assert.notNull(address);
         
-        String connection = address.getConnection();
+        String connection = address.getConnection(transportId);
         
         String schema;
         int pos = connection.indexOf("://");
@@ -109,7 +111,7 @@ public final class ConnectionManager implements IConnectionProvider
     {
         Assert.notNull(address);
         
-        String connection = address.getConnection();
+        String connection = address.getConnection(transportId);
         
         String schema;
         int pos = connection.indexOf("://");

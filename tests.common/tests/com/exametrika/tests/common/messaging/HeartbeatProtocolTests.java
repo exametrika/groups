@@ -57,7 +57,6 @@ public class HeartbeatProtocolTests
     public void setUp() throws Throwable
     {
         accessTimeProvider = new NodeAccessTimeProviderMock();
-        member1 = new TestAddress(UUID.randomUUID(), "member1");
         member2 = new TestAddress(UUID.randomUUID(), "member2");
         member3 = new TestAddress(UUID.randomUUID(), "member3");
         member4 = new TestAddress(UUID.randomUUID(), "member4");
@@ -69,7 +68,7 @@ public class HeartbeatProtocolTests
         sender = new SenderMock();
         channelObserver = new ChannelObserver("test");
         liveNodeManager = new LiveNodeManager("test", Arrays.<IFailureObserver>asList(channelObserver), channelObserver);
-        liveNodeManager.setLocalNode(member1);
+        member1 = liveNodeManager.getLocalNode();
         liveNodeManager.onNodesConnected(Collections.singleton(member2));
         liveNodeManager.onNodesConnected(Collections.singleton(member3));
         liveNodeManager.onNodesConnected(Collections.singleton(member4));

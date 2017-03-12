@@ -105,7 +105,7 @@ public class PeerToPeerChannelTests
         {
             int next = (i < COUNT - 1) ? (i + 1) : 0; 
             feeds[i].sink = peers[i].register(peers[next].getLiveNodeProvider().getLocalNode(), feeds[i]);
-            peers[i].connect(peers[next].getLiveNodeProvider().getLocalNode().getConnection());
+            peers[i].connect(peers[next].getLiveNodeProvider().getLocalNode().getConnection(0));
         }
         
         connectionSequencer.waitAll(COUNT * 2, CONNECT_TIMEOUT, 0, "Connection.");

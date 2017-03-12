@@ -3,9 +3,7 @@
  */
 package com.exametrika.common.messaging.impl.protocols.failuredetection;
 
-import com.exametrika.common.messaging.IAddress;
-
-
+import com.exametrika.common.messaging.impl.transports.UnicastAddress;
 
 /**
  * The {@link ILocalNodeAware} is a local node initializing interface.
@@ -16,9 +14,12 @@ import com.exametrika.common.messaging.IAddress;
 public interface ILocalNodeAware
 {
     /**
-     * Sets address of local node.
+     * Sets address of local node specific to given transport.
      *
-     * @param node address of local node
+     * @param transportId identifier of transport
+     * @param address address of local node
+     * @param connection connection string
+     * @return local address
      */
-    void setLocalNode(IAddress node);
+    UnicastAddress setLocalNode(int transportId, Object address, String connection);
 }

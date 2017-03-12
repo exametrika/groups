@@ -6,6 +6,7 @@ package com.exametrika.tests.common.messaging;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 
+import java.net.InetSocketAddress;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -22,7 +23,7 @@ import com.exametrika.common.messaging.impl.ChannelFactory;
 import com.exametrika.common.messaging.impl.MessageFlags;
 import com.exametrika.common.messaging.impl.protocols.AbstractProtocol;
 import com.exametrika.common.messaging.impl.protocols.ProtocolStack;
-import com.exametrika.common.messaging.impl.transports.tcp.ITcpAddress;
+import com.exametrika.common.messaging.impl.transports.UnicastAddress;
 import com.exametrika.common.messaging.impl.transports.tcp.TcpConnection;
 import com.exametrika.common.tests.Sequencer;
 import com.exametrika.common.tests.Tests;
@@ -77,7 +78,7 @@ public class FailureChannelTests
         assertThat(clientListener.disconnected.contains(server.getLiveNodeProvider().getLocalNode()), is(true));
         
         Map map = Tests.get(Tests.get(client, "transport"), "connections");
-        TcpConnection connection = (TcpConnection)map.get(((ITcpAddress)server.getLiveNodeProvider().getLocalNode()).getAddress());
+        TcpConnection connection = (TcpConnection)map.get(((UnicastAddress)server.getLiveNodeProvider().getLocalNode()).getAddress(0));
         assertThat((Boolean)Tests.get(connection, "closed"), is(true));
         List<TcpConnection> closedConnections = Tests.get(Tests.get(client, "transport"), "closedConnections");
         assertThat(closedConnections, is(Arrays.asList(connection)));
@@ -107,7 +108,7 @@ public class FailureChannelTests
         assertThat(clientListener.disconnected.contains(server.getLiveNodeProvider().getLocalNode()), is(true));
         
         Map map = Tests.get(Tests.get(client, "transport"), "connections");
-        TcpConnection connection = (TcpConnection)map.get(((ITcpAddress)server.getLiveNodeProvider().getLocalNode()).getAddress());
+        TcpConnection connection = (TcpConnection)map.get(((UnicastAddress)server.getLiveNodeProvider().getLocalNode()).getAddress(0));
         assertThat((Boolean)Tests.get(connection, "closed"), is(true));
         List<TcpConnection> closedConnections = Tests.get(Tests.get(client, "transport"), "closedConnections");
         assertThat(closedConnections, is(Arrays.asList(connection)));
@@ -130,7 +131,7 @@ public class FailureChannelTests
         createChannels(true, new ChannelFactory(parameters));
         
         Map map = Tests.get(Tests.get(client, "transport"), "connections");
-        TcpConnection connection = (TcpConnection)map.get(((ITcpAddress)server.getLiveNodeProvider().getLocalNode()).getAddress());
+        TcpConnection connection = (TcpConnection)map.get(((UnicastAddress)server.getLiveNodeProvider().getLocalNode()).getAddress(0));
         connection.close();
         
         Thread.sleep(100);
@@ -180,7 +181,7 @@ public class FailureChannelTests
         Thread.sleep(1500);
         
         Map map = Tests.get(Tests.get(client, "transport"), "connections");
-        TcpConnection connection = (TcpConnection)map.get(((ITcpAddress)server.getLiveNodeProvider().getLocalNode()).getAddress());
+        TcpConnection connection = (TcpConnection)map.get(((UnicastAddress)server.getLiveNodeProvider().getLocalNode()).getAddress(0));
         assertThat((Boolean)Tests.get(connection, "closed"), is(true));
         List<TcpConnection> closedConnections = Tests.get(Tests.get(client, "transport"), "closedConnections");
         assertThat(closedConnections, is(Arrays.asList(connection)));
@@ -224,7 +225,7 @@ public class FailureChannelTests
         parameters.receiver = serverReceiver;
         parameters.serverPart = true;
         parameters.secured = true;
-        parameters.portRangeStart = ((ITcpAddress)server.getLiveNodeProvider().getLocalNode()).getAddress().getPort();
+        parameters.portRangeStart = ((UnicastAddress)server.getLiveNodeProvider().getLocalNode()).<InetSocketAddress>getAddress(0).getPort();
         parameters.portRangeEnd = parameters.portRangeStart;
         parameters.keyStorePassword = "testtest";
         parameters.keyStorePath = "classpath:" + Classes.getResourcePath(TcpChannelTests.class) + "/keystore.jks";
@@ -237,7 +238,7 @@ public class FailureChannelTests
         server.getChannelObserver().addChannelListener(serverListener);
         server.start();
         
-        client.connect(server.getLiveNodeProvider().getLocalNode().getConnection());
+        client.connect(server.getLiveNodeProvider().getLocalNode().getConnection(0));
         
         Thread.sleep(1000);
         
@@ -245,7 +246,7 @@ public class FailureChannelTests
         
         Thread.sleep(2000);
         
-        client.connect(server.getLiveNodeProvider().getLocalNode().getConnection());
+        client.connect(server.getLiveNodeProvider().getLocalNode().getConnection(0));
         
         Thread.sleep(1000);
         
@@ -318,7 +319,7 @@ public class FailureChannelTests
         client.start();
         
         feed.sink = client.register(server.getLiveNodeProvider().getLocalNode(), feed);
-        client.connect(server.getLiveNodeProvider().getLocalNode().getConnection());
+        client.connect(server.getLiveNodeProvider().getLocalNode().getConnection(0));
         
         connectionSequencer.waitAll(2, CONNECT_TIMEOUT, 0, "Connection.");
         

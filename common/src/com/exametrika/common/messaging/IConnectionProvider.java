@@ -42,7 +42,7 @@ public interface IConnectionProvider
     void disconnect(IAddress connection);
     
     /**
-     * Canonicalize specified node address in order to be compatible with {@link IAddress#getConnection()}.
+     * Canonicalize specified node address in order to be compatible with {@link IAddress#getConnection}.
      *
      * @param connection node address
      * @return canonicalized node address

@@ -14,6 +14,7 @@ import com.exametrika.common.messaging.IFeed;
 import com.exametrika.common.messaging.IMessage;
 import com.exametrika.common.messaging.IMessageFactory;
 import com.exametrika.common.messaging.MessageFlags;
+import com.exametrika.common.messaging.impl.transports.UnicastAddress;
 import com.exametrika.common.net.ITcpChannel;
 import com.exametrika.common.net.ITcpChannelAware;
 import com.exametrika.common.net.ITcpChannelReader;
@@ -35,6 +36,7 @@ import com.exametrika.common.utils.Debug;
 public final class TcpConnection implements ITcpChannelAware
 {
     private final TcpTransport transport;
+    private final int transportId;
     private final ISerializationRegistry serializationRegistry;
     private final IMessageFactory messageFactory;
     private final ITcpReceiveQueue receiveQueue;
@@ -43,8 +45,8 @@ public final class TcpConnection implements ITcpChannelAware
     private volatile ArrayList<TcpSink> sinks = new ArrayList<TcpSink>();
     private final boolean client;
     private TcpChannelHandshaker channelHandshaker;
-    private TcpAddress localAddress;
-    private volatile TcpAddress remoteAddress;
+    private UnicastAddress localAddress;
+    private volatile UnicastAddress remoteAddress;
     private volatile InetSocketAddress remoteInetAddress;
     private ITcpPacketChannel<TcpPacket> channel;
     private volatile boolean connected;
@@ -64,12 +66,18 @@ public final class TcpConnection implements ITcpChannelAware
         Assert.notNull(messageFactory);
         
         this.transport = transport;
+        this.transportId = transport.getTransportId();
         this.serializationRegistry = serializationRegistry;
         this.receiveQueue = threadingModel.createReceiveQueue(this, incomingMessageHandler);
         this.sendQueue = new TcpStSendQueue(this, maxUnlockSendQueueCapacity, minLockSendQueueCapacity, flowController, discardPolicy);
         this.channelWriter.sendQueue = sendQueue;
         this.client = client;
         this.messageFactory = messageFactory;
+    }
+    
+    public int getTransportId()
+    {
+        return transportId;
     }
     
     public ISerializationRegistry getSerializationRegistry()
@@ -181,13 +189,13 @@ public final class TcpConnection implements ITcpChannelAware
         return transport;
     }
     
-    public TcpAddress getLocalAddress()
+    public UnicastAddress getLocalAddress()
     {
         Assert.notNull(localAddress);
         return localAddress;
     }
     
-    public void setLocalAddress(TcpAddress localAddress)
+    public void setLocalAddress(UnicastAddress localAddress)
     {
         Assert.notNull(localAddress);
         Assert.isNull(this.localAddress);
@@ -195,20 +203,26 @@ public final class TcpConnection implements ITcpChannelAware
         this.localAddress = localAddress;
     }
 
-    public TcpAddress getRemoteAddress()
+    public InetSocketAddress getLocalInetAddress()
+    {
+        Assert.notNull(localAddress);
+        return localAddress.getAddress(transportId);
+    }
+    
+    public UnicastAddress getRemoteAddress()
     {
         Assert.notNull(remoteAddress);
         return remoteAddress;
     }
     
-    public void setRemoteAddress(TcpAddress remoteAddress)
+    public void setRemoteAddress(UnicastAddress remoteAddress)
     {
         Assert.notNull(remoteAddress);
-        Assert.isTrue(remoteInetAddress == null || remoteAddress.getAddress().equals(remoteInetAddress));
+        Assert.isTrue(remoteInetAddress == null || remoteAddress.getAddress(transportId).equals(remoteInetAddress));
         Assert.isTrue(this.remoteAddress == null || this.remoteAddress.equals(remoteAddress));
         
         this.remoteAddress = remoteAddress;
-        this.remoteInetAddress = remoteAddress.getAddress();
+        this.remoteInetAddress = remoteAddress.getAddress(transportId);
     }
     
     public InetSocketAddress getRemoteInetAddress()
@@ -273,7 +287,7 @@ public final class TcpConnection implements ITcpChannelAware
             channel.updateWriteStatus();
     }
     
-    public TcpSink register(TcpAddress destination, IFeed feed)
+    public TcpSink register(UnicastAddress destination, IFeed feed)
     {
         Assert.notNull(destination);
         Assert.notNull(feed);
@@ -282,7 +296,7 @@ public final class TcpConnection implements ITcpChannelAware
         
         synchronized (channel)
         {
-            TcpAddress remoteAddress = this.remoteAddress;
+            UnicastAddress remoteAddress = this.remoteAddress;
             if (remoteAddress != null && !remoteAddress.equals(destination))
                 return null;
             
@@ -350,8 +364,8 @@ public final class TcpConnection implements ITcpChannelAware
     public void dump()
     {
         Json json = Json.object();
-        json.put("remote", remoteAddress.getAddress())
-            .put("local", localAddress.getAddress());
+        json.put("remote", remoteAddress.getAddress(transportId))
+            .put("local", localAddress.getAddress(transportId));
         ((TcpNioPacketChannel)channel).dump(json);
         Debug.print(json.toObject().toString());
     }
