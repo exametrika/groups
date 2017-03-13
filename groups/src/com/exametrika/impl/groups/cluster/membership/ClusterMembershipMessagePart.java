@@ -14,13 +14,20 @@ import com.exametrika.common.utils.Assert;
  */
 public final class ClusterMembershipMessagePart implements IMessagePart
 {
+    private final long roundId;
     private final ClusterMembershipDelta delta;
 
-    public ClusterMembershipMessagePart(ClusterMembershipDelta delta)
+    public ClusterMembershipMessagePart(long roundId, ClusterMembershipDelta delta)
     {
         Assert.notNull(delta);
         
+        this.roundId = roundId;
         this.delta = delta;
+    }
+    
+    public long getRoundId()
+    {
+        return roundId;
     }
     
     public ClusterMembershipDelta getDelta()
@@ -37,7 +44,7 @@ public final class ClusterMembershipMessagePart implements IMessagePart
     @Override 
     public String toString()
     {
-        return delta.toString();
+        return roundId + ":" + delta.toString();
     }
 }
 

@@ -14,9 +14,7 @@ import com.exametrika.api.groups.cluster.IClusterMembershipElementChange;
 import com.exametrika.api.groups.cluster.IDomainMembership;
 import com.exametrika.api.groups.cluster.IDomainMembershipChange;
 import com.exametrika.common.io.ISerializationRegistry;
-import com.exametrika.common.messaging.IMessage;
 import com.exametrika.common.messaging.IMessageFactory;
-import com.exametrika.common.messaging.IReceiver;
 import com.exametrika.common.messaging.impl.protocols.AbstractProtocol;
 import com.exametrika.common.utils.Assert;
 
@@ -56,97 +54,90 @@ public abstract class AbstractClusterMembershipProtocol extends AbstractProtocol
         registry.unregister(new ClusterMembershipSerializationRegistrar());
     }
 
-    @Override
-    protected void doReceive(IReceiver receiver, IMessage message)
+    protected void installMembership(ClusterMembershipMessagePart part)
     {
-        if (message.getPart() instanceof ClusterMembershipMessagePart)
+        IClusterMembership oldMembership = clusterMembershipManager.getMembership();
+        if (oldMembership == null)
+            Assert.isTrue(part.getDelta().isFull());
+        else
         {
-            ClusterMembershipMessagePart part = message.getPart();
-            IClusterMembership oldMembership = clusterMembershipManager.getMembership();
-            if (oldMembership == null)
-                Assert.isTrue(part.getDelta().isFull());
-            else
-            {
-                if (part.getDelta().getId() <= oldMembership.getId())
-                    return;
-                
-                if (!part.getDelta().isFull())
-                    Assert.isTrue(part.getDelta().getId() == oldMembership.getId() + 1);
-            }
+            if (part.getDelta().getId() <= oldMembership.getId())
+                return;
             
-            List<IDomainMembership> domains = new ArrayList<IDomainMembership>();
-            Set<String> domainNames = new HashSet<String>();
-            List<IDomainMembershipChange> domainsChanges = new ArrayList<IDomainMembershipChange>();
-            for (IDomainMembershipDelta domainDelta : part.getDelta().getDomains())
+            if (!part.getDelta().isFull())
+                Assert.isTrue(part.getDelta().getId() == oldMembership.getId() + 1);
+        }
+        
+        List<IDomainMembership> domains = new ArrayList<IDomainMembership>();
+        Set<String> domainNames = new HashSet<String>();
+        List<IDomainMembershipChange> domainsChanges = new ArrayList<IDomainMembershipChange>();
+        for (IDomainMembershipDelta domainDelta : part.getDelta().getDomains())
+        {
+            Assert.isTrue(domainDelta.getDeltas().size() == membershipProviders.size());
+            IDomainMembership oldDomain = null;
+            if (oldMembership != null)
+                oldDomain = oldMembership.findDomain(domainDelta.getName());
+            List<IClusterMembershipElement> elements = new ArrayList<IClusterMembershipElement>();
+            List<IClusterMembershipElementChange> changes = new ArrayList<IClusterMembershipElementChange>();
+            IDomainMembership domain = new DomainMembership(domainDelta.getName(), elements);
+            domains.add(domain);
+            domainNames.add(domain.getName());
+            
+            for (int i= 0; i < membershipProviders.size(); i++)
             {
-                Assert.isTrue(domainDelta.getDeltas().size() == membershipProviders.size());
-                IDomainMembership oldDomain = null;
-                if (oldMembership != null)
-                    oldDomain = oldMembership.findDomain(domainDelta.getName());
-                List<IClusterMembershipElement> elements = new ArrayList<IClusterMembershipElement>();
-                List<IClusterMembershipElementChange> changes = new ArrayList<IClusterMembershipElementChange>();
-                IDomainMembership domain = new DomainMembership(domainDelta.getName(), elements);
-                domains.add(domain);
-                domainNames.add(domain.getName());
+                IClusterMembershipElement element = membershipProviders.get(i).createMembership(domain, domainDelta.getDeltas().get(i),
+                    (oldDomain != null && !part.getDelta().isFull()) ? oldDomain.getElements().get(i) : null);
+                elements.add(element);
                 
-                for (int i= 0; i < membershipProviders.size(); i++)
+                if (oldDomain != null)
                 {
-                    IClusterMembershipElement element = membershipProviders.get(i).createMembership(domain, domainDelta.getDeltas().get(i),
-                        (oldDomain != null && !part.getDelta().isFull()) ? oldDomain.getElements().get(i) : null);
-                    elements.add(element);
+                    IClusterMembershipElementChange change;
+                    if (!part.getDelta().isFull())
+                        change = membershipProviders.get(i).createChange(domain, domainDelta.getDeltas().get(i),
+                            oldDomain.getElements().get(i));
+                    else
+                        change = membershipProviders.get(i).createChange(domain, element, oldDomain.getElements().get(i));
                     
-                    if (oldDomain != null)
-                    {
-                        IClusterMembershipElementChange change;
-                        if (!part.getDelta().isFull())
-                            change = membershipProviders.get(i).createChange(domain, domainDelta.getDeltas().get(i),
-                                oldDomain.getElements().get(i));
-                        else
-                            change = membershipProviders.get(i).createChange(domain, element, oldDomain.getElements().get(i));
-                        
-                        changes.add(change);
-                    }
-                }
-                
-                if (oldMembership != null)
-                {
-                    IDomainMembershipChange domainChange = new DomainMembershipChange(domainDelta.getName(), changes);
-                    domainsChanges.add(domainChange);
+                    changes.add(change);
                 }
             }
             
             if (oldMembership != null)
             {
-                for (IDomainMembership oldDomain : oldMembership.getDomains())
+                IDomainMembershipChange domainChange = new DomainMembershipChange(domainDelta.getName(), changes);
+                domainsChanges.add(domainChange);
+            }
+        }
+        
+        if (oldMembership != null)
+        {
+            for (IDomainMembership oldDomain : oldMembership.getDomains())
+            {
+                if (!domainNames.contains(oldDomain.getName()))
                 {
-                    if (!domainNames.contains(oldDomain.getName()))
+                    boolean empty = true;
+                    for (int i = 0; i < membershipProviders.size(); i++)
                     {
-                        boolean empty = true;
-                        for (int i = 0; i < membershipProviders.size(); i++)
-                        {
-                            if (!membershipProviders.get(i).isEmptyMembership(oldDomain.getElements().get(i)))
-                                break;
-                        }
-                        
-                        if (!empty)
-                            domains.add(oldDomain);
+                        if (!membershipProviders.get(i).isEmptyMembership(oldDomain.getElements().get(i)))
+                            break;
                     }
+                    
+                    if (!empty)
+                        domains.add(oldDomain);
                 }
             }
-            
-            IClusterMembership newMembership = new ClusterMembership(part.getDelta().getId(), domains);
-            if (oldMembership == null)
-                clusterMembershipManager.installMembership(newMembership);
-            else
-                clusterMembershipManager.changeMembership(newMembership, new ClusterMembershipChange(domainsChanges));
-            
-            onInstalled(newMembership, part.getDelta());
         }
+        
+        IClusterMembership newMembership = new ClusterMembership(part.getDelta().getId(), domains);
+        if (oldMembership == null)
+            clusterMembershipManager.installMembership(newMembership);
         else
-            receiver.receive(message);
+            clusterMembershipManager.changeMembership(newMembership, new ClusterMembershipChange(domainsChanges));
+        
+        onInstalled(part.getRoundId(), newMembership, part.getDelta());
     }
     
-    protected void onInstalled(IClusterMembership newMembership, ClusterMembershipDelta coreDelta)
+    protected void onInstalled(long roundId, IClusterMembership newMembership, ClusterMembershipDelta coreDelta)
     {
     }
 }

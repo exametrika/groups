@@ -14,7 +14,9 @@ import com.exametrika.api.groups.cluster.IClusterMembershipElement;
 import com.exametrika.api.groups.cluster.IDomainMembership;
 import com.exametrika.api.groups.core.IMembership;
 import com.exametrika.api.groups.core.INode;
+import com.exametrika.common.messaging.IMessage;
 import com.exametrika.common.messaging.IMessageFactory;
+import com.exametrika.common.messaging.IReceiver;
 import com.exametrika.common.messaging.ISender;
 import com.exametrika.common.utils.Assert;
 import com.exametrika.common.utils.Pair;
@@ -33,6 +35,14 @@ import com.exametrika.impl.groups.core.membership.Memberships;
  */
 public final class CoreClusterMembershipProtocol extends AbstractClusterMembershipProtocol implements IGracefulCloseStrategy
 {
+    // TODO:
+    // - детектировать падение кор узлов при смене core членства
+    // - после каждого такого события после флаш на коорлинаторе членства сформировать новок членство кластера
+    //   с тем же ид и составом, но новым маппингом воркеров на кор узлы
+    // - после этого возможно формирование новыз члкнств кластера
+    // - перед посылкой членства кор узлам запоминаем из срстав и блокируем формирование нового членства до очистки списка
+    //   при смене кор членства список сбрасывать флаг смены установить
+    // - при получении ответа стирать его из списка
     private final IMembershipManager membershipManager;
     private final ISender workerSender;
     private final long trackPeriod;
@@ -42,6 +52,7 @@ public final class CoreClusterMembershipProtocol extends AbstractClusterMembersh
     private boolean stopped;
     private boolean installing;
     private Set<INode> workerNodes = Collections.emptySet();
+    private long nextRoundId = 1;
     
     public CoreClusterMembershipProtocol(String channelName, IMessageFactory messageFactory, 
         IClusterMembershipManager clusterMembershipManager, List<IClusterMembershipProvider> membershipProviders,
@@ -91,11 +102,30 @@ public final class CoreClusterMembershipProtocol extends AbstractClusterMembersh
             return;
         
         installing = true;
-        send(messageFactory.create(Memberships.CORE_GROUP_ADDRESS, new ClusterMembershipMessagePart(delta)));
+        send(messageFactory.create(Memberships.CORE_GROUP_ADDRESS, new ClusterMembershipMessagePart(nextRoundId++, delta)));
     }
 
     @Override
-    protected void onInstalled(IClusterMembership newMembership, ClusterMembershipDelta coreDelta)
+    public void stop()
+    {
+        stopped = true;
+        super.stop();
+    }
+    
+    @Override
+    protected void doReceive(IReceiver receiver, IMessage message)
+    {
+        if (message.getPart() instanceof ClusterMembershipMessagePart)
+        {
+            ClusterMembershipMessagePart part = message.getPart();
+            installMembership(part);
+        }
+        else
+            receiver.receive(message);
+    }
+    
+    @Override
+    protected void onInstalled(long roundId, IClusterMembership newMembership, ClusterMembershipDelta coreDelta)
     {
         installing = false;
         WorkerToCoreMembership mapping = newMembership.findDomain(Memberships.CORE_DOMAIN).findElement(WorkerToCoreMembership.class);
@@ -115,7 +145,7 @@ public final class CoreClusterMembershipProtocol extends AbstractClusterMembersh
             else
                 delta = createWorkerFullDelta(workerNode.getDomain(), newMembership);
             
-            workerSender.send(messageFactory.create(workerNode.getAddress(), new ClusterMembershipMessagePart(delta)));
+            workerSender.send(messageFactory.create(workerNode.getAddress(), new ClusterMembershipMessagePart(roundId, delta)));
         }
         
         this.workerNodes = workerNodes;

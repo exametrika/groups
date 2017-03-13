@@ -25,6 +25,7 @@ public final class ClusterMembershipSerializationRegistrar implements ISerializa
         registry.register(new WorkerToCoreMembershipDeltaSerializer());
         registry.register(new NodeSerializer());
         registry.register(new ClusterMembershipMessagePartSerializer());
+        registry.register(new ClusterMembershipResponseMessagePartSerializer());
     }
 
     @Override
@@ -36,5 +37,6 @@ public final class ClusterMembershipSerializationRegistrar implements ISerializa
         registry.unregister(WorkerToCoreMembershipDeltaSerializer.ID);
         registry.unregister(NodeSerializer.ID);
         registry.unregister(ClusterMembershipMessagePartSerializer.ID);
+        registry.unregister(ClusterMembershipResponseMessagePartSerializer.ID);
     }
 }

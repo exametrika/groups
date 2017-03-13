@@ -10,35 +10,33 @@ import com.exametrika.common.io.ISerialization;
 import com.exametrika.common.io.impl.AbstractSerializer;
 
 /**
- * The {@link ClusterMembershipMessagePartSerializer} is a serializer for {@link ClusterMembershipMessagePart}.
+ * The {@link ClusterMembershipResponseMessagePartSerializer} is a serializer for {@link ClusterMembershipResponseMessagePart}.
  * 
  * @threadsafety This class and its methods are thread safe.
  * @author Medvedev-A
  */
-public final class ClusterMembershipMessagePartSerializer extends AbstractSerializer
+public final class ClusterMembershipResponseMessagePartSerializer extends AbstractSerializer
 {
-    public static final UUID ID = UUID.fromString("4b3c70ec-4dd7-470a-9af6-c21a2913839d");
+    public static final UUID ID = UUID.fromString("cc5129dd-37c2-475b-a436-18805ce58375");
  
-    public ClusterMembershipMessagePartSerializer()
+    public ClusterMembershipResponseMessagePartSerializer()
     {
-        super(ID, ClusterMembershipMessagePart.class);
+        super(ID, ClusterMembershipResponseMessagePart.class);
     }
 
     @Override
     public void serialize(ISerialization serialization, Object object)
     {
-        ClusterMembershipMessagePart part = (ClusterMembershipMessagePart)object;
+        ClusterMembershipResponseMessagePart part = (ClusterMembershipResponseMessagePart)object;
 
         serialization.writeLong(part.getRoundId());
-        serialization.writeTypedObject(part.getDelta());
     }
     
     @Override
     public Object deserialize(IDeserialization deserialization, UUID id)
     {
         long roundId = deserialization.readLong();
-        ClusterMembershipDelta delta = deserialization.readTypedObject(ClusterMembershipDelta.class);
         
-        return new ClusterMembershipMessagePart(roundId, delta);
+        return new ClusterMembershipResponseMessagePart(roundId);
     }
 }

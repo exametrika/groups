@@ -44,6 +44,7 @@ public final class ClusterMembershipManager implements IClusterMembershipManager
     private final ILiveNodeProvider liveNodeProvider;
     private final IPropertyProvider propertyProvider;
     private final IMembershipService membershipService;
+    private final String domainName;
     private final Set<IClusterMembershipListener> privateMembershipListeners;
     private final IMarker marker;
     private volatile Set<IClusterMembershipListener> publicMembershipListeners = new HashSet<IClusterMembershipListener>();
@@ -51,16 +52,19 @@ public final class ClusterMembershipManager implements IClusterMembershipManager
     private volatile INode localNode;
 
     public ClusterMembershipManager(String channelName, ILiveNodeProvider liveNodeProvider, IPropertyProvider propertyProvider,
-        IMembershipService  membershipService, Set<IClusterMembershipListener> membershipListeners)
+        IMembershipService  membershipService, String domainName, Set<IClusterMembershipListener> membershipListeners)
     {
         Assert.notNull(channelName);
         Assert.isTrue((membershipService != null) != (liveNodeProvider != null && propertyProvider != null));
+        Assert.notNull(domainName);
+        Assert.isTrue((membershipService != null) == (domainName.equals(Memberships.CORE_DOMAIN)));
         Assert.notNull(membershipListeners);
         
         this.channelName = channelName;
         this.liveNodeProvider = liveNodeProvider;
         this.propertyProvider = propertyProvider;
         this.membershipService = membershipService;
+        this.domainName = domainName;
         this.privateMembershipListeners = membershipListeners;
         marker = Loggers.getMarker(channelName);
     }
@@ -169,7 +173,7 @@ public final class ClusterMembershipManager implements IClusterMembershipManager
         else
         {
             localNode = new Node(liveNodeProvider.getLocalNode().getName(), 
-                liveNodeProvider.getLocalNode(), propertyProvider.getProperties(), Memberships.CORE_DOMAIN);
+                liveNodeProvider.getLocalNode(), propertyProvider.getProperties(), domainName);
         }
     }
     
