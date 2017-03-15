@@ -44,6 +44,12 @@ public final class WorkerToCoreMembershipProvider implements IClusterMembershipP
     }
     
     @Override
+    public boolean isCoreGroupOnly()
+    {
+        return true;
+    }
+    
+    @Override
     public Set<String> getDomains()
     {
         return Collections.asSet(Memberships.CORE_DOMAIN);
@@ -143,6 +149,18 @@ public final class WorkerToCoreMembershipProvider implements IClusterMembershipP
         return mappingMembership.getCoreByWorkerMap().isEmpty();
     }
 
+    @Override
+    public IClusterMembershipElementDelta createCoreFullDelta(IClusterMembershipElement membership)
+    {
+        WorkerToCoreMembership mappingMembership = (WorkerToCoreMembership)membership;
+        Map<UUID, UUID> coreByWorkerMapDelta = new LinkedHashMap<UUID, UUID>();
+        for (Map.Entry<INode, INode> entry : mappingMembership.getCoreByWorkerMap().entrySet())
+            coreByWorkerMapDelta.put(entry.getKey().getId(), entry.getValue().getId());
+           
+        return new WorkerToCoreMembershipDelta(mappingMembership.getCoreNodes(), java.util.Collections.<UUID>emptySet(),
+            java.util.Collections.<UUID>emptySet(), coreByWorkerMapDelta);
+    }
+    
     @Override
     public IClusterMembershipElementDelta createWorkerDelta(IClusterMembershipElement membership,
         IClusterMembershipElementDelta delta, boolean full, boolean publicPart)

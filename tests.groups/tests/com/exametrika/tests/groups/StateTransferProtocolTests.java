@@ -544,9 +544,9 @@ public class StateTransferProtocolTests
         }
         
         @Override
-        public MessageType classifyMessage(IMessagePart part)
+        public MessageType classifyMessage(IMessage message)
         {
-            if (part instanceof TestBufferMessagePart)
+            if (message.getPart() instanceof TestBufferMessagePart)
                 return MessageType.STATE_WRITE;
             else
                 return MessageType.NON_STATE;

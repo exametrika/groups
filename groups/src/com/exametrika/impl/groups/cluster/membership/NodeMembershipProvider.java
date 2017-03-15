@@ -43,6 +43,12 @@ public final class NodeMembershipProvider implements IClusterMembershipProvider
     }
     
     @Override
+    public boolean isCoreGroupOnly()
+    {
+        return false;
+    }
+    
+    @Override
     public Set<String> getDomains()
     {
         discoveredNodes = nodeDiscoverer.takeDiscoveredNodes();
@@ -135,6 +141,16 @@ public final class NodeMembershipProvider implements IClusterMembershipProvider
     }
     
     @Override
+    public IClusterMembershipElementDelta createCoreFullDelta(IClusterMembershipElement membership)
+    {
+        Assert.notNull(membership);
+        
+        NodeMembership nodeMembership = (NodeMembership)membership;
+        return new NodeMembershipDelta(new LinkedHashSet<INode>(nodeMembership.getNodes()), java.util.Collections.<UUID>emptySet(), 
+            java.util.Collections.<UUID>emptySet());
+    }
+    
+    @Override
     public IClusterMembershipElementDelta createWorkerDelta(IClusterMembershipElement membership,
         IClusterMembershipElementDelta delta, boolean full, boolean publicPart)
     {
@@ -142,17 +158,10 @@ public final class NodeMembershipProvider implements IClusterMembershipProvider
             return createEmptyDelta();
         
         if (full)
-        {
-            Assert.notNull(membership);
-            
-            NodeMembership nodeMembership = (NodeMembership)membership;
-            return new NodeMembershipDelta(new LinkedHashSet<INode>(nodeMembership.getNodes()), java.util.Collections.<UUID>emptySet(), 
-                java.util.Collections.<UUID>emptySet());
-        }
+            return createCoreFullDelta(membership);
         else
         {
             Assert.notNull(delta);
-            
             return delta;
         }
     }

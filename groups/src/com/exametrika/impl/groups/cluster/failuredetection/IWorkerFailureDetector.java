@@ -10,7 +10,7 @@ import com.exametrika.api.groups.core.INode;
 
 
 /**
- * The {@link IWorkerFailureDetector} is a workerbnode failure detector.
+ * The {@link IWorkerFailureDetector} is a worker node failure detector.
  * 
  * @threadsafety Implementations of this interface and its methods are thread safe.
  * @author Medvedev-A

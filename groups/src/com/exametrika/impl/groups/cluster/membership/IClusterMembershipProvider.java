@@ -21,6 +21,13 @@ import com.exametrika.common.utils.Pair;
 public interface IClusterMembershipProvider
 {
     /**
+     * Is provider membership used in core group only?
+     *
+     * @return true if provider membership used in core group only
+     */
+    boolean isCoreGroupOnly();
+    
+    /**
      * Returns list of domains, used in {@link #getDelta}.
      *
      * @return list of domains, used in {@link #getDelta}
@@ -62,7 +69,14 @@ public interface IClusterMembershipProvider
     boolean isEmptyMembership(IClusterMembershipElement membership);
     
     /**
-     * Creates full membership delta based on given membership.
+     * Creates full core full membership delta based on given membership.
+     *
+     * @param membership membership
+     * @return core full membership delta
+     */
+    IClusterMembershipElementDelta createCoreFullDelta(IClusterMembershipElement membership);
+    /**
+     * Creates full membership delta based on given membership. Only one of membership or delta must be specified.
      *
      * @param membership membership
      * @param delta delta

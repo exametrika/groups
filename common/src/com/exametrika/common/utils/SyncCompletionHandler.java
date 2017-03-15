@@ -3,6 +3,8 @@
  */
 package com.exametrika.common.utils;
 
+import java.util.concurrent.Callable;
+
 import com.exametrika.common.tasks.ThreadInterruptedException;
 import com.exametrika.common.utils.SimpleList.Element;
 
@@ -13,10 +15,11 @@ import com.exametrika.common.utils.SimpleList.Element;
  * @threadsafety This class and its methods are thread safe.
  * @author Medvedev-A
  */
-public final class SyncCompletionHandler implements ICompletionHandler
+public final class SyncCompletionHandler implements ICompletionHandler, Runnable
 {
     private final SimpleList<SyncCompletionHandler> handlers;
     private final Element<SyncCompletionHandler> element;
+    private final Callable callable;
     private boolean completed;
     private Object result;
     private Throwable error;
@@ -25,6 +28,16 @@ public final class SyncCompletionHandler implements ICompletionHandler
     {
         handlers = null;
         element = null;
+        callable = null;
+    }
+    
+    public SyncCompletionHandler(Callable callable)
+    {
+        Assert.notNull(callable);
+        
+        handlers = null;
+        element = null;
+        this.callable = callable;
     }
     
     public SyncCompletionHandler(SimpleList<SyncCompletionHandler> handlers)
@@ -33,6 +46,7 @@ public final class SyncCompletionHandler implements ICompletionHandler
         
         this.handlers = handlers;
         element = new Element<SyncCompletionHandler>(this);
+        this.callable = null;
         
         synchronized (handlers)
         {
@@ -112,6 +126,20 @@ public final class SyncCompletionHandler implements ICompletionHandler
             completed = true;
             this.error = error;
             notify();
+        }
+    }
+
+    @Override
+    public void run()
+    {
+        try
+        {
+            Object result = callable.call();
+            onSucceeded(result);
+        }
+        catch (Throwable e)
+        {
+            onFailed(e);
         }
     }
 }

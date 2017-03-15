@@ -5,7 +5,7 @@ package com.exametrika.spi.groups;
 
 import java.io.File;
 
-import com.exametrika.common.messaging.IMessagePart;
+import com.exametrika.common.messaging.IMessage;
 
 
 
@@ -32,10 +32,10 @@ public interface IStateTransferServer
     /**
      * Classifies incoming message to segregate state read/write messages.
      *
-     * @param part message part to classify
+     * @param message message to classify
      * @return message type
      */
-    MessageType classifyMessage(IMessagePart part);
+    MessageType classifyMessage(IMessage message);
     
     /**
      * Saves snapshot of group state into the specified file.

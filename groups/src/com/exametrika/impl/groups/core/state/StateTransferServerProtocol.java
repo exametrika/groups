@@ -246,14 +246,14 @@ public final class StateTransferServerProtocol extends AbstractProtocol implemen
         }
         else if ((stateSaveTask != null || (stateTransfer != null && stateTransfer.saveSnapshotTask != null)))
         {
-            if (server.classifyMessage(message.getPart()) != IStateTransferServer.MessageType.NON_STATE)
+            if (server.classifyMessage(message) != IStateTransferServer.MessageType.NON_STATE)
                 addPendingMessage(message);
             else
                 receiver.receive(message);
         }
         else
         {
-            if (!snapshotRequest && server.classifyMessage(message.getPart()) == IStateTransferServer.MessageType.STATE_WRITE)
+            if (!snapshotRequest && server.classifyMessage(message) == IStateTransferServer.MessageType.STATE_WRITE)
             {
                 if (stateTransfer != null)
                     stateTransfer.addMessage(message);
