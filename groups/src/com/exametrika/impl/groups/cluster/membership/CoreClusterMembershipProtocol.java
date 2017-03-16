@@ -18,7 +18,9 @@ import com.exametrika.common.messaging.IMessage;
 import com.exametrika.common.messaging.IMessageFactory;
 import com.exametrika.common.messaging.IReceiver;
 import com.exametrika.common.messaging.ISender;
+import com.exametrika.common.messaging.impl.protocols.failuredetection.IFailureObserver;
 import com.exametrika.common.utils.Assert;
+import com.exametrika.impl.groups.core.failuredetection.IFailureDetectionListener;
 import com.exametrika.impl.groups.core.failuredetection.IFailureDetector;
 import com.exametrika.impl.groups.core.flush.IFlushManager;
 import com.exametrika.impl.groups.core.membership.IMembershipManager;
@@ -31,12 +33,13 @@ import com.exametrika.impl.groups.core.membership.Memberships;
  * @threadsafety This class and its methods are not thread safe.
  * @author Medvedev-A
  */
-public final class CoreClusterMembershipProtocol extends AbstractClusterMembershipProtocol
+public final class CoreClusterMembershipProtocol extends AbstractClusterMembershipProtocol implements IFailureDetectionListener
 {
     private final IMembershipManager membershipManager;
     private final ISender workerSender;
     private final CoreCoordinatorClusterMembershipProtocol coordinatorProtocol;
     private final long membershipTimeout;
+    private final IFailureObserver failureObserver;
     private IFailureDetector failureDetector;
     private IFlushManager flushManager;
     private Set<INode> workerNodes = Collections.emptySet();
@@ -47,18 +50,21 @@ public final class CoreClusterMembershipProtocol extends AbstractClusterMembersh
     public CoreClusterMembershipProtocol(String channelName, IMessageFactory messageFactory, 
         IClusterMembershipManager clusterMembershipManager, List<IClusterMembershipProvider> membershipProviders,
         IMembershipManager membershipManager, ISender workerSender,
-        CoreCoordinatorClusterMembershipProtocol coordinatorProtocol, long membershipTimeout)
+        CoreCoordinatorClusterMembershipProtocol coordinatorProtocol, IFailureObserver failureObserver,
+        long membershipTimeout)
     {
         super(channelName, messageFactory, clusterMembershipManager, membershipProviders);
         
         Assert.notNull(membershipManager);
         Assert.notNull(workerSender);
         Assert.notNull(coordinatorProtocol);
+        Assert.notNull(failureObserver);
         
         this.membershipManager = membershipManager;
         this.workerSender = workerSender;
         this.coordinatorProtocol = coordinatorProtocol;
         this.membershipTimeout = membershipTimeout;
+        this.failureObserver = failureObserver;
     }
     
     public void setFailureDetector(IFailureDetector failureDetector)
@@ -77,16 +83,16 @@ public final class CoreClusterMembershipProtocol extends AbstractClusterMembersh
         this.flushManager = flushManager;
     }
     
-    // TODO:подключить к механике детектирования падений/выходов воркеров
-    public void onWorkerNodesLeft(Set<INode> nodes)
+    @Override
+    public void onMemberFailed(INode member)
     {
-        onWorkerNodesFailed(nodes);
+        removeFromRespondingNodes(member.getAddress(), roundId);
     }
-    
-    public void onWorkerNodesFailed(Set<INode> nodes)
+
+    @Override
+    public void onMemberLeft(INode member)
     {
-        for (INode node : nodes)
-            removeFromRespondingNodes(node.getAddress(), roundId);
+        onMemberFailed(member);
     }
     
     @Override
@@ -95,7 +101,7 @@ public final class CoreClusterMembershipProtocol extends AbstractClusterMembersh
         if (currentTime > startInstallTime + membershipTimeout && 
             !com.exametrika.common.utils.Collections.isEmpty(respondingNodes))
         {
-            // TODO: mark responding nodes as failed
+            failureObserver.onNodesFailed(respondingNodes);
             respondingNodes = null;
             sendResponseToCoordinator();
         }

@@ -19,7 +19,7 @@ public interface IClusterMembershipChange
      * Finds domain by name.
      *
      * @param name dimain name
-     * @return domain
+     * @return domain or null if domain change is not found
      */
     IDomainMembershipChange findDomain(String name);
     
