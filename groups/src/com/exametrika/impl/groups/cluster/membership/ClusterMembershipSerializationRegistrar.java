@@ -5,6 +5,8 @@ package com.exametrika.impl.groups.cluster.membership;
 
 import com.exametrika.common.io.ISerializationRegistrar;
 import com.exametrika.common.io.ISerializationRegistry;
+import com.exametrika.impl.groups.core.membership.GroupDeltaSerializer;
+import com.exametrika.impl.groups.core.membership.GroupSerializer;
 import com.exametrika.impl.groups.core.membership.NodeSerializer;
 
 /**
@@ -26,6 +28,9 @@ public final class ClusterMembershipSerializationRegistrar implements ISerializa
         registry.register(new NodeSerializer());
         registry.register(new ClusterMembershipMessagePartSerializer());
         registry.register(new ClusterMembershipResponseMessagePartSerializer());
+        registry.register(new GroupSerializer());
+        registry.register(new GroupDeltaSerializer());
+        registry.register(new GroupMembershipDeltaSerializer());
     }
 
     @Override
@@ -38,5 +43,8 @@ public final class ClusterMembershipSerializationRegistrar implements ISerializa
         registry.unregister(NodeSerializer.ID);
         registry.unregister(ClusterMembershipMessagePartSerializer.ID);
         registry.unregister(ClusterMembershipResponseMessagePartSerializer.ID);
+        registry.unregister(GroupSerializer.ID);
+        registry.unregister(GroupDeltaSerializer.ID);
+        registry.unregister(GroupMembershipDeltaSerializer.ID);
     }
 }

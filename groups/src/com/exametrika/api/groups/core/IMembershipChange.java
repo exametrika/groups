@@ -3,9 +3,6 @@
  */
 package com.exametrika.api.groups.core;
 
-import java.util.Set;
-
-
 /**
  * The {@link IMembershipChange} represents a difference between old and new membership.
  * 
@@ -16,23 +13,9 @@ import java.util.Set;
 public interface IMembershipChange
 {
     /**
-     * Returns set of new group members
-     * 
-     * @return set of new group members
+     * Returns group change.
+     *
+     * @return group change
      */
-    Set<INode> getJoinedMembers();
-    
-    /**
-     * Returns set of left group members.
-     * 
-     * @return set of left group members
-     */
-    Set<INode> getLeftMembers();
-    
-    /**
-     * Returns set of failed group members.
-     * 
-     * @return set of failed group members
-     */
-    Set<INode> getFailedMembers();
+    IGroupChange getGroup();
 }

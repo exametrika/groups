@@ -126,8 +126,8 @@ public final class CoreCoordinatorClusterMembershipProtocol extends AbstractClus
     @Override
     public void onMembershipChanged(MembershipEvent event)
     {
-        if ((!event.getMembershipChange().getFailedMembers().isEmpty() || 
-            !event.getMembershipChange().getLeftMembers().isEmpty()) &&
+        if ((!event.getMembershipChange().getGroup().getFailedMembers().isEmpty() || 
+            !event.getMembershipChange().getGroup().getLeftMembers().isEmpty()) &&
             event.getNewMembership().getGroup().getCoordinator().equals(membershipManager.getLocalNode()))
         {
             respondingNodes = null;

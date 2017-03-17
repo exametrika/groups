@@ -137,8 +137,8 @@ public final class Memberships
         IGroup group = new Group((GroupAddress)oldMembership.getGroup().getAddress(), primaryGroup, members);
         
         IMembership newMembership = new Membership(oldMembership.getId() + 1, group);
-        IMembershipDelta membershipDelta = new MembershipDelta(newMembership.getId(), joinedMembers, leftMemberIds, 
-            failedMemberIds);
+        IMembershipDelta membershipDelta = new MembershipDelta(newMembership.getId(), 
+            new GroupDelta(group.getId(), group.isPrimary(), joinedMembers, leftMemberIds, failedMemberIds));
 
         return new MembershipDeltaInfo(oldMembership, newMembership, membershipDelta);
     }
@@ -154,16 +154,16 @@ public final class Memberships
         Set<INode> leftMembers = new HashSet<INode>();
         for (INode member : oldMembership.getGroup().getMembers())
         {
-            if (membershipDelta.getFailedMembers().contains(member.getId()))
+            if (membershipDelta.getGroup().getFailedMembers().contains(member.getId()))
                 failedMembers.add(member);
-            else if (membershipDelta.getLeftMembers().contains(member.getId()))
+            else if (membershipDelta.getGroup().getLeftMembers().contains(member.getId()))
                 leftMembers.add(member);
             else
                 members.add(member);
         }
         
-        Set<INode> joinedMembers = new HashSet<INode>(membershipDelta.getJoinedMembers());
-        members.addAll(membershipDelta.getJoinedMembers());
+        Set<INode> joinedMembers = new HashSet<INode>(membershipDelta.getGroup().getJoinedMembers());
+        members.addAll(membershipDelta.getGroup().getJoinedMembers());
         
         boolean primaryGroup;
         if (oldMembership.getGroup().isPrimary())
@@ -174,7 +174,8 @@ public final class Memberships
         IGroup group = new Group((GroupAddress)oldMembership.getGroup().getAddress(), primaryGroup, members);
         
         IMembership newMembership = new Membership(oldMembership.getId() + 1, group);
-        IMembershipChange membershipChange = new MembershipChange(joinedMembers, leftMembers, failedMembers);
+        IMembershipChange membershipChange = new MembershipChange(new GroupChange(group, oldMembership.getGroup(), 
+            joinedMembers, leftMembers, failedMembers));
         return new MembershipChangeInfo(oldMembership, newMembership, membershipChange);
     }
     

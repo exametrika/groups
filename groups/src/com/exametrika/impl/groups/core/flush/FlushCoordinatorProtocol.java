@@ -509,7 +509,7 @@ public final class FlushCoordinatorProtocol extends AbstractProtocol implements 
                 boolean joined = false;
                 if (installingMembershipDelta != null)
                 {
-                    for (INode joinedMember : installingMembershipDelta.getJoinedMembers())
+                    for (INode joinedMember : installingMembershipDelta.getGroup().getJoinedMembers())
                     {
                         if (joinedMember.getAddress().equals(node))
                         {

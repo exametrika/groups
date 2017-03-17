@@ -34,6 +34,8 @@ import com.exametrika.impl.groups.core.failuredetection.IFailureDetector;
 import com.exametrika.impl.groups.core.flush.IFlushManager;
 import com.exametrika.impl.groups.core.membership.Group;
 import com.exametrika.impl.groups.core.membership.GroupAddress;
+import com.exametrika.impl.groups.core.membership.GroupChange;
+import com.exametrika.impl.groups.core.membership.GroupDelta;
 import com.exametrika.impl.groups.core.membership.IMembershipDelta;
 import com.exametrika.impl.groups.core.membership.IMembershipManager;
 import com.exametrika.impl.groups.core.membership.IPreparedMembershipListener;
@@ -129,8 +131,9 @@ public class MembershipManagerTests
         assertThat(membership.getGroup().findMember(node2.getId()) == node2, is(true));
         assertThat(membership.getGroup().findMember(node3.getId()) == node3, is(true));
         
-        MembershipChangeInfo changeInfo = Memberships.createMembership(membership, new MembershipDelta(2, Arrays.<INode>asList(node4, node5), 
-            com.exametrika.common.utils.Collections.<UUID>asSet(node1.getId()), com.exametrika.common.utils.Collections.<UUID>asSet(node2.getId())));
+        MembershipChangeInfo changeInfo = Memberships.createMembership(membership, new MembershipDelta(2,
+            new GroupDelta(membership.getGroup().getId(), false, Arrays.<INode>asList(node4, node5), 
+            com.exametrika.common.utils.Collections.<UUID>asSet(node1.getId()), com.exametrika.common.utils.Collections.<UUID>asSet(node2.getId()))));
         assertTrue(changeInfo.oldMembership == membership);
         assertTrue(changeInfo.newMembership.getId() == 2);
         assertThat(changeInfo.newMembership.getGroup().getCoordinator(), is((INode)node3));
@@ -138,9 +141,9 @@ public class MembershipManagerTests
         assertThat(changeInfo.newMembership.getGroup().getName(), is("core"));
         assertThat(changeInfo.newMembership.getGroup().isPrimary(), is(false));
         
-        assertThat(changeInfo.membershipChange.getJoinedMembers(), is(com.exametrika.common.utils.Collections.<INode>asSet(node4, node5)));
-        assertThat(changeInfo.membershipChange.getLeftMembers(), is(com.exametrika.common.utils.Collections.<INode>asSet(node1)));
-        assertThat(changeInfo.membershipChange.getFailedMembers(), is(com.exametrika.common.utils.Collections.<INode>asSet(node2)));
+        assertThat(changeInfo.membershipChange.getGroup().getJoinedMembers(), is(com.exametrika.common.utils.Collections.<INode>asSet(node4, node5)));
+        assertThat(changeInfo.membershipChange.getGroup().getLeftMembers(), is(com.exametrika.common.utils.Collections.<INode>asSet(node1)));
+        assertThat(changeInfo.membershipChange.getGroup().getFailedMembers(), is(com.exametrika.common.utils.Collections.<INode>asSet(node2)));
         
         MembershipDeltaInfo deltaInfo = Memberships.createMembership(membership, com.exametrika.common.utils.Collections.<INode>asSet(node1), 
             com.exametrika.common.utils.Collections.<INode>asSet(node2), com.exametrika.common.utils.Collections.<INode>asSet(node4, node5), null);
@@ -156,12 +159,13 @@ public class MembershipManagerTests
         
         List<INode> joined = new ArrayList<INode>(deltaInfo.newMembership.getGroup().getMembers());
         joined.remove(node3);
-        assertThat(deltaInfo.membershipDelta.getJoinedMembers(), is(joined));
-        assertThat(deltaInfo.membershipDelta.getFailedMembers(), is(com.exametrika.common.utils.Collections.<UUID>asSet(node1.getId())));
-        assertThat(deltaInfo.membershipDelta.getLeftMembers(), is(com.exametrika.common.utils.Collections.<UUID>asSet(node2.getId())));
+        assertThat(deltaInfo.membershipDelta.getGroup().getJoinedMembers(), is(joined));
+        assertThat(deltaInfo.membershipDelta.getGroup().getFailedMembers(), is(com.exametrika.common.utils.Collections.<UUID>asSet(node1.getId())));
+        assertThat(deltaInfo.membershipDelta.getGroup().getLeftMembers(), is(com.exametrika.common.utils.Collections.<UUID>asSet(node2.getId())));
         
-        changeInfo = Memberships.createMembership(membership, new MembershipDelta(2, Arrays.<INode>asList(), 
-            com.exametrika.common.utils.Collections.<UUID>asSet(node1.getId()), com.exametrika.common.utils.Collections.<UUID>asSet(node2.getId())));
+        changeInfo = Memberships.createMembership(membership, new MembershipDelta(2,
+            new GroupDelta(membership.getGroup().getId(), false, Arrays.<INode>asList(), 
+            com.exametrika.common.utils.Collections.<UUID>asSet(node1.getId()), com.exametrika.common.utils.Collections.<UUID>asSet(node2.getId()))));
         assertThat(changeInfo.newMembership.getGroup().isPrimary(), is(false));
         
         deltaInfo = Memberships.createMembership(membership, com.exametrika.common.utils.Collections.<INode>asSet(node1), 
@@ -211,9 +215,9 @@ public class MembershipManagerTests
         
         tracker.onTimer(20000);
         assertTrue(flushManager.membershipDelta.getId() == 2);
-        assertThat(flushManager.membershipDelta.getJoinedMembers(), is(Arrays.<INode>asList(discoveredNode2)));
-        assertThat(flushManager.membershipDelta.getLeftMembers(), is(com.exametrika.common.utils.Collections.<UUID>asSet()));
-        assertThat(flushManager.membershipDelta.getFailedMembers(), is(com.exametrika.common.utils.Collections.<UUID>asSet(discoveredNode1.getId())));
+        assertThat(flushManager.membershipDelta.getGroup().getJoinedMembers(), is(Arrays.<INode>asList(discoveredNode2)));
+        assertThat(flushManager.membershipDelta.getGroup().getLeftMembers(), is(com.exametrika.common.utils.Collections.<UUID>asSet()));
+        assertThat(flushManager.membershipDelta.getGroup().getFailedMembers(), is(com.exametrika.common.utils.Collections.<UUID>asSet(discoveredNode1.getId())));
         assertThat(flushManager.membership.getId(), is(2l));
         assertThat(flushManager.membership.getGroup().getMembers(), is(Arrays.asList(membershipManager.getLocalNode(), discoveredNode2)));
     }
@@ -258,23 +262,23 @@ public class MembershipManagerTests
         
         Group group2 = new Group(new GroupAddress(UUID.randomUUID(), "test"), true, Arrays.<INode>asList(manager.getLocalNode(), node1, node2));
         Membership membership2 = new Membership(2, group2);
-        MembershipChange membershipChange = new MembershipChange(Collections.<INode>singleton(node2), 
-            Collections.<INode>emptySet(), Collections.<INode>emptySet());
+        MembershipChange membershipChange = new MembershipChange(new GroupChange(group2, group, Collections.<INode>singleton(node2), 
+            Collections.<INode>emptySet(), Collections.<INode>emptySet()));
         manager.prepareChangeMembership(membership2, membershipChange);
         
         assertThat(manager.getPreparedMembership(), is((IMembership)membership2));
         assertThat(manager.getMembership(), is((IMembership)membership));
         assertThat(preparedListener.newMembership, is((IMembership)membership2));
         assertThat(preparedListener.oldMembership, is((IMembership)membership));
-        assertThat(preparedListener.change.getJoinedMembers(), is(membershipChange.getJoinedMembers()));
+        assertThat(preparedListener.change.getGroup().getJoinedMembers(), is(membershipChange.getGroup().getJoinedMembers()));
         
         manager.commitMembership();
         assertThat(manager.getMembership(), is((IMembership)membership2));
         assertThat(listener.onMembershipChangedEvent.getNewMembership(), is((IMembership)membership2));
         assertThat(listener.onMembershipChangedEvent.getOldMembership(), is((IMembership)membership));
-        assertThat(listener.onMembershipChangedEvent.getMembershipChange().getJoinedMembers(), is(membershipChange.getJoinedMembers()));
-        assertThat(listener.onMembershipChangedEvent.getMembershipChange().getFailedMembers(), is(membershipChange.getFailedMembers()));
-        assertThat(listener.onMembershipChangedEvent.getMembershipChange().getLeftMembers(), is(membershipChange.getLeftMembers()));
+        assertThat(listener.onMembershipChangedEvent.getMembershipChange().getGroup().getJoinedMembers(), is(membershipChange.getGroup().getJoinedMembers()));
+        assertThat(listener.onMembershipChangedEvent.getMembershipChange().getGroup().getFailedMembers(), is(membershipChange.getGroup().getFailedMembers()));
+        assertThat(listener.onMembershipChangedEvent.getMembershipChange().getGroup().getLeftMembers(), is(membershipChange.getGroup().getLeftMembers()));
         
         manager.uninstallMembership(IMembershipListener.LeaveReason.GRACEFUL_CLOSE);
         assertThat(manager.getPreparedMembership() == null, is(true));

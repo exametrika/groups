@@ -3,13 +3,6 @@
  */
 package com.exametrika.impl.groups.core.membership;
 
-import java.util.List;
-import java.util.Set;
-import java.util.UUID;
-
-import com.exametrika.api.groups.core.INode;
-
-
 /**
  * The {@link IMembershipDelta} represents a difference between old and new membership.
  * 
@@ -27,23 +20,9 @@ public interface IMembershipDelta
     long getId();
     
     /**
-     * Returns list of new group members
-     * 
-     * @return list of new group members
+     * Returns group delta.
+     *
+     * @return group delta
      */
-    List<INode> getJoinedMembers();
-    
-    /**
-     * Returns set of left group members.
-     * 
-     * @return set of left group members
-     */
-    Set<UUID> getLeftMembers();
-    
-    /**
-     * Returns set of failed group members.
-     * 
-     * @return set of failed group members
-     */
-    Set<UUID> getFailedMembers();
+    IGroupDelta getGroup();
 }
