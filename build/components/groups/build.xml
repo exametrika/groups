@@ -6,7 +6,7 @@
     <import file="../../src/product.xml"/>
     
     <property name="product.version" value="1.0.0" />
-    <property name="product.name" value="пкщгзы" />
+    <property name="product.name" value="groups" />
     <property name="product.title" value="Groups product." />
     <property name="product.dist" value="true" />
     <fileset id="product.libraries" dir="${product.lib.dir}" includes="*.jar *.so *.dll" excludes="asm-debug*.jar ant*.jar junit*.jar *-src.jar *-src.zip" />
@@ -20,6 +20,7 @@
     <target name="product.test-modules">
         <module dir="${root.dir}/tests.common"/>
         <module dir="${root.dir}/tests.groups"/>
+        <module dir="${root.dir}/groups.simulator"/>
     </target>
     
 </project>

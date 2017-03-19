@@ -1,7 +1,7 @@
 /**
  * Copyright 2007 Andrey Medvedev. All rights reserved.
  */
-package com.exametrika.common.messaging.impl.protocols.modelling;
+package com.exametrika.impl.groups.simulator.modelling;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
