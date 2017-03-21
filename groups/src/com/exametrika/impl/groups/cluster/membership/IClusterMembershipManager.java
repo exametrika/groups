@@ -5,7 +5,7 @@ package com.exametrika.impl.groups.cluster.membership;
 
 import com.exametrika.api.groups.cluster.IClusterMembership;
 import com.exametrika.api.groups.cluster.IClusterMembershipChange;
-import com.exametrika.api.groups.cluster.IClusterMembershipListener.LeaveReason;
+import com.exametrika.api.groups.cluster.IMembershipListener.LeaveReason;
 import com.exametrika.api.groups.cluster.IClusterMembershipService;
 
 

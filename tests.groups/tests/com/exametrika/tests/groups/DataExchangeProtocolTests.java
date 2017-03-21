@@ -21,9 +21,9 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.junit.After;
 import org.junit.Test;
 
-import com.exametrika.api.groups.core.IMembership;
-import com.exametrika.api.groups.core.IMembershipListener;
-import com.exametrika.api.groups.core.INode;
+import com.exametrika.api.groups.cluster.IGroupMembership;
+import com.exametrika.api.groups.cluster.IGroupMembershipListener;
+import com.exametrika.api.groups.cluster.INode;
 import com.exametrika.common.compartment.ICompartment;
 import com.exametrika.common.compartment.ICompartmentTimerProcessor;
 import com.exametrika.common.io.ISerializationRegistry;
@@ -51,25 +51,27 @@ import com.exametrika.common.utils.Debug;
 import com.exametrika.common.utils.IOs;
 import com.exametrika.common.utils.Threads;
 import com.exametrika.common.utils.Times;
-import com.exametrika.impl.groups.core.channel.GroupChannel;
-import com.exametrika.impl.groups.core.channel.IChannelReconnector;
-import com.exametrika.impl.groups.core.channel.IGracefulCloseStrategy;
-import com.exametrika.impl.groups.core.discovery.DiscoveryProtocol;
-import com.exametrika.impl.groups.core.discovery.WellKnownAddressesDiscoveryStrategy;
-import com.exametrika.impl.groups.core.exchange.DataExchangeProtocol;
-import com.exametrika.impl.groups.core.exchange.IDataExchangeProvider;
-import com.exametrika.impl.groups.core.exchange.IExchangeData;
-import com.exametrika.impl.groups.core.failuredetection.FailureDetectionProtocol;
-import com.exametrika.impl.groups.core.failuredetection.GroupNodeTrackingStrategy;
-import com.exametrika.impl.groups.core.failuredetection.IFailureDetectionListener;
-import com.exametrika.impl.groups.core.flush.FlushCoordinatorProtocol;
-import com.exametrika.impl.groups.core.flush.FlushParticipantProtocol;
-import com.exametrika.impl.groups.core.flush.IFlush;
-import com.exametrika.impl.groups.core.flush.IFlushParticipant;
-import com.exametrika.impl.groups.core.membership.IMembershipManager;
-import com.exametrika.impl.groups.core.membership.IPreparedMembershipListener;
-import com.exametrika.impl.groups.core.membership.MembershipManager;
-import com.exametrika.impl.groups.core.membership.MembershipTracker;
+import com.exametrika.impl.groups.cluster.channel.GroupChannel;
+import com.exametrika.impl.groups.cluster.channel.IChannelReconnector;
+import com.exametrika.impl.groups.cluster.channel.IGracefulCloseStrategy;
+import com.exametrika.impl.groups.cluster.discovery.CoreGroupDiscoveryProtocol;
+import com.exametrika.impl.groups.cluster.discovery.WellKnownAddressesDiscoveryStrategy;
+import com.exametrika.impl.groups.cluster.exchange.GroupDataExchangeProtocol;
+import com.exametrika.impl.groups.cluster.exchange.IDataExchangeProvider;
+import com.exametrika.impl.groups.cluster.exchange.IExchangeData;
+import com.exametrika.impl.groups.cluster.failuredetection.CoreGroupFailureDetectionProtocol;
+import com.exametrika.impl.groups.cluster.failuredetection.GroupNodeTrackingStrategy;
+import com.exametrika.impl.groups.cluster.failuredetection.IFailureDetectionListener;
+import com.exametrika.impl.groups.cluster.flush.FlushCoordinatorProtocol;
+import com.exametrika.impl.groups.cluster.flush.FlushParticipantProtocol;
+import com.exametrika.impl.groups.cluster.flush.IFlush;
+import com.exametrika.impl.groups.cluster.flush.IFlushParticipant;
+import com.exametrika.impl.groups.cluster.membership.CoreGroupMembershipManager;
+import com.exametrika.impl.groups.cluster.membership.CoreGroupMembershipTracker;
+import com.exametrika.impl.groups.cluster.membership.GroupMemberships;
+import com.exametrika.impl.groups.cluster.membership.IGroupMembershipManager;
+import com.exametrika.impl.groups.cluster.membership.IPreparedGroupMembershipListener;
+import com.exametrika.impl.groups.cluster.membership.LocalNodeProvider;
 import com.exametrika.spi.groups.IDiscoveryStrategy;
 import com.exametrika.tests.common.messaging.ReceiverMock;
 import com.exametrika.tests.groups.DiscoveryProtocolTests.GroupJoinStrategyMock;
@@ -205,13 +207,13 @@ public class DataExchangeProtocolTests
 
     private void checkMembership(TestChannelFactory channelFactory, Set<Integer> skipIndexes, long exchangeId)
     {
-        IMembership membership = null;
+        IGroupMembership membership = null;
         for (int i = 0; i < COUNT; i++)
         {
             if (skipIndexes.contains(i))
                 continue;
             
-            IMembership nodeMembership = channels[i].getMembershipService().getMembership();
+            IGroupMembership nodeMembership = channels[i].getMembershipService().getMembership();
             if (membership == null)
                 membership = nodeMembership;
             
@@ -237,7 +239,7 @@ public class DataExchangeProtocolTests
         assertThat(membership.getGroup().getMembers().size(), is(COUNT - skipIndexes.size()));
     }
     
-    private void checkDataExchange(TestChannelFactory channelFactory, IMembership membership,
+    private void checkDataExchange(TestChannelFactory channelFactory, IGroupMembership membership,
         int index, long exchangeId, Set<Integer> skipIndexes)
     {
         TestDataExchangeProvider exchangeProvider = channelFactory.exchangeProviders.get(index);
@@ -453,8 +455,8 @@ public class DataExchangeProtocolTests
         private long gracefulCloseTimeout = 10000;
         private long dataExchangePeriod = 200;
         private List<FlushParticipantMock> flushParticipants = new ArrayList<FlushParticipantMock>();
-        private MembershipTracker membershipTracker;
-        private MembershipManager membershipManager;
+        private CoreGroupMembershipTracker membershipTracker;
+        private CoreGroupMembershipManager membershipManager;
         private List<IGracefulCloseStrategy> gracefulCloseStrategies = new ArrayList<IGracefulCloseStrategy>();
         private boolean failOnFlush;
         private List<TestDataExchangeProvider> exchangeProviders = new ArrayList<TestDataExchangeProvider>();
@@ -481,13 +483,15 @@ public class DataExchangeProtocolTests
             ISerializationRegistry serializationRegistry, ILiveNodeProvider liveNodeProvider, List<IFailureObserver> failureObservers, 
             List<AbstractProtocol> protocols)
         {
-            Set<IPreparedMembershipListener> preparedMembershipListeners = new HashSet<IPreparedMembershipListener>();
-            Set<IMembershipListener> membershipListeners = new HashSet<IMembershipListener>();
-            membershipManager = new MembershipManager("test", liveNodeProvider, new PropertyProviderMock(), 
+            Set<IPreparedGroupMembershipListener> preparedMembershipListeners = new HashSet<IPreparedGroupMembershipListener>();
+            Set<IGroupMembershipListener> membershipListeners = new HashSet<IGroupMembershipListener>();
+            LocalNodeProvider localNodeProvider = new LocalNodeProvider(liveNodeProvider, new PropertyProviderMock(), 
+                GroupMemberships.CORE_DOMAIN);
+            membershipManager = new CoreGroupMembershipManager("test", localNodeProvider, 
                 preparedMembershipListeners, membershipListeners);
 
             Set<IFailureDetectionListener> failureDetectionListeners = new HashSet<IFailureDetectionListener>();
-            FailureDetectionProtocol failureDetectionProtocol = new FailureDetectionProtocol(channelName, messageFactory, membershipManager, 
+            CoreGroupFailureDetectionProtocol failureDetectionProtocol = new CoreGroupFailureDetectionProtocol(channelName, messageFactory, membershipManager, 
                 failureDetectionListeners, failureUpdatePeriod, failureHistoryPeriod, maxShunCount);
             preparedMembershipListeners.add(failureDetectionProtocol);
             failureObservers.add(failureDetectionProtocol);
@@ -505,14 +509,14 @@ public class DataExchangeProtocolTests
 
             TestDataExchangeProvider exchangeProvider = new TestDataExchangeProvider();
             exchangeProviders.add(exchangeProvider);
-            DataExchangeProtocol dataExchangeProtocol = new DataExchangeProtocol(channelName, messageFactory, membershipManager,
+            GroupDataExchangeProtocol dataExchangeProtocol = new GroupDataExchangeProtocol(channelName, messageFactory, membershipManager,
                 failureDetectionProtocol, Arrays.<IDataExchangeProvider>asList(exchangeProvider), dataExchangePeriod);
             membershipListeners.add(dataExchangeProtocol);
             protocols.add(dataExchangeProtocol);
             failureDetectionListeners.add(dataExchangeProtocol);
             
             GroupJoinStrategyMock joinStrategy = new GroupJoinStrategyMock(); 
-            DiscoveryProtocol discoveryProtocol = new DiscoveryProtocol(channelName, messageFactory, membershipManager, 
+            CoreGroupDiscoveryProtocol discoveryProtocol = new CoreGroupDiscoveryProtocol(channelName, messageFactory, membershipManager, 
                 failureDetectionProtocol, discoveryStrategy, liveNodeProvider, discoveryPeriod, 
                 groupFormationPeriod);
             discoveryProtocol.setGroupJoinStrategy(joinStrategy);
@@ -527,7 +531,7 @@ public class DataExchangeProtocolTests
             
             protocols.add(failureDetectionProtocol);
 
-            membershipTracker = new MembershipTracker(1000, membershipManager, discoveryProtocol, 
+            membershipTracker = new CoreGroupMembershipTracker(1000, membershipManager, discoveryProtocol, 
                 failureDetectionProtocol, flushCoordinatorProtocol, null);
             
             gracefulCloseStrategies.add(flushCoordinatorProtocol);
@@ -538,14 +542,14 @@ public class DataExchangeProtocolTests
         @Override
         protected void wireProtocols(Channel channel, TcpTransport transport, ProtocolStack protocolStack)
         {
-            FailureDetectionProtocol failureDetectionProtocol = protocolStack.find(FailureDetectionProtocol.class);
+            CoreGroupFailureDetectionProtocol failureDetectionProtocol = protocolStack.find(CoreGroupFailureDetectionProtocol.class);
             failureDetectionProtocol.setFailureObserver(transport);
             failureDetectionProtocol.setChannelReconnector((IChannelReconnector)channel);
             channel.getCompartment().addTimerProcessor(membershipTracker);
             
             GroupNodeTrackingStrategy strategy = (GroupNodeTrackingStrategy)protocolStack.find(HeartbeatProtocol.class).getNodeTrackingStrategy();
             strategy.setFailureDetector(failureDetectionProtocol);
-            strategy.setMembershipManager((IMembershipManager)failureDetectionProtocol.getMembersipService());
+            strategy.setMembershipManager((IGroupMembershipManager)failureDetectionProtocol.getMembersipService());
             
             channel.getCompartment().addTimerProcessor(flushParticipants.get(flushParticipants.size() - 1));
         }

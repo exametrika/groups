@@ -3,65 +3,52 @@
  */
 package com.exametrika.impl.groups.cluster.membership;
 
-import java.util.Set;
-import java.util.UUID;
-
-import com.exametrika.api.groups.core.IGroup;
 import com.exametrika.common.l10n.DefaultMessage;
 import com.exametrika.common.l10n.ILocalizedMessage;
 import com.exametrika.common.l10n.Messages;
 import com.exametrika.common.utils.Assert;
-import com.exametrika.common.utils.Immutables;
-import com.exametrika.impl.groups.core.membership.IGroupDelta;
 
 /**
- * The {@link GroupMembershipDelta} is implementation of {@link IClusterMembershipElementDelta}.
+ * The {@link GroupMembershipDelta} is implementation of {@link IGroupMembershipDelta}.
  * 
  * @threadsafety This class and its methods are thread safe.
  * @author Medvedev-A
  */
-public final class GroupMembershipDelta implements IClusterMembershipElementDelta
+public final class GroupMembershipDelta implements IGroupMembershipDelta
 {
     private static final IMessages messages = Messages.get(IMessages.class);
-    private final Set<IGroup> newGroups;
-    private final Set<IGroupDelta> changedGroups;
-    private final Set<UUID> removedGroups;
+    private final long id;
+    private final IGroupDelta group;
 
-    public GroupMembershipDelta(Set<IGroup> newGroups, Set<IGroupDelta> changedGroups, Set<UUID> removedGroups)
+    public GroupMembershipDelta(long id, IGroupDelta group)
     {
-        Assert.notNull(newGroups);
-        Assert.notNull(changedGroups);
-        Assert.notNull(removedGroups);
+        Assert.notNull(group);
         
-        this.newGroups = Immutables.wrap(newGroups);
-        this.changedGroups = Immutables.wrap(changedGroups);
-        this.removedGroups = Immutables.wrap(removedGroups);
+        this.id = id;
+        this.group = group;
     }
 
-    public Set<IGroup> getNewGroups()
+    @Override
+    public long getId()
     {
-        return newGroups;
+        return id;
     }
     
-    public Set<IGroupDelta> getChangedGroups()
+    @Override
+    public IGroupDelta getGroup()
     {
-        return changedGroups;
-    }
-    
-    public Set<UUID> getRemovedGroups()
-    {
-        return removedGroups;
+        return group;
     }
 
     @Override
     public String toString()
     {
-        return messages.toString(newGroups, changedGroups, removedGroups).toString();
+        return messages.toString(id, group).toString();
     }
     
     private interface IMessages
     {
-        @DefaultMessage("new: {0}\nchanged: {1}\nremoved: {2}")
-        ILocalizedMessage toString(Set<IGroup> newGroups, Set<IGroupDelta> changedGroups, Set<UUID> removedGroups);
+        @DefaultMessage("id: {0}, {1}")
+        ILocalizedMessage toString(long id, IGroupDelta group);
     }
 }

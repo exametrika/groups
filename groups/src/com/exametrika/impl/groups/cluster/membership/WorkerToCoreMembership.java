@@ -11,7 +11,7 @@ import java.util.Set;
 import java.util.UUID;
 
 import com.exametrika.api.groups.cluster.IClusterMembershipElement;
-import com.exametrika.api.groups.core.INode;
+import com.exametrika.api.groups.cluster.INode;
 import com.exametrika.common.l10n.DefaultMessage;
 import com.exametrika.common.l10n.ILocalizedMessage;
 import com.exametrika.common.l10n.Messages;

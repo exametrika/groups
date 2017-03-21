@@ -7,15 +7,14 @@ import java.util.LinkedHashSet;
 import java.util.Set;
 import java.util.UUID;
 
-import com.exametrika.api.groups.core.INode;
+import com.exametrika.api.groups.cluster.INode;
 import com.exametrika.common.io.IDeserialization;
 import com.exametrika.common.io.ISerialization;
 import com.exametrika.common.io.impl.AbstractSerializer;
 import com.exametrika.common.utils.Serializers;
-import com.exametrika.impl.groups.core.membership.Node;
 
 /**
- * The {@link NodeMembershipDeltaSerializer} is a serializer of {@link NodeMembershipDelta}.
+ * The {@link NodeMembershipDeltaSerializer} is a serializer of {@link NodesMembershipDelta}.
  * 
  * @threadsafety This class and its methods are thread safe.
  * @author Medvedev-A
@@ -27,7 +26,7 @@ public final class NodeMembershipDeltaSerializer extends AbstractSerializer
     
     public NodeMembershipDeltaSerializer()
     {
-        super(ID, NodeMembershipDelta.class);
+        super(ID, NodesMembershipDelta.class);
     }
 
     @Override
@@ -48,13 +47,13 @@ public final class NodeMembershipDeltaSerializer extends AbstractSerializer
         for (int i = 0; i < count; i++)
             failedNodes.add(Serializers.readUUID(deserialization));
         
-        return new NodeMembershipDelta(joinedNodes, leftNodes, failedNodes);
+        return new NodesMembershipDelta(joinedNodes, leftNodes, failedNodes);
     }
 
     @Override
     public void serialize(ISerialization serialization, Object object)
     {
-        NodeMembershipDelta delta = (NodeMembershipDelta)object;
+        NodesMembershipDelta delta = (NodesMembershipDelta)object;
 
         serialization.writeInt(delta.getJoinedNodes().size());
         for (INode member : delta.getJoinedNodes())

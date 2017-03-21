@@ -19,11 +19,11 @@ import org.junit.After;
 import org.junit.Ignore;
 import org.junit.Test;
 
-import com.exametrika.api.groups.core.IMembership;
-import com.exametrika.api.groups.core.IMembershipChange;
-import com.exametrika.api.groups.core.IMembershipListener;
-import com.exametrika.api.groups.core.IMembershipListener.LeaveReason;
-import com.exametrika.api.groups.core.INode;
+import com.exametrika.api.groups.cluster.IGroupMembership;
+import com.exametrika.api.groups.cluster.IGroupMembershipChange;
+import com.exametrika.api.groups.cluster.IGroupMembershipListener;
+import com.exametrika.api.groups.cluster.INode;
+import com.exametrika.api.groups.cluster.IMembershipListener.LeaveReason;
 import com.exametrika.common.io.ISerializationRegistry;
 import com.exametrika.common.messaging.IChannel;
 import com.exametrika.common.messaging.ILiveNodeProvider;
@@ -44,22 +44,22 @@ import com.exametrika.common.utils.Debug;
 import com.exametrika.common.utils.IOs;
 import com.exametrika.common.utils.Threads;
 import com.exametrika.impl.groups.MessageFlags;
-import com.exametrika.impl.groups.core.channel.IChannelReconnector;
-import com.exametrika.impl.groups.core.failuredetection.FailureDetectionProtocol;
-import com.exametrika.impl.groups.core.failuredetection.GroupNodeTrackingStrategy;
-import com.exametrika.impl.groups.core.failuredetection.IFailureDetectionListener;
-import com.exametrika.impl.groups.core.membership.Group;
-import com.exametrika.impl.groups.core.membership.GroupAddress;
-import com.exametrika.impl.groups.core.membership.IMembershipManager;
-import com.exametrika.impl.groups.core.membership.Membership;
-import com.exametrika.impl.groups.core.membership.MembershipSerializationRegistrar;
-import com.exametrika.impl.groups.core.membership.Node;
+import com.exametrika.impl.groups.cluster.channel.IChannelReconnector;
+import com.exametrika.impl.groups.cluster.failuredetection.CoreGroupFailureDetectionProtocol;
+import com.exametrika.impl.groups.cluster.failuredetection.GroupNodeTrackingStrategy;
+import com.exametrika.impl.groups.cluster.failuredetection.IFailureDetectionListener;
+import com.exametrika.impl.groups.cluster.membership.Group;
+import com.exametrika.impl.groups.cluster.membership.GroupAddress;
+import com.exametrika.impl.groups.cluster.membership.GroupMembership;
+import com.exametrika.impl.groups.cluster.membership.GroupMembershipSerializationRegistrar;
+import com.exametrika.impl.groups.cluster.membership.IGroupMembershipManager;
+import com.exametrika.impl.groups.cluster.membership.Node;
 import com.exametrika.tests.common.messaging.ReceiverMock;
 
 /**
- * The {@link FailureDetectionProtocolTests} are tests for {@link FailureDetectionProtocol}.
+ * The {@link FailureDetectionProtocolTests} are tests for {@link CoreGroupFailureDetectionProtocol}.
  * 
- * @see FailureDetectionProtocol
+ * @see CoreGroupFailureDetectionProtocol
  * @author Medvedev-A
  */
 public class FailureDetectionProtocolTests
@@ -92,7 +92,7 @@ public class FailureDetectionProtocolTests
             nodes.add(channelFactory.membershipServices.get(i).getLocalNode());
         }
         
-        Membership membership = new Membership(1, new Group(new GroupAddress(UUID.randomUUID(), "test"), true, nodes));
+        GroupMembership membership = new GroupMembership(1, new Group(new GroupAddress(UUID.randomUUID(), "test"), true, nodes));
         for (int i = 0; i < COUNT; i++)
         {
             channelFactory.protocols.get(i).onPreparedMembershipChanged(null, membership, null);
@@ -119,7 +119,7 @@ public class FailureDetectionProtocolTests
             healthy.remove(nodes.get(0));
             healthy.remove(nodes.get(3));
             healthy.remove(nodes.get(4));
-            FailureDetectionProtocol protocol = channelFactory.protocols.get(i);
+            CoreGroupFailureDetectionProtocol protocol = channelFactory.protocols.get(i);
             assertThat(protocol.getCurrentCoordinator(), is(nodes.get(1)));
             assertThat(protocol.getHealthyMembers(), is(healthy));
             assertThat(protocol.getLeftMembers(), is(com.exametrika.common.utils.Collections.asSet(nodes.get(3), nodes.get(4))));
@@ -143,13 +143,13 @@ public class FailureDetectionProtocolTests
         List<INode> healthy = new ArrayList<INode>(newNodes);
         healthy.remove(nodes.get(4));
         
-        Membership membership2 = new Membership(2, new Group(new GroupAddress(UUID.randomUUID(), "test"), true, newNodes));
+        GroupMembership membership2 = new GroupMembership(2, new Group(new GroupAddress(UUID.randomUUID(), "test"), true, newNodes));
         for (int i = 0; i < COUNT; i++)
         {
             if (i == 0 || i == 3 || i == 4)
                 continue;
             channelFactory.membershipServices.get(i).membership = membership2;
-            FailureDetectionProtocol protocol = channelFactory.protocols.get(i);
+            CoreGroupFailureDetectionProtocol protocol = channelFactory.protocols.get(i);
             protocol.onPreparedMembershipChanged(null, membership2, null);
             assertThat(protocol.getCurrentCoordinator(), is(nodes.get(1)));
             assertThat(protocol.getHealthyMembers(), is(healthy));
@@ -163,7 +163,7 @@ public class FailureDetectionProtocolTests
         {
             if (i == 0 || i == 3 || i == 4)
                 continue;
-            FailureDetectionProtocol protocol = channelFactory.protocols.get(i);
+            CoreGroupFailureDetectionProtocol protocol = channelFactory.protocols.get(i);
             Map history = Tests.get(protocol, "failureHistory");
             assertTrue(history.isEmpty());
         }
@@ -188,7 +188,7 @@ public class FailureDetectionProtocolTests
             nodes.add(channelFactory.membershipServices.get(i).getLocalNode());
         }
         
-        Membership membership = new Membership(1, new Group(new GroupAddress(UUID.randomUUID(), "test"), true, nodes));
+        GroupMembership membership = new GroupMembership(1, new Group(new GroupAddress(UUID.randomUUID(), "test"), true, nodes));
         for (int i = 0; i < COUNT; i++)
         {
             channelFactory.protocols.get(i).onPreparedMembershipChanged(null, membership, null);
@@ -258,7 +258,7 @@ public class FailureDetectionProtocolTests
             nodes.add(channelFactory.membershipServices.get(i).getLocalNode());
         }
         
-        Membership membership = new Membership(1, new Group(new GroupAddress(UUID.randomUUID(), "test"), true, nodes));
+        GroupMembership membership = new GroupMembership(1, new Group(new GroupAddress(UUID.randomUUID(), "test"), true, nodes));
         for (int i = 0; i < COUNT; i++)
         {
             channelFactory.protocols.get(i).onPreparedMembershipChanged(null, membership, null);
@@ -281,7 +281,7 @@ public class FailureDetectionProtocolTests
             healthy.remove(nodes.get(0));
             healthy.remove(nodes.get(3));
             healthy.remove(nodes.get(4));
-            FailureDetectionProtocol protocol = channelFactory.protocols.get(i);
+            CoreGroupFailureDetectionProtocol protocol = channelFactory.protocols.get(i);
             assertThat(protocol.getCurrentCoordinator(), is(nodes.get(1)));
             assertThat(protocol.getHealthyMembers(), is(healthy));
             assertThat(protocol.getFailedMembers(), is(com.exametrika.common.utils.Collections.asSet(nodes.get(0), nodes.get(3))));
@@ -303,14 +303,14 @@ public class FailureDetectionProtocolTests
         List<INode> newHealthy = new ArrayList<INode>(newNodes);
         newHealthy.remove(nodes.get(4));
         
-        Membership membership2 = new Membership(2, new Group(new GroupAddress(UUID.randomUUID(), "test"), true, newNodes));
+        GroupMembership membership2 = new GroupMembership(2, new Group(new GroupAddress(UUID.randomUUID(), "test"), true, newNodes));
         for (int i = 0; i < COUNT; i++)
         {
             if (i == 0 || i == 3 || i == 4)
                 continue;
             
             channelFactory.membershipServices.get(i).membership = membership2;
-            FailureDetectionProtocol protocol = channelFactory.protocols.get(i);
+            CoreGroupFailureDetectionProtocol protocol = channelFactory.protocols.get(i);
             protocol.onPreparedMembershipChanged(null, membership2, null);
             assertThat(protocol.getCurrentCoordinator(), is(nodes.get(1)));
             assertThat(protocol.getHealthyMembers(), is(newHealthy));
@@ -325,7 +325,7 @@ public class FailureDetectionProtocolTests
             if (i == 0 || i == 3 || i == 4)
                 continue;
             
-            FailureDetectionProtocol protocol = channelFactory.protocols.get(i);
+            CoreGroupFailureDetectionProtocol protocol = channelFactory.protocols.get(i);
             Map history = Tests.get(protocol, "failureHistory");
             assertTrue(history.isEmpty());
         }
@@ -337,10 +337,10 @@ public class FailureDetectionProtocolTests
         IOs.close(channel);
     }
     
-    private static class MembershipServiceMock implements IMembershipManager
+    private static class MembershipServiceMock implements IGroupMembershipManager
     {
         private Node localNode;
-        private Membership membership;
+        private GroupMembership membership;
         private ILiveNodeProvider provider;
         private String name;
         
@@ -360,18 +360,18 @@ public class FailureDetectionProtocolTests
         }
 
         @Override
-        public synchronized IMembership getMembership()
+        public synchronized IGroupMembership getMembership()
         {
             return membership;
         }
 
         @Override
-        public void addMembershipListener(IMembershipListener listener)
+        public void addMembershipListener(IGroupMembershipListener listener)
         {
         }
 
         @Override
-        public void removeMembershipListener(IMembershipListener listener)
+        public void removeMembershipListener(IGroupMembershipListener listener)
         {
         }
 
@@ -381,18 +381,18 @@ public class FailureDetectionProtocolTests
         }
 
         @Override
-        public IMembership getPreparedMembership()
+        public IGroupMembership getPreparedMembership()
         {
             return membership;
         }
 
         @Override
-        public void prepareInstallMembership(IMembership membership)
+        public void prepareInstallMembership(IGroupMembership membership)
         {
         }
 
         @Override
-        public void prepareChangeMembership(IMembership membership, IMembershipChange membershipChange)
+        public void prepareChangeMembership(IGroupMembership membership, IGroupMembershipChange membershipChange)
         {
         }
 
@@ -441,7 +441,7 @@ public class FailureDetectionProtocolTests
         private long failureUpdatePeriod = 500;
         private  long failureHistoryPeriod = 2000;
         private  int maxShunCount = 3;
-        private List<FailureDetectionProtocol> protocols = new ArrayList<FailureDetectionProtocol>();
+        private List<CoreGroupFailureDetectionProtocol> protocols = new ArrayList<CoreGroupFailureDetectionProtocol>();
         private List<MembershipServiceMock> membershipServices = new ArrayList<MembershipServiceMock>();
         private List<FailureDetectionListenerMock> failureListeners = new ArrayList<FailureDetectionListenerMock>();
         private List<ChannelReconnectorMock> channelReconnectors = new ArrayList<ChannelReconnectorMock>();
@@ -471,7 +471,7 @@ public class FailureDetectionProtocolTests
             ChannelReconnectorMock channelReconnector = new ChannelReconnectorMock();
             channelReconnectors.add(channelReconnector);
             
-            FailureDetectionProtocol failureDetectionProtocol = new FailureDetectionProtocol(channelName, messageFactory, membershipService, 
+            CoreGroupFailureDetectionProtocol failureDetectionProtocol = new CoreGroupFailureDetectionProtocol(channelName, messageFactory, membershipService, 
                 Collections.<IFailureDetectionListener>singleton(failureListener), failureUpdatePeriod,
                 failureHistoryPeriod, maxShunCount);
             failureDetectionProtocol.setChannelReconnector(channelReconnector);
@@ -480,17 +480,17 @@ public class FailureDetectionProtocolTests
             
             this.protocols.add(failureDetectionProtocol);
             
-            serializationRegistry.register(new MembershipSerializationRegistrar());
+            serializationRegistry.register(new GroupMembershipSerializationRegistrar());
         }
         
         @Override
         protected void wireProtocols(Channel channel, TcpTransport transport, ProtocolStack protocolStack)
         {
             GroupNodeTrackingStrategy strategy = (GroupNodeTrackingStrategy)protocolStack.find(HeartbeatProtocol.class).getNodeTrackingStrategy();
-            FailureDetectionProtocol failureDetectionProtocol = protocolStack.find(FailureDetectionProtocol.class);
+            CoreGroupFailureDetectionProtocol failureDetectionProtocol = protocolStack.find(CoreGroupFailureDetectionProtocol.class);
             failureDetectionProtocol.setFailureObserver(transport);
             strategy.setFailureDetector(failureDetectionProtocol);
-            strategy.setMembershipManager((IMembershipManager)failureDetectionProtocol.getMembersipService());
+            strategy.setMembershipManager((IGroupMembershipManager)failureDetectionProtocol.getMembersipService());
         }
     }
 }

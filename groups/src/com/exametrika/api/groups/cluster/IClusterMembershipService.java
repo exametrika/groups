@@ -3,8 +3,6 @@
  */
 package com.exametrika.api.groups.cluster;
 
-import com.exametrika.api.groups.core.INode;
-
 /**
  * The {@link IClusterMembershipService} manages cluster membership.
  * 

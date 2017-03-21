@@ -19,10 +19,10 @@ import org.junit.After;
 import org.junit.Ignore;
 import org.junit.Test;
 
-import com.exametrika.api.groups.core.IGroup;
-import com.exametrika.api.groups.core.IMembership;
-import com.exametrika.api.groups.core.IMembershipListener;
-import com.exametrika.api.groups.core.INode;
+import com.exametrika.api.groups.cluster.IGroup;
+import com.exametrika.api.groups.cluster.IGroupMembership;
+import com.exametrika.api.groups.cluster.IGroupMembershipListener;
+import com.exametrika.api.groups.cluster.INode;
 import com.exametrika.common.compartment.ICompartment;
 import com.exametrika.common.io.IDeserialization;
 import com.exametrika.common.io.ISerialization;
@@ -60,27 +60,28 @@ import com.exametrika.common.utils.Debug;
 import com.exametrika.common.utils.Files;
 import com.exametrika.common.utils.IOs;
 import com.exametrika.common.utils.Threads;
-import com.exametrika.impl.groups.core.channel.GroupChannel;
-import com.exametrika.impl.groups.core.channel.IChannelReconnector;
-import com.exametrika.impl.groups.core.channel.IGracefulCloseStrategy;
-import com.exametrika.impl.groups.core.discovery.DiscoveryProtocol;
-import com.exametrika.impl.groups.core.discovery.WellKnownAddressesDiscoveryStrategy;
-import com.exametrika.impl.groups.core.failuredetection.FailureDetectionProtocol;
-import com.exametrika.impl.groups.core.failuredetection.GroupNodeTrackingStrategy;
-import com.exametrika.impl.groups.core.failuredetection.IFailureDetectionListener;
-import com.exametrika.impl.groups.core.flush.FlushCoordinatorProtocol;
-import com.exametrika.impl.groups.core.flush.FlushParticipantProtocol;
-import com.exametrika.impl.groups.core.flush.IFlush;
-import com.exametrika.impl.groups.core.flush.IFlushParticipant;
-import com.exametrika.impl.groups.core.membership.IMembershipManager;
-import com.exametrika.impl.groups.core.membership.IPreparedMembershipListener;
-import com.exametrika.impl.groups.core.membership.MembershipManager;
-import com.exametrika.impl.groups.core.membership.MembershipTracker;
-import com.exametrika.impl.groups.core.membership.Memberships;
-import com.exametrika.impl.groups.core.multicast.FlowControlProtocol;
-import com.exametrika.impl.groups.core.multicast.RemoteFlowId;
-import com.exametrika.impl.groups.core.state.StateTransferClientProtocol;
-import com.exametrika.impl.groups.core.state.StateTransferServerProtocol;
+import com.exametrika.impl.groups.cluster.channel.GroupChannel;
+import com.exametrika.impl.groups.cluster.channel.IChannelReconnector;
+import com.exametrika.impl.groups.cluster.channel.IGracefulCloseStrategy;
+import com.exametrika.impl.groups.cluster.discovery.CoreGroupDiscoveryProtocol;
+import com.exametrika.impl.groups.cluster.discovery.WellKnownAddressesDiscoveryStrategy;
+import com.exametrika.impl.groups.cluster.failuredetection.CoreGroupFailureDetectionProtocol;
+import com.exametrika.impl.groups.cluster.failuredetection.GroupNodeTrackingStrategy;
+import com.exametrika.impl.groups.cluster.failuredetection.IFailureDetectionListener;
+import com.exametrika.impl.groups.cluster.flush.FlushCoordinatorProtocol;
+import com.exametrika.impl.groups.cluster.flush.FlushParticipantProtocol;
+import com.exametrika.impl.groups.cluster.flush.IFlush;
+import com.exametrika.impl.groups.cluster.flush.IFlushParticipant;
+import com.exametrika.impl.groups.cluster.membership.CoreGroupMembershipManager;
+import com.exametrika.impl.groups.cluster.membership.CoreGroupMembershipTracker;
+import com.exametrika.impl.groups.cluster.membership.GroupMemberships;
+import com.exametrika.impl.groups.cluster.membership.IGroupMembershipManager;
+import com.exametrika.impl.groups.cluster.membership.IPreparedGroupMembershipListener;
+import com.exametrika.impl.groups.cluster.membership.LocalNodeProvider;
+import com.exametrika.impl.groups.cluster.multicast.FlowControlProtocol;
+import com.exametrika.impl.groups.cluster.multicast.RemoteFlowId;
+import com.exametrika.impl.groups.cluster.state.StateTransferClientProtocol;
+import com.exametrika.impl.groups.cluster.state.StateTransferServerProtocol;
 import com.exametrika.spi.groups.IDiscoveryStrategy;
 import com.exametrika.spi.groups.IStateStore;
 import com.exametrika.spi.groups.IStateTransferClient;
@@ -427,14 +428,14 @@ public class StateTransferProtocolTests
 
     private void checkMembership(TestChannelFactory channelFactory, Set<Integer> skipIndexes)
     {
-        IMembership membership = null;
+        IGroupMembership membership = null;
         ByteArray state = null;
         for (int i = 0; i < COUNT; i++)
         {
             if (skipIndexes.contains(i))
                 continue;
             
-            IMembership nodeMembership = channels[i].getMembershipService().getMembership();
+            IGroupMembership nodeMembership = channels[i].getMembershipService().getMembership();
             if (membership == null)
                 membership = nodeMembership;
             
@@ -604,7 +605,7 @@ public class StateTransferProtocolTests
         @Override
         public void load(UUID id, File state)
         {
-            if (id.equals(Memberships.CORE_GROUP_ID))
+            if (id.equals(GroupMemberships.CORE_GROUP_ID))
                 Files.writeBytes(state, buffer);
             else
                 Assert.error();
@@ -613,7 +614,7 @@ public class StateTransferProtocolTests
         @Override
         public void save(UUID id, File state)
         {
-            if (id.equals(Memberships.CORE_GROUP_ID))
+            if (id.equals(GroupMemberships.CORE_GROUP_ID))
                 savedBuffer = Files.readBytes(state);
             else
                 Assert.error();
@@ -672,7 +673,7 @@ public class StateTransferProtocolTests
         private final TestStateTransferFactory stateTransferFactory;
         private boolean coordinator;
         private IFlush flush;
-        private IMembership membership;
+        private IGroupMembership membership;
         private boolean disableSend;
         private boolean flowLocked;
 
@@ -801,8 +802,8 @@ public class StateTransferProtocolTests
         private int transferLogMessagesCount = 2;
         private int minLockQueueCapacity = 10000000;
         private List<TestStateTransferFactory> stateTransferFactories = new ArrayList<TestStateTransferFactory>();
-        private MembershipTracker membershipTracker;
-        private MembershipManager membershipManager;
+        private CoreGroupMembershipTracker membershipTracker;
+        private CoreGroupMembershipManager membershipManager;
         private List<IGracefulCloseStrategy> gracefulCloseStrategies = new ArrayList<IGracefulCloseStrategy>();
         private TestStateStore stateStore = new TestStateStore();
         private List<TestMessageSender> messageSenders = new ArrayList<TestMessageSender>();
@@ -830,18 +831,20 @@ public class StateTransferProtocolTests
             ISerializationRegistry serializationRegistry, ILiveNodeProvider liveNodeProvider, List<IFailureObserver> failureObservers, 
             List<AbstractProtocol> protocols)
         {
-            Set<IPreparedMembershipListener> preparedMembershipListeners = new HashSet<IPreparedMembershipListener>();
-            Set<IMembershipListener> membershipListeners = new HashSet<IMembershipListener>();
-            membershipManager = new MembershipManager("test", liveNodeProvider, new PropertyProviderMock(), 
+            Set<IPreparedGroupMembershipListener> preparedMembershipListeners = new HashSet<IPreparedGroupMembershipListener>();
+            Set<IGroupMembershipListener> membershipListeners = new HashSet<IGroupMembershipListener>();
+            LocalNodeProvider localNodeProvider = new LocalNodeProvider(liveNodeProvider, new PropertyProviderMock(), 
+                GroupMemberships.CORE_DOMAIN);
+            membershipManager = new CoreGroupMembershipManager("test", localNodeProvider, 
                 preparedMembershipListeners, membershipListeners);
 
             Set<IFailureDetectionListener> failureDetectionListeners = new HashSet<IFailureDetectionListener>();
-            FailureDetectionProtocol failureDetectionProtocol = new FailureDetectionProtocol(channelName, messageFactory, membershipManager, 
+            CoreGroupFailureDetectionProtocol failureDetectionProtocol = new CoreGroupFailureDetectionProtocol(channelName, messageFactory, membershipManager, 
                 failureDetectionListeners, failureUpdatePeriod, failureHistoryPeriod, maxShunCount);
             preparedMembershipListeners.add(failureDetectionProtocol);
             failureObservers.add(failureDetectionProtocol);
             
-            DiscoveryProtocol discoveryProtocol = new DiscoveryProtocol(channelName, messageFactory, membershipManager, 
+            CoreGroupDiscoveryProtocol discoveryProtocol = new CoreGroupDiscoveryProtocol(channelName, messageFactory, membershipManager, 
                 failureDetectionProtocol, discoveryStrategy, liveNodeProvider, discoveryPeriod, 
                 groupFormationPeriod);
             preparedMembershipListeners.add(discoveryProtocol);
@@ -860,7 +863,8 @@ public class StateTransferProtocolTests
             
             StateTransferServerProtocol stateTransferServerProtocol = new StateTransferServerProtocol(channelName, 
                 messageFactory, membershipManager, failureDetectionProtocol, stateTransferFactory, stateStore, serializationRegistry, 
-                saveSnapshotPeriod, transferLogRecordPeriod, transferLogMessagesCount, minLockQueueCapacity);
+                saveSnapshotPeriod, transferLogRecordPeriod, transferLogMessagesCount, minLockQueueCapacity,
+                GroupMemberships.CORE_GROUP_ADDRESS, GroupMemberships.CORE_GROUP_ID);
             protocols.add(stateTransferServerProtocol);
             
             TestMessageSender testSender = new TestMessageSender(channelName, messageFactory, stateTransferFactory);
@@ -886,7 +890,7 @@ public class StateTransferProtocolTests
             protocols.add(discoveryProtocol);
             protocols.add(failureDetectionProtocol);
             
-            membershipTracker = new MembershipTracker(1000, membershipManager, discoveryProtocol, 
+            membershipTracker = new CoreGroupMembershipTracker(1000, membershipManager, discoveryProtocol, 
                 failureDetectionProtocol, flushCoordinatorProtocol, null);
             
             gracefulCloseStrategies.add(flushCoordinatorProtocol);
@@ -897,14 +901,14 @@ public class StateTransferProtocolTests
         @Override
         protected void wireProtocols(Channel channel, TcpTransport transport, ProtocolStack protocolStack)
         {
-            FailureDetectionProtocol failureDetectionProtocol = protocolStack.find(FailureDetectionProtocol.class);
+            CoreGroupFailureDetectionProtocol failureDetectionProtocol = protocolStack.find(CoreGroupFailureDetectionProtocol.class);
             failureDetectionProtocol.setFailureObserver(transport);
             failureDetectionProtocol.setChannelReconnector((IChannelReconnector)channel);
             channel.getCompartment().addTimerProcessor(membershipTracker);
             
             GroupNodeTrackingStrategy strategy = (GroupNodeTrackingStrategy)protocolStack.find(HeartbeatProtocol.class).getNodeTrackingStrategy();
             strategy.setFailureDetector(failureDetectionProtocol);
-            strategy.setMembershipManager((IMembershipManager)failureDetectionProtocol.getMembersipService());
+            strategy.setMembershipManager((IGroupMembershipManager)failureDetectionProtocol.getMembersipService());
             
             StateTransferClientProtocol stateTransferClientProtocol = protocolStack.find(StateTransferClientProtocol.class);
             stateTransferClientProtocol.setChannelReconnector((IChannelReconnector)channel);

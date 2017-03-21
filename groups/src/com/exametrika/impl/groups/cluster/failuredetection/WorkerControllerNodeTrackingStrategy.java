@@ -18,9 +18,9 @@ import com.exametrika.common.utils.Assert;
  */
 public final class WorkerControllerNodeTrackingStrategy implements INodeTrackingStrategy
 {
-    private final CoreFailureDetectionProtocol failureDetectionProtocol;
+    private final CoreClusterFailureDetectionProtocol failureDetectionProtocol;
     
-    public WorkerControllerNodeTrackingStrategy(CoreFailureDetectionProtocol failureDetectionProtocol)
+    public WorkerControllerNodeTrackingStrategy(CoreClusterFailureDetectionProtocol failureDetectionProtocol)
     {
         Assert.notNull(failureDetectionProtocol);
         

@@ -19,10 +19,10 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.junit.After;
 import org.junit.Test;
 
-import com.exametrika.api.groups.core.IMembership;
-import com.exametrika.api.groups.core.IMembershipListener;
-import com.exametrika.api.groups.core.IMembershipService;
-import com.exametrika.api.groups.core.INode;
+import com.exametrika.api.groups.cluster.IGroupMembership;
+import com.exametrika.api.groups.cluster.IGroupMembershipListener;
+import com.exametrika.api.groups.cluster.IGroupMembershipService;
+import com.exametrika.api.groups.cluster.INode;
 import com.exametrika.common.io.ISerializationRegistry;
 import com.exametrika.common.messaging.IAddress;
 import com.exametrika.common.messaging.IChannel;
@@ -36,23 +36,23 @@ import com.exametrika.common.messaging.impl.protocols.failuredetection.IFailureO
 import com.exametrika.common.utils.Debug;
 import com.exametrika.common.utils.IOs;
 import com.exametrika.common.utils.Threads;
-import com.exametrika.impl.groups.core.discovery.DiscoveryProtocol;
-import com.exametrika.impl.groups.core.discovery.GroupJoinMessagePart;
-import com.exametrika.impl.groups.core.discovery.IGroupJoinStrategy;
-import com.exametrika.impl.groups.core.discovery.WellKnownAddressesDiscoveryStrategy;
-import com.exametrika.impl.groups.core.failuredetection.IFailureDetector;
-import com.exametrika.impl.groups.core.membership.Group;
-import com.exametrika.impl.groups.core.membership.GroupAddress;
-import com.exametrika.impl.groups.core.membership.Membership;
-import com.exametrika.impl.groups.core.membership.MembershipSerializationRegistrar;
-import com.exametrika.impl.groups.core.membership.Node;
+import com.exametrika.impl.groups.cluster.discovery.CoreGroupDiscoveryProtocol;
+import com.exametrika.impl.groups.cluster.discovery.GroupJoinMessagePart;
+import com.exametrika.impl.groups.cluster.discovery.IGroupJoinStrategy;
+import com.exametrika.impl.groups.cluster.discovery.WellKnownAddressesDiscoveryStrategy;
+import com.exametrika.impl.groups.cluster.failuredetection.IGroupFailureDetector;
+import com.exametrika.impl.groups.cluster.membership.Group;
+import com.exametrika.impl.groups.cluster.membership.GroupAddress;
+import com.exametrika.impl.groups.cluster.membership.GroupMembership;
+import com.exametrika.impl.groups.cluster.membership.GroupMembershipSerializationRegistrar;
+import com.exametrika.impl.groups.cluster.membership.Node;
 import com.exametrika.spi.groups.IDiscoveryStrategy;
 import com.exametrika.tests.common.messaging.ReceiverMock;
 
 /**
- * The {@link DiscoveryProtocolTests} are tests for {@link DiscoveryProtocol}.
+ * The {@link DiscoveryProtocolTests} are tests for {@link CoreGroupDiscoveryProtocol}.
  * 
- * @see DiscoveryProtocol
+ * @see CoreGroupDiscoveryProtocol
  * @author Medvedev-A
  */
 public class DiscoveryProtocolTests
@@ -85,7 +85,7 @@ public class DiscoveryProtocolTests
             channels[i] = channel;
         }
         
-        for (DiscoveryProtocol protocol : channelFactory.protocols)
+        for (CoreGroupDiscoveryProtocol protocol : channelFactory.protocols)
             protocol.startDiscovery();
         
         Threads.sleep(channelFactory.groupFormationPeriod + 500);
@@ -95,7 +95,7 @@ public class DiscoveryProtocolTests
         {
             INode local = channelFactory.membershipServices.get(i).getLocalNode();
             
-            DiscoveryProtocol protocol = channelFactory.protocols.get(i);
+            CoreGroupDiscoveryProtocol protocol = channelFactory.protocols.get(i);
             Set<INode> nodes = new TreeSet(protocol.getDiscoveredNodes());
             assertTrue(!nodes.contains(local));
             nodes.add(local);
@@ -134,7 +134,7 @@ public class DiscoveryProtocolTests
             channels[i] = channel;
         }
         
-        for (DiscoveryProtocol protocol : channelFactory.protocols)
+        for (CoreGroupDiscoveryProtocol protocol : channelFactory.protocols)
             protocol.startDiscovery();
         
         Threads.sleep(channelFactory.groupFormationPeriod + 2000);
@@ -153,7 +153,7 @@ public class DiscoveryProtocolTests
         {
             INode local = channelFactory.membershipServices.get(i).getLocalNode();
             
-            DiscoveryProtocol protocol = channelFactory.protocols.get(i);
+            CoreGroupDiscoveryProtocol protocol = channelFactory.protocols.get(i);
             Set<INode> nodes = new TreeSet(protocol.getDiscoveredNodes());
             assertTrue(!nodes.contains(local));
             nodes.add(local);
@@ -186,7 +186,7 @@ public class DiscoveryProtocolTests
         wellKnownAddresses.add(channel.getLiveNodeProvider().getLocalNode().getConnection(0));
         channels[0] = channel;
 
-        DiscoveryProtocol protocol = channelFactory.protocols.get(0); 
+        CoreGroupDiscoveryProtocol protocol = channelFactory.protocols.get(0); 
         protocol.startDiscovery();
         
         Threads.sleep(channelFactory.groupFormationPeriod + 500);
@@ -213,7 +213,7 @@ public class DiscoveryProtocolTests
             channels[i] = channel;
         }
         
-        IMembership membership = new Membership(1, new Group(new GroupAddress(UUID.randomUUID(), "test"), true, Arrays.asList(
+        IGroupMembership membership = new GroupMembership(1, new Group(new GroupAddress(UUID.randomUUID(), "test"), true, Arrays.asList(
             channelFactory.membershipServices.get(0).getLocalNode(), channelFactory.membershipServices.get(1).getLocalNode())));
         channelFactory.failureDetectors.get(0).currentCoordinator = membership.getGroup().getCoordinator();
         channelFactory.failureDetectors.get(0).healthyMembers = membership.getGroup().getMembers();
@@ -228,7 +228,7 @@ public class DiscoveryProtocolTests
         for (int i = 2; i < COUNT; i++)
             channels[i].start();
 
-        for (DiscoveryProtocol protocol : channelFactory.protocols)
+        for (CoreGroupDiscoveryProtocol protocol : channelFactory.protocols)
             protocol.startDiscovery();
         
         Threads.sleep(channelFactory.groupFormationPeriod + 500);
@@ -236,7 +236,7 @@ public class DiscoveryProtocolTests
         Set<INode> discoveredNodes = null;
         for (int i = 0; i < COUNT; i++)
         {
-            DiscoveryProtocol protocol = channelFactory.protocols.get(i);
+            CoreGroupDiscoveryProtocol protocol = channelFactory.protocols.get(i);
             assertThat(protocol.canFormGroup(), is(false));
             if (i > 0)
                 assertThat(protocol.getDiscoveredNodes(), is(Collections.<INode>emptySet()));
@@ -268,7 +268,7 @@ public class DiscoveryProtocolTests
             channels[i] = channel;
         }
         
-        IMembership membership = new Membership(1, new Group(new GroupAddress(UUID.randomUUID(), "test"), true, Arrays.asList(
+        IGroupMembership membership = new GroupMembership(1, new Group(new GroupAddress(UUID.randomUUID(), "test"), true, Arrays.asList(
             channelFactory.membershipServices.get(0).getLocalNode(), channelFactory.membershipServices.get(1).getLocalNode())));
         channelFactory.failureDetectors.get(0).currentCoordinator = membership.getGroup().getCoordinator();
         channelFactory.failureDetectors.get(0).healthyMembers = membership.getGroup().getMembers();
@@ -283,7 +283,7 @@ public class DiscoveryProtocolTests
         for (int i = 2; i < COUNT; i++)
             channels[i].start();
 
-        for (DiscoveryProtocol protocol : channelFactory.protocols)
+        for (CoreGroupDiscoveryProtocol protocol : channelFactory.protocols)
             protocol.startDiscovery();
         
         Threads.sleep(channelFactory.groupFormationPeriod + 500);
@@ -291,7 +291,7 @@ public class DiscoveryProtocolTests
         Set<INode> discoveredNodes = null;
         for (int i = 0; i < COUNT; i++)
         {
-            DiscoveryProtocol protocol = channelFactory.protocols.get(i);
+            CoreGroupDiscoveryProtocol protocol = channelFactory.protocols.get(i);
             assertThat(protocol.canFormGroup(), is(false));
             if (i > 0)
                 assertThat(protocol.getDiscoveredNodes(), is(Collections.<INode>emptySet()));
@@ -327,7 +327,7 @@ public class DiscoveryProtocolTests
         }
 
         
-        IMembership membership = new Membership(1, new Group(new GroupAddress(UUID.randomUUID(), "test"), true, Arrays.asList(
+        IGroupMembership membership = new GroupMembership(1, new Group(new GroupAddress(UUID.randomUUID(), "test"), true, Arrays.asList(
             channelFactory.membershipServices.get(0).getLocalNode(), channelFactory.membershipServices.get(1).getLocalNode())));
         channelFactory.failureDetectors.get(0).currentCoordinator = membership.getGroup().getCoordinator();
         channelFactory.failureDetectors.get(0).healthyMembers = membership.getGroup().getMembers();
@@ -343,7 +343,7 @@ public class DiscoveryProtocolTests
             wellKnownAddresses.add(channels[i].getLiveNodeProvider().getLocalNode().getConnection(0));
         }
 
-        for (DiscoveryProtocol protocol : channelFactory.protocols)
+        for (CoreGroupDiscoveryProtocol protocol : channelFactory.protocols)
             protocol.startDiscovery();
         
         Threads.sleep(channelFactory.groupFormationPeriod + 500);
@@ -357,7 +357,7 @@ public class DiscoveryProtocolTests
         Set<INode> discoveredNodes = null;
         for (int i = 0; i < COUNT; i++)
         {
-            DiscoveryProtocol protocol = channelFactory.protocols.get(i);
+            CoreGroupDiscoveryProtocol protocol = channelFactory.protocols.get(i);
             assertThat(protocol.canFormGroup(), is(false));
             if (i > 1)
                 assertThat(protocol.getDiscoveredNodes(), is(Collections.<INode>emptySet()));
@@ -394,7 +394,7 @@ public class DiscoveryProtocolTests
             channels[i] = channel;
         }
         
-        IMembership membership = new Membership(1, new Group(new GroupAddress(UUID.randomUUID(), "test"), true, Arrays.asList(
+        IGroupMembership membership = new GroupMembership(1, new Group(new GroupAddress(UUID.randomUUID(), "test"), true, Arrays.asList(
             channelFactory.membershipServices.get(0).getLocalNode(), channelFactory.membershipServices.get(1).getLocalNode())));
         channelFactory.failureDetectors.get(0).currentCoordinator = membership.getGroup().getCoordinator();
         channelFactory.failureDetectors.get(0).healthyMembers = membership.getGroup().getMembers();
@@ -412,7 +412,7 @@ public class DiscoveryProtocolTests
             wellKnownAddresses.add(channels[i].getLiveNodeProvider().getLocalNode().getConnection(0));
         }
 
-        for (DiscoveryProtocol protocol : channelFactory.protocols)
+        for (CoreGroupDiscoveryProtocol protocol : channelFactory.protocols)
             protocol.startDiscovery();
         
         Threads.sleep(channelFactory.groupFormationPeriod + 5000);
@@ -427,7 +427,7 @@ public class DiscoveryProtocolTests
         {
             INode local = channelFactory.membershipServices.get(i).getLocalNode();
             
-            DiscoveryProtocol protocol = channelFactory.protocols.get(i);
+            CoreGroupDiscoveryProtocol protocol = channelFactory.protocols.get(i);
             Set<INode> nodes = new TreeSet(protocol.getDiscoveredNodes());
             assertTrue(!nodes.contains(local));
             nodes.add(local);
@@ -448,8 +448,8 @@ public class DiscoveryProtocolTests
     public static class GroupJoinStrategyMock implements IGroupJoinStrategy
     {
         public boolean groupFailed;
-        public IMembershipService membershipService;
-        public DiscoveryProtocol protocol;
+        public IGroupMembershipService membershipService;
+        public CoreGroupDiscoveryProtocol protocol;
         public IMessageFactory messageFactory;
 
         @Override
@@ -465,10 +465,10 @@ public class DiscoveryProtocolTests
         }
     }
     
-    private static class MembershipServiceMock implements IMembershipService
+    private static class MembershipServiceMock implements IGroupMembershipService
     {
         private Node localNode;
-        private Membership membership;
+        private GroupMembership membership;
         private ILiveNodeProvider provider;
         private String name;
         
@@ -488,18 +488,18 @@ public class DiscoveryProtocolTests
         }
 
         @Override
-        public synchronized IMembership getMembership()
+        public synchronized IGroupMembership getMembership()
         {
             return membership;
         }
 
         @Override
-        public void addMembershipListener(IMembershipListener listener)
+        public void addMembershipListener(IGroupMembershipListener listener)
         {
         }
 
         @Override
-        public void removeMembershipListener(IMembershipListener listener)
+        public void removeMembershipListener(IGroupMembershipListener listener)
         {
         }
 
@@ -509,7 +509,7 @@ public class DiscoveryProtocolTests
         }
     }
     
-    private static class FailureDetectorMock implements IFailureDetector
+    private static class FailureDetectorMock implements IGroupFailureDetector
     {
         private INode currentCoordinator;
         private List<INode> healthyMembers = new ArrayList<INode>();
@@ -565,7 +565,7 @@ public class DiscoveryProtocolTests
         private final IDiscoveryStrategy discoveryStrategy;
         private final long discoveryPeriod = 200;
         private final long groupFormationPeriod = 2000;
-        private List<DiscoveryProtocol> protocols = new ArrayList<DiscoveryProtocol>();
+        private List<CoreGroupDiscoveryProtocol> protocols = new ArrayList<CoreGroupDiscoveryProtocol>();
         private List<GroupJoinStrategyMock> joinStrategies = new ArrayList<GroupJoinStrategyMock>();
         private List<MembershipServiceMock> membershipServices = new ArrayList<MembershipServiceMock>();
         private List<FailureDetectorMock> failureDetectors = new ArrayList<FailureDetectorMock>();
@@ -593,7 +593,7 @@ public class DiscoveryProtocolTests
             FailureDetectorMock failureDetector = new FailureDetectorMock();
             failureDetectors.add(failureDetector);
             
-            DiscoveryProtocol discoveryProtocol = new DiscoveryProtocol(channelName, messageFactory, membershipService, 
+            CoreGroupDiscoveryProtocol discoveryProtocol = new CoreGroupDiscoveryProtocol(channelName, messageFactory, membershipService, 
                 failureDetector, discoveryStrategy, liveNodeProvider, discoveryPeriod, groupFormationPeriod);
             protocols.add(discoveryProtocol);
             discoveryProtocol.onJoined();
@@ -605,7 +605,7 @@ public class DiscoveryProtocolTests
             joinStrategy.membershipService = membershipService;
             joinStrategy.messageFactory = messageFactory;
             
-            serializationRegistry.register(new MembershipSerializationRegistrar());
+            serializationRegistry.register(new GroupMembershipSerializationRegistrar());
         }
     }
 }

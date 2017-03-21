@@ -23,7 +23,6 @@ import com.exametrika.common.utils.Assert;
 import com.exametrika.common.utils.ByteArray;
 import com.exametrika.common.utils.Files;
 import com.exametrika.common.utils.SyncCompletionHandler;
-import com.exametrika.impl.groups.core.membership.Memberships;
 import com.exametrika.spi.groups.IStateTransferClient;
 import com.exametrika.spi.groups.IStateTransferFactory;
 import com.exametrika.spi.groups.IStateTransferServer;
@@ -69,7 +68,7 @@ public final class ClusterMembershipStateTransferFactory implements IStateTransf
         @Override
         public MessageType classifyMessage(IMessage message)
         {
-            if (message.getDestination().equals(Memberships.CORE_GROUP_ADDRESS))
+            if (message.getDestination().equals(GroupMemberships.CORE_GROUP_ADDRESS))
                 return MessageType.STATE_WRITE;
             else
                 return MessageType.NON_STATE;

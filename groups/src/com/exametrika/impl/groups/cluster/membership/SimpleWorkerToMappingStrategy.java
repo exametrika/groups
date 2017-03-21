@@ -8,7 +8,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.exametrika.api.groups.core.INode;
+import com.exametrika.api.groups.cluster.INode;
 import com.exametrika.common.utils.Assert;
 
 /**

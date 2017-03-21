@@ -11,12 +11,11 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
-import com.exametrika.api.groups.core.INode;
+import com.exametrika.api.groups.cluster.INode;
 import com.exametrika.common.io.IDeserialization;
 import com.exametrika.common.io.ISerialization;
 import com.exametrika.common.io.impl.AbstractSerializer;
 import com.exametrika.common.utils.Serializers;
-import com.exametrika.impl.groups.core.membership.Node;
 
 /**
  * The {@link WorkerToCoreMembershipDeltaSerializer} is a serializer of {@link WorkerToCoreMembershipDelta}.

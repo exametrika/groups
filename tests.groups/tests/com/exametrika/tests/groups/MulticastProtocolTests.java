@@ -17,9 +17,9 @@ import java.util.UUID;
 import org.junit.After;
 import org.junit.Test;
 
-import com.exametrika.api.groups.core.IGroup;
-import com.exametrika.api.groups.core.IGroupChannel;
-import com.exametrika.api.groups.core.IMembership;
+import com.exametrika.api.groups.cluster.IGroup;
+import com.exametrika.api.groups.cluster.IGroupChannel;
+import com.exametrika.api.groups.cluster.IGroupMembership;
 import com.exametrika.common.io.IDeserialization;
 import com.exametrika.common.io.ISerialization;
 import com.exametrika.common.io.impl.AbstractSerializer;
@@ -43,16 +43,16 @@ import com.exametrika.common.utils.Debug;
 import com.exametrika.common.utils.Files;
 import com.exametrika.common.utils.IOs;
 import com.exametrika.common.utils.Threads;
-import com.exametrika.impl.groups.core.channel.GroupChannel;
-import com.exametrika.impl.groups.core.channel.GroupChannelFactory;
-import com.exametrika.impl.groups.core.channel.GroupChannelFactory.GroupFactoryParameters;
-import com.exametrika.impl.groups.core.channel.GroupChannelFactory.GroupParameters;
-import com.exametrika.impl.groups.core.discovery.WellKnownAddressesDiscoveryStrategy;
-import com.exametrika.impl.groups.core.flush.FlushParticipantProtocol;
-import com.exametrika.impl.groups.core.flush.IFlush;
-import com.exametrika.impl.groups.core.flush.IFlushParticipant;
-import com.exametrika.impl.groups.core.membership.Memberships;
-import com.exametrika.impl.groups.core.multicast.RemoteFlowId;
+import com.exametrika.impl.groups.cluster.channel.GroupChannel;
+import com.exametrika.impl.groups.cluster.channel.GroupChannelFactory;
+import com.exametrika.impl.groups.cluster.channel.GroupChannelFactory.GroupFactoryParameters;
+import com.exametrika.impl.groups.cluster.channel.GroupChannelFactory.GroupParameters;
+import com.exametrika.impl.groups.cluster.discovery.WellKnownAddressesDiscoveryStrategy;
+import com.exametrika.impl.groups.cluster.flush.FlushParticipantProtocol;
+import com.exametrika.impl.groups.cluster.flush.IFlush;
+import com.exametrika.impl.groups.cluster.flush.IFlushParticipant;
+import com.exametrika.impl.groups.cluster.membership.GroupMemberships;
+import com.exametrika.impl.groups.cluster.multicast.RemoteFlowId;
 import com.exametrika.spi.groups.IStateStore;
 import com.exametrika.spi.groups.IStateTransferClient;
 import com.exametrika.spi.groups.IStateTransferFactory;
@@ -115,7 +115,7 @@ public class MulticastProtocolTests
         createGroup(Collections.<Integer>asSet());
          
         TestFeed feed = new TestFeed();
-        ISink sink = channels[0].register(Memberships.CORE_GROUP_ADDRESS, feed);
+        ISink sink = channels[0].register(GroupMemberships.CORE_GROUP_ADDRESS, feed);
         sink.setReady(true);
         
         Threads.sleep(10000);
@@ -264,7 +264,7 @@ public class MulticastProtocolTests
 
     private void checkMembership(Set<Integer> skipIndexes)
     {
-        IMembership membership = null;
+        IGroupMembership membership = null;
         ByteArray state = null;
         Integer receivedCount = null;
         for (int i = 0; i < COUNT; i++)
@@ -272,7 +272,7 @@ public class MulticastProtocolTests
             if (skipIndexes.contains(i))
                 continue;
             
-            IMembership nodeMembership = channels[i].getMembershipService().getMembership();
+            IGroupMembership nodeMembership = channels[i].getMembershipService().getMembership();
             if (membership == null)
                 membership = nodeMembership;
             
@@ -447,7 +447,7 @@ public class MulticastProtocolTests
         @Override
         public void load(UUID id, File state)
         {
-            if (id.equals(Memberships.CORE_GROUP_ID))
+            if (id.equals(GroupMemberships.CORE_GROUP_ID))
                 Files.writeBytes(state, buffer);
             else
                 Assert.error();
@@ -577,11 +577,11 @@ public class MulticastProtocolTests
             if (sendBeforeGroup)
             {
                 if (!flowLocked && count < SEND_COUNT)
-                    channel.send(channel.getMessageFactory().create(Memberships.CORE_GROUP_ADDRESS, 
+                    channel.send(channel.getMessageFactory().create(GroupMemberships.CORE_GROUP_ADDRESS, 
                         new TestBufferMessagePart(index, count++)));
             }
             else if (!flowLocked && channel.getMembershipService().getMembership() != null && count < SEND_COUNT)
-                channel.send(channel.getMessageFactory().create(Memberships.CORE_GROUP_ADDRESS, 
+                channel.send(channel.getMessageFactory().create(GroupMemberships.CORE_GROUP_ADDRESS, 
                     new TestBufferMessagePart(index, count++)));
         }
         

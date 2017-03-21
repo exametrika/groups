@@ -15,13 +15,12 @@ import java.util.UUID;
 import com.exametrika.api.groups.cluster.IClusterMembershipElement;
 import com.exametrika.api.groups.cluster.IClusterMembershipElementChange;
 import com.exametrika.api.groups.cluster.IDomainMembership;
-import com.exametrika.api.groups.core.IMembership;
-import com.exametrika.api.groups.core.IMembershipService;
-import com.exametrika.api.groups.core.INode;
+import com.exametrika.api.groups.cluster.IGroupMembership;
+import com.exametrika.api.groups.cluster.IGroupMembershipService;
+import com.exametrika.api.groups.cluster.INode;
 import com.exametrika.common.utils.Assert;
 import com.exametrika.common.utils.Collections;
 import com.exametrika.common.utils.Pair;
-import com.exametrika.impl.groups.core.membership.Memberships;
 
 /**
  * The {@link WorkerToCoreMembershipProvider} is an implementation of worker to core node membership provider.
@@ -31,10 +30,10 @@ import com.exametrika.impl.groups.core.membership.Memberships;
  */
 public final class WorkerToCoreMembershipProvider implements IClusterMembershipProvider
 {
-    private final IMembershipService membershipService;
+    private final IGroupMembershipService membershipService;
     private final IWorkerToCoreMappingStarategy mappingStarategy;
 
-    public WorkerToCoreMembershipProvider(IMembershipService membershipService, IWorkerToCoreMappingStarategy mappingStarategy)
+    public WorkerToCoreMembershipProvider(IGroupMembershipService membershipService, IWorkerToCoreMappingStarategy mappingStarategy)
     {
         Assert.notNull(membershipService);
         Assert.notNull(mappingStarategy);
@@ -52,7 +51,7 @@ public final class WorkerToCoreMembershipProvider implements IClusterMembershipP
     @Override
     public Set<String> getDomains()
     {
-        return Collections.asSet(Memberships.CORE_DOMAIN);
+        return Collections.asSet(GroupMemberships.CORE_DOMAIN);
     }
 
     @Override
@@ -60,7 +59,7 @@ public final class WorkerToCoreMembershipProvider implements IClusterMembershipP
         IDomainMembership newDomainMembership, IDomainMembershipDelta domainMembershipDelta, IDomainMembership oldDomainMembership,
         IClusterMembershipElement oldMembership)
     {
-        IMembership newCoreMembership = membershipService.getMembership();
+        IGroupMembership newCoreMembership = membershipService.getMembership();
         Assert.notNull(newCoreMembership);
         
         WorkerToCoreMembership oldMappingMembership = (WorkerToCoreMembership)oldMembership;
@@ -84,10 +83,10 @@ public final class WorkerToCoreMembershipProvider implements IClusterMembershipP
             }
         }
         
-        NodeMembership nodeMembership = newDomainMembership.findElement(NodeMembership.class);
+        NodesMembership nodeMembership = newDomainMembership.findElement(NodesMembership.class);
         Assert.notNull(nodeMembership);
         
-        NodeMembershipDelta nodeMembershipDelta = domainMembershipDelta.findDelta(NodeMembershipDelta.class);
+        NodesMembershipDelta nodeMembershipDelta = domainMembershipDelta.findDelta(NodesMembershipDelta.class);
         Assert.notNull(nodeMembershipDelta);
         
         WorkerToCoreMembershipDelta delta = null;
@@ -173,7 +172,7 @@ public final class WorkerToCoreMembershipProvider implements IClusterMembershipP
     public IClusterMembershipElement createMembership(IDomainMembership newDomainMembership,
         IClusterMembershipElementDelta delta, IClusterMembershipElement oldMembership)
     {
-        NodeMembership nodeMembership = newDomainMembership.findElement(NodeMembership.class);
+        NodesMembership nodeMembership = newDomainMembership.findElement(NodesMembership.class);
         WorkerToCoreMembership oldMappingMembership = (WorkerToCoreMembership)oldMembership;
         WorkerToCoreMembershipDelta mappingDelta = (WorkerToCoreMembershipDelta)delta;
         List<INode> coreNodes = new ArrayList<INode>();
@@ -224,7 +223,7 @@ public final class WorkerToCoreMembershipProvider implements IClusterMembershipP
     public IClusterMembershipElementChange createChange(IDomainMembership newDomainMembership,
         IClusterMembershipElementDelta delta, IClusterMembershipElement oldMembership)
     {
-        NodeMembership nodeMembership = newDomainMembership.findElement(NodeMembership.class);
+        NodesMembership nodeMembership = newDomainMembership.findElement(NodesMembership.class);
         WorkerToCoreMembership oldMappingMembership = (WorkerToCoreMembership)oldMembership;
         WorkerToCoreMembershipDelta mappingDelta = (WorkerToCoreMembershipDelta)delta;
         WorkerToCoreMembership mappingMembership = newDomainMembership.findElement(WorkerToCoreMembership.class);

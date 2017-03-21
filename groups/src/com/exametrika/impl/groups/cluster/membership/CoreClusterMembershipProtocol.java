@@ -11,8 +11,8 @@ import java.util.Set;
 
 import com.exametrika.api.groups.cluster.IClusterMembership;
 import com.exametrika.api.groups.cluster.IDomainMembership;
-import com.exametrika.api.groups.core.IMembership;
-import com.exametrika.api.groups.core.INode;
+import com.exametrika.api.groups.cluster.IGroupMembership;
+import com.exametrika.api.groups.cluster.INode;
 import com.exametrika.common.messaging.IAddress;
 import com.exametrika.common.messaging.IMessage;
 import com.exametrika.common.messaging.IMessageFactory;
@@ -20,11 +20,9 @@ import com.exametrika.common.messaging.IReceiver;
 import com.exametrika.common.messaging.ISender;
 import com.exametrika.common.messaging.impl.protocols.failuredetection.IFailureObserver;
 import com.exametrika.common.utils.Assert;
-import com.exametrika.impl.groups.core.failuredetection.IFailureDetectionListener;
-import com.exametrika.impl.groups.core.failuredetection.IFailureDetector;
-import com.exametrika.impl.groups.core.flush.IFlushManager;
-import com.exametrika.impl.groups.core.membership.IMembershipManager;
-import com.exametrika.impl.groups.core.membership.Memberships;
+import com.exametrika.impl.groups.cluster.failuredetection.IFailureDetectionListener;
+import com.exametrika.impl.groups.cluster.failuredetection.IGroupFailureDetector;
+import com.exametrika.impl.groups.cluster.flush.IFlushManager;
 
 /**
  * The {@link CoreClusterMembershipProtocol} represents a core node part of cluster membership protocol.
@@ -35,12 +33,12 @@ import com.exametrika.impl.groups.core.membership.Memberships;
  */
 public final class CoreClusterMembershipProtocol extends AbstractClusterMembershipProtocol implements IFailureDetectionListener
 {
-    private final IMembershipManager membershipManager;
+    private final IGroupMembershipManager membershipManager;
     private final ISender workerSender;
     private final CoreCoordinatorClusterMembershipProtocol coordinatorProtocol;
     private final long membershipTimeout;
     private final IFailureObserver failureObserver;
-    private IFailureDetector failureDetector;
+    private IGroupFailureDetector failureDetector;
     private IFlushManager flushManager;
     private Set<INode> workerNodes = Collections.emptySet();
     private long roundId;
@@ -49,7 +47,7 @@ public final class CoreClusterMembershipProtocol extends AbstractClusterMembersh
     
     public CoreClusterMembershipProtocol(String channelName, IMessageFactory messageFactory, 
         IClusterMembershipManager clusterMembershipManager, List<IClusterMembershipProvider> membershipProviders,
-        IMembershipManager membershipManager, ISender workerSender,
+        IGroupMembershipManager membershipManager, ISender workerSender,
         CoreCoordinatorClusterMembershipProtocol coordinatorProtocol, IFailureObserver failureObserver,
         long membershipTimeout)
     {
@@ -67,7 +65,7 @@ public final class CoreClusterMembershipProtocol extends AbstractClusterMembersh
         this.failureObserver = failureObserver;
     }
     
-    public void setFailureDetector(IFailureDetector failureDetector)
+    public void setFailureDetector(IGroupFailureDetector failureDetector)
     {
         Assert.notNull(failureDetector);
         Assert.isNull(this.failureDetector);
@@ -129,7 +127,7 @@ public final class CoreClusterMembershipProtocol extends AbstractClusterMembersh
     {
         coordinatorProtocol.onInstalled(roundId, newMembership, coreDelta);
         
-        WorkerToCoreMembership mapping = newMembership.findDomain(Memberships.CORE_DOMAIN).findElement(WorkerToCoreMembership.class);
+        WorkerToCoreMembership mapping = newMembership.findDomain(GroupMemberships.CORE_DOMAIN).findElement(WorkerToCoreMembership.class);
         Assert.notNull(mapping);
         Set<INode> workerNodes = mapping.findWorkerNodes(membershipManager.getLocalNode());
         if (workerNodes == null || workerNodes.isEmpty())
@@ -162,7 +160,7 @@ public final class CoreClusterMembershipProtocol extends AbstractClusterMembersh
         List<IDomainMembershipDelta> domains = new ArrayList<IDomainMembershipDelta>();
         for (IDomainMembership coreDomain : newMembership.getDomains())
         {
-            if (coreDomain.getName().equals(Memberships.CORE_DOMAIN))
+            if (coreDomain.getName().equals(GroupMemberships.CORE_DOMAIN))
                 continue;
             
             boolean publicPart = !coreDomain.getName().equals(domain);
@@ -181,7 +179,7 @@ public final class CoreClusterMembershipProtocol extends AbstractClusterMembersh
         List<IDomainMembershipDelta> domains = new ArrayList<IDomainMembershipDelta>();
         for (IDomainMembershipDelta coreDomainDelta : coreDelta.getDomains())
         {
-            if (coreDomainDelta.getName().equals(Memberships.CORE_DOMAIN))
+            if (coreDomainDelta.getName().equals(GroupMemberships.CORE_DOMAIN))
                 continue;
             
             if (coreDomainDelta.getName().equals(domain))
@@ -209,7 +207,7 @@ public final class CoreClusterMembershipProtocol extends AbstractClusterMembersh
 
     private void sendResponseToCoordinator()
     {
-        IMembership membership = membershipManager.getMembership();
+        IGroupMembership membership = membershipManager.getMembership();
         if (membership == null)
             return;
         INode coordinator = membership.getGroup().getCoordinator();

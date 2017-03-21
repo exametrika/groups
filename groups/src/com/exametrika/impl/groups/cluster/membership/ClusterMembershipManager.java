@@ -10,9 +10,9 @@ import com.exametrika.api.groups.cluster.ClusterMembershipEvent;
 import com.exametrika.api.groups.cluster.IClusterMembership;
 import com.exametrika.api.groups.cluster.IClusterMembershipChange;
 import com.exametrika.api.groups.cluster.IClusterMembershipListener;
-import com.exametrika.api.groups.cluster.IClusterMembershipListener.LeaveReason;
-import com.exametrika.api.groups.core.IMembershipService;
-import com.exametrika.api.groups.core.INode;
+import com.exametrika.api.groups.cluster.IMembershipListener.LeaveReason;
+import com.exametrika.api.groups.cluster.IGroupMembershipService;
+import com.exametrika.api.groups.cluster.INode;
 import com.exametrika.common.l10n.DefaultMessage;
 import com.exametrika.common.l10n.ILocalizedMessage;
 import com.exametrika.common.l10n.Messages;
@@ -20,15 +20,11 @@ import com.exametrika.common.log.ILogger;
 import com.exametrika.common.log.IMarker;
 import com.exametrika.common.log.LogLevel;
 import com.exametrika.common.log.Loggers;
-import com.exametrika.common.messaging.ILiveNodeProvider;
 import com.exametrika.common.tasks.ThreadInterruptedException;
 import com.exametrika.common.utils.Assert;
 import com.exametrika.common.utils.Exceptions;
 import com.exametrika.common.utils.ILifecycle;
 import com.exametrika.common.utils.Strings;
-import com.exametrika.impl.groups.core.membership.Memberships;
-import com.exametrika.impl.groups.core.membership.Node;
-import com.exametrika.spi.groups.IPropertyProvider;
 
 /**
  * The {@link ClusterMembershipManager} is a cluster membership manager.
@@ -41,30 +37,21 @@ public final class ClusterMembershipManager implements IClusterMembershipManager
     private static final IMessages messages = Messages.get(IMessages.class);
     private static final ILogger logger = Loggers.get(ClusterMembershipManager.class);
     private final String channelName;
-    private final ILiveNodeProvider liveNodeProvider;
-    private final IPropertyProvider propertyProvider;
-    private final IMembershipService membershipService;
-    private final String domainName;
+    private final LocalNodeProvider localNodeProvider;
     private final Set<IClusterMembershipListener> privateMembershipListeners;
     private final IMarker marker;
     private volatile Set<IClusterMembershipListener> publicMembershipListeners = new HashSet<IClusterMembershipListener>();
     private volatile IClusterMembership membership;
-    private volatile INode localNode;
 
-    public ClusterMembershipManager(String channelName, ILiveNodeProvider liveNodeProvider, IPropertyProvider propertyProvider,
-        IMembershipService  membershipService, String domainName, Set<IClusterMembershipListener> membershipListeners)
+    public ClusterMembershipManager(String channelName, LocalNodeProvider localNodeProvider,
+        IGroupMembershipService  membershipService, Set<IClusterMembershipListener> membershipListeners)
     {
         Assert.notNull(channelName);
-        Assert.isTrue((membershipService != null) != (liveNodeProvider != null && propertyProvider != null));
-        Assert.notNull(domainName);
-        Assert.isTrue((membershipService != null) == (domainName.equals(Memberships.CORE_DOMAIN)));
+        Assert.notNull(localNodeProvider);
         Assert.notNull(membershipListeners);
         
         this.channelName = channelName;
-        this.liveNodeProvider = liveNodeProvider;
-        this.propertyProvider = propertyProvider;
-        this.membershipService = membershipService;
-        this.domainName = domainName;
+        this.localNodeProvider = localNodeProvider;
         this.privateMembershipListeners = membershipListeners;
         marker = Loggers.getMarker(channelName);
     }
@@ -72,9 +59,7 @@ public final class ClusterMembershipManager implements IClusterMembershipManager
     @Override
     public INode getLocalNode()
     {
-        Assert.notNull(localNode);
-        
-        return localNode;
+        return localNodeProvider.getLocalNode();
     }
 
     @Override
@@ -168,13 +153,6 @@ public final class ClusterMembershipManager implements IClusterMembershipManager
     @Override
     public void start()
     {
-        if (membershipService != null)
-            localNode = membershipService.getLocalNode();
-        else
-        {
-            localNode = new Node(liveNodeProvider.getLocalNode().getName(), 
-                liveNodeProvider.getLocalNode(), propertyProvider.getProperties(), domainName);
-        }
     }
     
     @Override

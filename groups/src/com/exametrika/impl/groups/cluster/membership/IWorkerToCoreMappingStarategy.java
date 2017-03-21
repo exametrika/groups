@@ -6,7 +6,7 @@ package com.exametrika.impl.groups.cluster.membership;
 import java.util.List;
 import java.util.Map;
 
-import com.exametrika.api.groups.core.INode;
+import com.exametrika.api.groups.cluster.INode;
 
 /**
  * The {@link IWorkerToCoreMappingStarategy} represents a strategy which maps worker nodes to core nodes.

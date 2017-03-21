@@ -65,7 +65,6 @@ public final class LiveNodeManager implements IFailureObserver, IConnectionObser
     @Override
     public IAddress getLocalNode()
     {
-        Assert.notNull(localNode);
         return localNode;
     }
 

@@ -3,49 +3,33 @@
  */
 package com.exametrika.api.groups.cluster;
 
-import java.util.List;
-import java.util.UUID;
-
-import com.exametrika.api.groups.core.IGroup;
-import com.exametrika.common.messaging.IAddress;
 
 /**
- * The {@link IGroupMembership} is a cluster group membership.
+ * The {@link IGroupMembership} is a group membership.
  * 
  * @threadsafety Implementations of this interface and its methods are thread safe.
  * @author Medvedev-A
  */
 
-public interface IGroupMembership extends IClusterMembershipElement
+public interface IGroupMembership
 {
     /**
-     * Returns list of cluster groups.
+     * Returns membership identifier.
      * 
-     * @return list of cluster groups
+     * @return membership identifier
      */
-    List<IGroup> getGroups();
-    
+    long getId();
+
     /**
-     * Finds group by identifier.
-     * 
-     * @param groupId group identifier
-     * @return cluster group or <c>null</c>, if cluster group is not found
-     */
-    IGroup findGroup(UUID groupId);
-    
-    /**
-     * Finds group by address.
-     * 
-     * @param address address of group
-     * @return cluster group or <c>null</c>, if cluster group is not found
-     */
-    IGroup findGroup(IAddress address);
-    
-    /**
-     * Finds list of node's groups.
+     * Returns core group.
      *
-     * @param nodeId node identifier
-     * @return list of node's groups
+     * @return core group
      */
-    List<IGroup> findNodeGroups(UUID nodeId);
+    IGroup getGroup();
+
+    @Override
+    boolean equals(Object o);
+    
+    @Override
+    int hashCode();
 }

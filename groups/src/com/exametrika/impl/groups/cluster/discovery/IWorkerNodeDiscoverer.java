@@ -5,10 +5,10 @@ package com.exametrika.impl.groups.cluster.discovery;
 
 import java.util.Set;
 
-import com.exametrika.api.groups.core.INode;
+import com.exametrika.api.groups.cluster.INode;
 
 /**
- * The {@link IWorkerNodeDiscoverer} is a discoverer of worker nodes
+ * The {@link IWorkerNodeDiscoverer} is a discoverer of worker nodes.
  * 
  * @threadsafety Implementations of this interface and its methods are thread safe.
  * @author Medvedev-A

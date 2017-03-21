@@ -5,10 +5,9 @@ package com.exametrika.impl.groups.cluster.membership;
 
 import java.util.List;
 
-import com.exametrika.api.groups.core.IGroup;
-import com.exametrika.api.groups.core.INode;
+import com.exametrika.api.groups.cluster.IGroup;
+import com.exametrika.api.groups.cluster.INode;
 import com.exametrika.common.utils.Pair;
-import com.exametrika.impl.groups.core.membership.IGroupDelta;
 
 /**
  * The {@link IGroupMappingStrategy} represents a group mapping strategy.

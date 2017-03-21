@@ -9,13 +9,13 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
+import com.exametrika.api.groups.cluster.GroupMembershipEvent;
 import com.exametrika.api.groups.cluster.IClusterMembership;
 import com.exametrika.api.groups.cluster.IClusterMembershipElement;
 import com.exametrika.api.groups.cluster.IDomainMembership;
-import com.exametrika.api.groups.core.IMembership;
-import com.exametrika.api.groups.core.IMembershipListener;
-import com.exametrika.api.groups.core.INode;
-import com.exametrika.api.groups.core.MembershipEvent;
+import com.exametrika.api.groups.cluster.IGroupMembership;
+import com.exametrika.api.groups.cluster.IGroupMembershipListener;
+import com.exametrika.api.groups.cluster.INode;
 import com.exametrika.common.messaging.IAddress;
 import com.exametrika.common.messaging.IMessage;
 import com.exametrika.common.messaging.IMessageFactory;
@@ -23,11 +23,9 @@ import com.exametrika.common.messaging.IReceiver;
 import com.exametrika.common.utils.Assert;
 import com.exametrika.common.utils.Collections;
 import com.exametrika.common.utils.Pair;
-import com.exametrika.impl.groups.core.channel.IGracefulCloseStrategy;
-import com.exametrika.impl.groups.core.failuredetection.IFailureDetector;
-import com.exametrika.impl.groups.core.flush.IFlushManager;
-import com.exametrika.impl.groups.core.membership.IMembershipManager;
-import com.exametrika.impl.groups.core.membership.Memberships;
+import com.exametrika.impl.groups.cluster.channel.IGracefulCloseStrategy;
+import com.exametrika.impl.groups.cluster.failuredetection.IGroupFailureDetector;
+import com.exametrika.impl.groups.cluster.flush.IFlushManager;
 
 /**
  * The {@link CoreCoordinatorClusterMembershipProtocol} represents a core coordinator part of cluster membership protocol.
@@ -37,11 +35,11 @@ import com.exametrika.impl.groups.core.membership.Memberships;
  * @author Medvedev-A
  */
 public final class CoreCoordinatorClusterMembershipProtocol extends AbstractClusterMembershipProtocol 
-    implements IGracefulCloseStrategy, IMembershipListener
+    implements IGracefulCloseStrategy, IGroupMembershipListener
 {
-    private final IMembershipManager membershipManager;
+    private final IGroupMembershipManager membershipManager;
     private final long trackPeriod;
-    private IFailureDetector failureDetector;
+    private IGroupFailureDetector failureDetector;
     private IFlushManager flushManager;
     private long lastTrackTime;
     private boolean stopped;
@@ -52,7 +50,7 @@ public final class CoreCoordinatorClusterMembershipProtocol extends AbstractClus
     
     public CoreCoordinatorClusterMembershipProtocol(String channelName, IMessageFactory messageFactory, 
         IClusterMembershipManager clusterMembershipManager, List<IClusterMembershipProvider> membershipProviders,
-        IMembershipManager membershipManager, long trackPeriod)
+        IGroupMembershipManager membershipManager, long trackPeriod)
     {
         super(channelName, messageFactory, clusterMembershipManager, membershipProviders);
         
@@ -62,7 +60,7 @@ public final class CoreCoordinatorClusterMembershipProtocol extends AbstractClus
         this.trackPeriod = trackPeriod;
     }
     
-    public void setFailureDetector(IFailureDetector failureDetector)
+    public void setFailureDetector(IGroupFailureDetector failureDetector)
     {
         Assert.notNull(failureDetector);
         Assert.isNull(this.failureDetector);
@@ -110,7 +108,7 @@ public final class CoreCoordinatorClusterMembershipProtocol extends AbstractClus
         for (INode node : membershipManager.getMembership().getGroup().getMembers())
             respondingNodes.add(node.getAddress());
         
-        send(messageFactory.create(Memberships.CORE_GROUP_ADDRESS, new ClusterMembershipMessagePart(roundId, delta)));
+        send(messageFactory.create(GroupMemberships.CORE_GROUP_ADDRESS, new ClusterMembershipMessagePart(roundId, delta)));
     }
 
     @Override
@@ -124,7 +122,7 @@ public final class CoreCoordinatorClusterMembershipProtocol extends AbstractClus
     }
 
     @Override
-    public void onMembershipChanged(MembershipEvent event)
+    public void onMembershipChanged(GroupMembershipEvent event)
     {
         if ((!event.getMembershipChange().getGroup().getFailedMembers().isEmpty() || 
             !event.getMembershipChange().getGroup().getLeftMembers().isEmpty()) &&
@@ -176,7 +174,7 @@ public final class CoreCoordinatorClusterMembershipProtocol extends AbstractClus
                 domainNames.addAll(membershipProviders.get(i).getDomains());
         }
         else
-            domainNames.add(Memberships.CORE_DOMAIN);
+            domainNames.add(GroupMemberships.CORE_DOMAIN);
         
         List<IDomainMembershipDelta> domainDeltas = new ArrayList<IDomainMembershipDelta>();
         for (String domainName : domainNames)
@@ -245,7 +243,7 @@ public final class CoreCoordinatorClusterMembershipProtocol extends AbstractClus
         if (flushManager.isFlushInProgress())
             return false;
 
-        IMembership membership = membershipManager.getMembership();
+        IGroupMembership membership = membershipManager.getMembership();
         if (membership == null || !membership.getGroup().getCoordinator().equals(membershipManager.getLocalNode()))
             return false;
         

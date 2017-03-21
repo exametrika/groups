@@ -3,19 +3,12 @@
  */
 package com.exametrika.impl.groups.cluster.membership;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-
+import com.exametrika.api.groups.cluster.IGroup;
 import com.exametrika.api.groups.cluster.IGroupMembership;
-import com.exametrika.api.groups.core.IGroup;
-import com.exametrika.api.groups.core.INode;
-import com.exametrika.common.messaging.IAddress;
+import com.exametrika.common.l10n.DefaultMessage;
+import com.exametrika.common.l10n.ILocalizedMessage;
+import com.exametrika.common.l10n.Messages;
 import com.exametrika.common.utils.Assert;
-import com.exametrika.common.utils.Immutables;
-import com.exametrika.common.utils.Strings;
 
 /**
  * The {@link GroupMembership} is implementation of {@link IGroupMembership}.
@@ -25,78 +18,59 @@ import com.exametrika.common.utils.Strings;
  */
 public final class GroupMembership implements IGroupMembership
 {
-    private final List<IGroup> groups;
-    private final Map<UUID, IGroup> groupsByIdMap;
-    private final Map<IAddress, IGroup> groupsByAddressMap;
-    private final Map<UUID, List<IGroup>> groupsByNodeMap;
+    private static final IMessages messages = Messages.get(IMessages.class);
+    private final long id;
+    private final IGroup group;
 
-    public GroupMembership(List<IGroup> groups)
+    public GroupMembership(long id, IGroup group)
     {
-        Assert.notNull(groups);
-        Assert.isTrue(!groups.isEmpty());
+        Assert.isTrue(id > 0);
+        Assert.notNull(group);
 
-        this.groups = Immutables.wrap(groups);
-        
-        Map<UUID, IGroup> groupsByIdMap = new HashMap<UUID, IGroup>();
-        Map<IAddress, IGroup> groupsByAddressMap = new HashMap<IAddress, IGroup>();
-        Map<UUID, List<IGroup>> groupsByNodeMap = new HashMap<UUID, List<IGroup>>();
-        for (IGroup group : groups)
-        {
-            groupsByIdMap.put(group.getId(), group);
-            groupsByAddressMap.put(group.getAddress(), group);
-            
-            for (INode node : group.getMembers())
-            {
-                List<IGroup> list = groupsByNodeMap.get(node.getId());
-                if (list == null)
-                {
-                    list = Immutables.wrap(new ArrayList<IGroup>());
-                    groupsByNodeMap.put(node.getId(), list);
-                }
-                
-                list = Immutables.unwrap(list);
-                list.add(group);
-            }
-        }
-        
-        this.groupsByIdMap = groupsByIdMap;
-        this.groupsByAddressMap = groupsByAddressMap;
-        this.groupsByNodeMap = groupsByNodeMap;
+        this.id = id;
+        this.group = group;
     }
 
     @Override
-    public List<IGroup> getGroups()
+    public long getId()
     {
-        return groups;
+        return id;
     }
 
     @Override
-    public IGroup findGroup(UUID groupId)
+    public IGroup getGroup()
     {
-        Assert.notNull(groupId);
-        
-        return groupsByIdMap.get(groupId);
+        return group;
     }
 
     @Override
-    public List<IGroup> findNodeGroups(UUID nodeId)
+    public boolean equals(Object o)
     {
-        Assert.notNull(nodeId);
-        
-        return groupsByNodeMap.get(nodeId);
+        if (this == o)
+            return true;
+
+        if (!(o instanceof GroupMembership))
+            return false;
+
+        GroupMembership membership = (GroupMembership)o;
+        return id == membership.id;
     }
-    
+
     @Override
-    public IGroup findGroup(IAddress address)
+    public int hashCode()
     {
-        Assert.notNull(address);
-        
-        return groupsByAddressMap.get(address);
+        return (int)(id ^ (id >>> 32));
     }
 
     @Override
     public String toString()
     {
-        return Strings.toString(groups, false);
+        return messages.toString(id, group).toString();
+    }
+    
+    private interface IMessages
+    {
+        @DefaultMessage("id : {0}\ngroup: {1}")
+        ILocalizedMessage toString(long id, IGroup group);
     }
 }
