@@ -42,7 +42,7 @@ public final class DomainMembershipChange implements IDomainMembershipChange
     }
     
     @Override
-    public <T extends IClusterMembershipElementChange> T getChange(Class<T> changeClass)
+    public <T extends IClusterMembershipElementChange> T findChange(Class<T> changeClass)
     {
         Assert.notNull(changeClass);
         
@@ -52,7 +52,7 @@ public final class DomainMembershipChange implements IDomainMembershipChange
                 return (T)change;
         }
         
-        return Assert.error();
+        return null;
     }
     
     @Override

@@ -3,6 +3,7 @@
  */
 package com.exametrika.impl.groups.cluster.membership;
 
+import java.util.List;
 import java.util.Set;
 
 import com.exametrika.api.groups.cluster.IGroup;
@@ -25,11 +26,11 @@ public final class GroupChange implements IGroupChange
     private static final IMessages messages = Messages.get(IMessages.class);
     private final IGroup newGroup;
     private final IGroup oldGroup;
-    private final Set<INode> joinedMembers;
+    private final List<INode> joinedMembers;
     private final Set<INode> leftMembers;
     private final Set<INode> failedMembers;
 
-    public GroupChange(IGroup newGroup, IGroup oldGroup, Set<INode> joinedMembers, Set<INode> leftMembers, Set<INode> failedMembers)
+    public GroupChange(IGroup newGroup, IGroup oldGroup, List<INode> joinedMembers, Set<INode> leftMembers, Set<INode> failedMembers)
     {
         Assert.notNull(joinedMembers);
         Assert.notNull(leftMembers);
@@ -57,7 +58,7 @@ public final class GroupChange implements IGroupChange
     }
     
     @Override
-    public Set<INode> getJoinedMembers()
+    public List<INode> getJoinedMembers()
     {
         return joinedMembers;
     }
@@ -83,6 +84,6 @@ public final class GroupChange implements IGroupChange
     private interface IMessages
     {
         @DefaultMessage("{0} - joined: {1}\nleft: {2}\nfailed: {3}")
-        ILocalizedMessage toString(String name, Set<INode> joinedMembers, Set<INode> leftMembers, Set<INode> failedMembers);
+        ILocalizedMessage toString(String name, List<INode> joinedMembers, Set<INode> leftMembers, Set<INode> failedMembers);
     }
 }

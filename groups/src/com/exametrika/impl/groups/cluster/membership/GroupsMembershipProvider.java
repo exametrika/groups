@@ -223,7 +223,7 @@ public final class GroupsMembershipProvider implements IClusterMembershipProvide
                     Assert.notNull(leftMember);
                     leftMembers.add(leftMember);
                 }
-                IGroupChange groupChange = new GroupChange(newGroup, group, new LinkedHashSet<>(changedGroup.getJoinedMembers()),
+                IGroupChange groupChange = new GroupChange(newGroup, group, changedGroup.getJoinedMembers(),
                     leftMembers, failedMembers);
                 changedGroups.add(groupChange);
             }
@@ -258,7 +258,7 @@ public final class GroupsMembershipProvider implements IClusterMembershipProvide
                         failedNodes.add(node);
                 }
                 
-                Set<INode> joinedNodes = new HashSet<INode>();
+                List<INode> joinedNodes = new ArrayList<INode>();
                 for (INode node : newGroup.getMembers())
                 {
                     if (group.findMember(node.getId()) == null)

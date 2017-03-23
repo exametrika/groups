@@ -3,7 +3,10 @@
  */
 package com.exametrika.impl.groups.cluster.membership;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 
 import com.exametrika.api.groups.cluster.IGroup;
 import com.exametrika.api.groups.cluster.IGroupChange;
@@ -25,6 +28,7 @@ public final class GroupsMembershipChange implements IGroupsMembershipChange
     private static final IMessages messages = Messages.get(IMessages.class);
     private final Set<IGroup> newGroups;
     private final Set<IGroupChange> changedGroups;
+    private final Map<UUID, IGroupChange> changedGroupsMap;
     private final Set<IGroup> removedGroups;
 
     public GroupsMembershipChange(Set<IGroup> newGroups, Set<IGroupChange> changedGroups, Set<IGroup> removedGroups)
@@ -36,6 +40,11 @@ public final class GroupsMembershipChange implements IGroupsMembershipChange
         this.newGroups = Immutables.wrap(newGroups);
         this.changedGroups = Immutables.wrap(changedGroups);
         this.removedGroups = Immutables.wrap(removedGroups);
+        
+        Map<UUID, IGroupChange> changedGroupsMap = new HashMap<UUID, IGroupChange>();
+        for (IGroupChange group : changedGroups)
+            changedGroupsMap.put(group.getNewGroup().getId(), group);
+        this.changedGroupsMap = changedGroupsMap;
     }
 
     @Override
@@ -48,6 +57,14 @@ public final class GroupsMembershipChange implements IGroupsMembershipChange
     public Set<IGroupChange> getChangedGroups()
     {
         return changedGroups;
+    }
+    
+    @Override
+    public  IGroupChange findChangedGroup(UUID groupId)
+    {
+        Assert.notNull(groupId);
+        
+        return changedGroupsMap.get(groupId);
     }
     
     @Override

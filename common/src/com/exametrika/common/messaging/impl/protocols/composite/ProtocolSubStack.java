@@ -21,7 +21,7 @@ import com.exametrika.common.messaging.impl.protocols.AbstractProtocol;
  * @threadsafety This class and its methods are thread safe.
  * @author Medvedev-A
  */
-public final class ProtocolSubStack extends AbstractCompositeProtocol
+public class ProtocolSubStack extends AbstractCompositeProtocol
 {
     public ProtocolSubStack(String channelName, IMessageFactory messageFactory, List<? extends AbstractProtocol> protocols)
     {
@@ -47,6 +47,7 @@ public final class ProtocolSubStack extends AbstractCompositeProtocol
             prev.setSender(next);
             prev.setPullableSender(next);
             prev.setTimeService(getTimeService());
+            prev.setConnectionProvider(connectionProvider);
             next.setReceiver(prev);
         }
         
@@ -54,6 +55,7 @@ public final class ProtocolSubStack extends AbstractCompositeProtocol
         last.setSender(getSender());
         last.setPullableSender(getPullableSender());
         last.setTimeService(getTimeService());
+        last.setConnectionProvider(connectionProvider);
     }
     
     @Override

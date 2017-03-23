@@ -4,6 +4,7 @@
 package com.exametrika.api.groups.cluster;
 
 import java.util.Set;
+import java.util.UUID;
 
 
 /**
@@ -28,6 +29,14 @@ public interface IGroupsMembershipChange extends IClusterMembershipElementChange
      * @return set of changed custer groups
      */
     Set<IGroupChange> getChangedGroups();
+    
+    /**
+     * Finds changed group by identifier.
+     *
+     * @param groupId group identifier
+     * @return changed group or null if changed group is not found
+     */
+    IGroupChange findChangedGroup(UUID groupId);
     
     /**
      * Returns set of removed cluster groups.

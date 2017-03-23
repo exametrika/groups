@@ -23,12 +23,12 @@ public interface IDomainMembershipChange
     String getName();
     
     /**
-     * Returns membership element change.
+     * Finds membership element change.
      *
      * @param changeClass change class
-     * @return membership element change
+     * @return membership element change or null if change is not found
      */
-    <T extends IClusterMembershipElementChange> T getChange(Class<T> changeClass);
+    <T extends IClusterMembershipElementChange> T findChange(Class<T> changeClass);
     
     /**
      * Returns list of all membership elements changes.

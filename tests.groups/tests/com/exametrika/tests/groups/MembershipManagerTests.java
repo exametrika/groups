@@ -23,8 +23,8 @@ import com.exametrika.api.groups.cluster.GroupMembershipEvent;
 import com.exametrika.api.groups.cluster.IGroupMembership;
 import com.exametrika.api.groups.cluster.IGroupMembershipChange;
 import com.exametrika.api.groups.cluster.IGroupMembershipListener;
-import com.exametrika.api.groups.cluster.INode;
 import com.exametrika.api.groups.cluster.IMembershipListener.LeaveReason;
+import com.exametrika.api.groups.cluster.INode;
 import com.exametrika.common.messaging.IAddress;
 import com.exametrika.common.messaging.ILiveNodeProvider;
 import com.exametrika.common.messaging.impl.transports.UnicastAddress;
@@ -42,13 +42,13 @@ import com.exametrika.impl.groups.cluster.membership.GroupMembership;
 import com.exametrika.impl.groups.cluster.membership.GroupMembershipChange;
 import com.exametrika.impl.groups.cluster.membership.GroupMembershipDelta;
 import com.exametrika.impl.groups.cluster.membership.GroupMemberships;
+import com.exametrika.impl.groups.cluster.membership.GroupMemberships.MembershipChangeInfo;
+import com.exametrika.impl.groups.cluster.membership.GroupMemberships.MembershipDeltaInfo;
 import com.exametrika.impl.groups.cluster.membership.IGroupMembershipDelta;
 import com.exametrika.impl.groups.cluster.membership.IGroupMembershipManager;
 import com.exametrika.impl.groups.cluster.membership.IPreparedGroupMembershipListener;
 import com.exametrika.impl.groups.cluster.membership.LocalNodeProvider;
 import com.exametrika.impl.groups.cluster.membership.Node;
-import com.exametrika.impl.groups.cluster.membership.GroupMemberships.MembershipChangeInfo;
-import com.exametrika.impl.groups.cluster.membership.GroupMemberships.MembershipDeltaInfo;
 import com.exametrika.spi.groups.IPropertyProvider;
 
 /**
@@ -142,7 +142,7 @@ public class MembershipManagerTests
         assertThat(changeInfo.newMembership.getGroup().getName(), is("core"));
         assertThat(changeInfo.newMembership.getGroup().isPrimary(), is(false));
         
-        assertThat(changeInfo.membershipChange.getGroup().getJoinedMembers(), is(com.exametrika.common.utils.Collections.<INode>asSet(node4, node5)));
+        assertThat(changeInfo.membershipChange.getGroup().getJoinedMembers(), is(Arrays.<INode>asList(node4, node5)));
         assertThat(changeInfo.membershipChange.getGroup().getLeftMembers(), is(com.exametrika.common.utils.Collections.<INode>asSet(node1)));
         assertThat(changeInfo.membershipChange.getGroup().getFailedMembers(), is(com.exametrika.common.utils.Collections.<INode>asSet(node2)));
         
@@ -265,7 +265,7 @@ public class MembershipManagerTests
         
         Group group2 = new Group(new GroupAddress(UUID.randomUUID(), "test"), true, Arrays.<INode>asList(manager.getLocalNode(), node1, node2));
         GroupMembership membership2 = new GroupMembership(2, group2);
-        GroupMembershipChange membershipChange = new GroupMembershipChange(new GroupChange(group2, group, Collections.<INode>singleton(node2), 
+        GroupMembershipChange membershipChange = new GroupMembershipChange(new GroupChange(group2, group, Collections.<INode>singletonList(node2), 
             Collections.<INode>emptySet(), Collections.<INode>emptySet()));
         manager.prepareChangeMembership(membership2, membershipChange);
         

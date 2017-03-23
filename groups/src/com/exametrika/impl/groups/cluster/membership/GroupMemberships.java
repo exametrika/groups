@@ -164,8 +164,7 @@ public final class GroupMemberships
                 members.add(member);
         }
         
-        Set<INode> joinedMembers = new HashSet<INode>(membershipDelta.getGroup().getJoinedMembers());
-        members.addAll(membershipDelta.getGroup().getJoinedMembers());
+        List<INode> joinedMembers = membershipDelta.getGroup().getJoinedMembers();
         
         boolean primaryGroup;
         if (oldMembership.getGroup().isPrimary())

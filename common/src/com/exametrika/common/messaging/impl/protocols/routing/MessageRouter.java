@@ -10,9 +10,6 @@ import com.exametrika.common.messaging.IMessageFactory;
 import com.exametrika.common.messaging.IReceiver;
 import com.exametrika.common.messaging.impl.protocols.AbstractProtocol;
 import com.exametrika.common.messaging.impl.protocols.composite.AbstractCompositeProtocol;
-import com.exametrika.common.utils.Assert;
-import com.exametrika.common.utils.ICondition;
-import com.exametrika.common.utils.Pair;
 
 /**
  * The {@link MessageRouter} represents a router of messages in protocol stack based on their content.
@@ -20,50 +17,43 @@ import com.exametrika.common.utils.Pair;
  * @threadsafety This class and its methods are thread safe.
  * @author Medvedev-A
  */
-public final class MessageRouter extends AbstractCompositeProtocol
+public abstract class MessageRouter extends AbstractCompositeProtocol
 {
-    private final List<Pair<ICondition<IMessage>, IReceiver>> routes;
-    
-    public MessageRouter(String channelName, IMessageFactory messageFactory, List<? extends AbstractProtocol> protocols, 
-        List<Pair<ICondition<IMessage>, IReceiver>> routes)
+    public MessageRouter(String channelName, IMessageFactory messageFactory, List<? extends AbstractProtocol> protocols)
     {
-        this(channelName, null, messageFactory, protocols, routes);
+        this(channelName, null, messageFactory, protocols);
     }
     
-    public MessageRouter(String channelName, String loggerName, IMessageFactory messageFactory, List<? extends AbstractProtocol> protocols, 
-        List<Pair<ICondition<IMessage>, IReceiver>> routes)
+    public MessageRouter(String channelName, String loggerName, IMessageFactory messageFactory, List<? extends AbstractProtocol> protocols)
     {
         super(channelName, loggerName, messageFactory, protocols);
-        
-        Assert.notNull(routes);
-        
-        this.routes = routes;
     }
     
     @Override
     protected void doWire(List<AbstractProtocol> protocols)
     {
         for (AbstractProtocol protocol : protocols)
-        {
-            protocol.setTimeService(timeService);
-            protocol.setSender(getSender());
-            protocol.setPullableSender(getPullableSender());
-            protocol.setReceiver(getReceiver());
-        }
+            doWire(protocol);
     }
 
     @Override
     protected void doReceive(IReceiver receiver, IMessage message)
     {
-        for (Pair<ICondition<IMessage>, IReceiver> pair : routes)
-        {
-            if (pair.getKey().evaluate(message))
-            {
-                pair.getValue().receive(message);
-                return;
-            }
-        }
-        
-        receiver.receive(message);
+        if (doRoute(message))
+            return;
+        else
+            receiver.receive(message);
     }
+    
+    @Override
+    protected void doWire(AbstractProtocol protocol)
+    {
+        protocol.setTimeService(timeService);
+        protocol.setConnectionProvider(connectionProvider);
+        protocol.setSender(getSender());
+        protocol.setPullableSender(getPullableSender());
+        protocol.setReceiver(getReceiver());
+    }
+    
+    protected abstract boolean doRoute(IMessage message);
 }

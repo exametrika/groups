@@ -142,7 +142,7 @@ public abstract class AbstractProtocol implements ISender, IReceiver, IPullableS
         return timeService;
     }
     
-    public final void setTimeService(ITimeService timeService)
+    public void setTimeService(ITimeService timeService)
     {
         Assert.notNull(timeService);
         Assert.isNull(this.timeService);
@@ -150,7 +150,7 @@ public abstract class AbstractProtocol implements ISender, IReceiver, IPullableS
         this.timeService = timeService;
     }
     
-    public final void setConnectionProvider(IConnectionProvider connectionProvider)
+    public void setConnectionProvider(IConnectionProvider connectionProvider)
     {
         Assert.notNull(connectionProvider);
         Assert.isNull(this.connectionProvider);

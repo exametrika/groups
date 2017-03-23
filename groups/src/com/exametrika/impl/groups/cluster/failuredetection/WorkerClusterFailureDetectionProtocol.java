@@ -108,7 +108,7 @@ public final class WorkerClusterFailureDetectionProtocol extends AbstractProtoco
             return;
         
         long currentTime = timeService.getCurrentTime();
-        NodesMembershipChange change = domain.getChange(NodesMembershipChange.class);
+        NodesMembershipChange change = domain.findChange(NodesMembershipChange.class);
         
         for (INode node : change.getFailedNodes())
             failureHistory.put(node.getAddress(), new FailureInfo(currentTime, true));

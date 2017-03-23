@@ -3,6 +3,7 @@
  */
 package com.exametrika.api.groups.cluster;
 
+import java.util.List;
 import java.util.Set;
 
 
@@ -30,11 +31,11 @@ public interface IGroupChange
     IGroup getOldGroup();
     
     /**
-     * Returns set of new group members
+     * Returns list of new group members
      * 
-     * @return set of new group members
+     * @return list of new group members
      */
-    Set<INode> getJoinedMembers();
+    List<INode> getJoinedMembers();
     
     /**
      * Returns set of left group members.
