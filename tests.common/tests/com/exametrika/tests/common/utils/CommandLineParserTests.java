@@ -14,15 +14,19 @@ import java.util.Map;
 
 import org.junit.Test;
 
+import com.exametrika.common.shell.IParameterValidator;
+import com.exametrika.common.shell.impl.ShellCommand;
+import com.exametrika.common.shell.impl.converters.FileConverter;
+import com.exametrika.common.shell.impl.converters.IntegerConverter;
+import com.exametrika.common.shell.impl.converters.URIConverter;
 import com.exametrika.common.tests.Expected;
-import com.exametrika.common.utils.CommandLineParser;
 import com.exametrika.common.utils.InvalidArgumentException;
 
 
 /**
- * The {@link CommandLineParserTests} are tests for {@link CommandLineParser}.
+ * The {@link CommandLineParserTests} are tests for {@link ShellCommand}.
  * 
- * @see CommandLineParser
+ * @see ShellCommand
  * @author Medvedev-A
  */
 public class CommandLineParserTests
@@ -32,15 +36,15 @@ public class CommandLineParserTests
     {
         final Map<String, Object> params = new HashMap<String, Object>();
 
-        final CommandLineParser parser = new CommandLineParser();
+        final ShellCommand parser = new ShellCommand();
         parser.defineParameter("key1", new String[]{"-n1", "--name1"}, "-n1, --name1", "param1\ndescription", true);
         parser.defineParameter("key2", new String[]{"-n2"}, "-n2", "param2\ndescription", true, false, true, null, null);
         parser.defineParameter("key3", new String[]{"-n3"}, "-n3", "param3\ndescription", false, true, true,
-            new CommandLineParser.FileConverter(), new File("/home"));
+            new FileConverter(), new File("/home"));
         parser.defineParameter("key4", new String[]{"-n4"}, "-n4", "param4\ndescription", false, true, true, 
-            new CommandLineParser.URIConverter(), "http://localhost");
+            new URIConverter(), "http://localhost");
         parser.defineParameter("key5", new String[]{"-n5"}, "-n5", "param5\ndescription", false, true, false, 
-            new CommandLineParser.IntegerConverter(), 123);
+            new IntegerConverter(), 123);
         parser.defineParameter("key6", new String[]{"-n6", "--name6"}, "-n6, --name6", "param6\ndescription", false);
         
         parser.defineUnnamedParameter("key10", "unnamed_param", "unnamed_param\ndescription", true, true,  
@@ -125,7 +129,7 @@ public class CommandLineParserTests
             new Entry("key10", "hello")})));
         
         parser.defineUnnamedParameter("key10", "unnamed_param", "unnamed_param\ndescription", false, true,
-            new CommandLineParser.URIConverter(), new URI("ftp://hello"));
+            new URIConverter(), new URI("ftp://hello"));
         
         parser.parse(new String[]{"-n3", "/", "-n2", "--name1"}, params);
         assertThat(params, is(asMap(new Entry[]{new Entry("key1", null), new Entry("key2", null),
@@ -133,7 +137,7 @@ public class CommandLineParserTests
             new Entry("key10", new URI("ftp://hello"))})));
         
         parser.defineUnnamedParameter("key10", "unnamed_param", "unnamed_param\ndescription", true, false,
-            new CommandLineParser.URIConverter(), null);
+            new URIConverter(), null);
         
         parser.parse(new String[]{"ftp://hello2", "-n3", "/", "-n2", "--name1", "ftp://hello1"}, params);
         assertThat(params, is(asMap(new Entry[]{new Entry("key1", null), new Entry("key2", null),
@@ -141,7 +145,7 @@ public class CommandLineParserTests
             new Entry("key10", Arrays.asList(new URI("ftp://hello2"), new URI("ftp://hello1")))})));
         
         parser.defineUnnamedParameter("key10", "unnamed_param", "unnamed_param\ndescription", false, false, 
-            new CommandLineParser.URIConverter(), "ftp://hello");
+            new URIConverter(), "ftp://hello");
         
         parser.parse(new String[]{"ftp://hello2", "-n3", "/", "-n2", "--name1", "ftp://hello1"}, params);
         assertThat(params, is(asMap(new Entry[]{new Entry("key1", null), new Entry("key2", null),
@@ -153,7 +157,7 @@ public class CommandLineParserTests
             new Entry("key3", new File("/")), new Entry("key4", new URI("http://localhost")), new Entry("key5", Arrays.asList(123)),
             new Entry("key10", Arrays.asList(new URI("ftp://hello")))})));
         
-        parser.setValidator(new CommandLineParser.IParameterValidator()
+        parser.setValidator(new IParameterValidator()
         {
             @Override
             public void validate(Map<String, Object> parameters)

@@ -90,12 +90,25 @@ public final class Strings
      */
     public static String indent(String value, String indent)
     {
+        return indent(value, indent, true);
+    }
+    
+    /**
+     * Indents each new line of specified string on specified number of spaces.
+     * 
+     * @param value string to indent
+     * @param indent indent string to be inserted on each line
+     * @param indentFirst if true first lune is indented
+     * @return indented string
+     */
+    public static String indent(String value, String indent, boolean indentFirst)
+    {
         Assert.notNull(value);
         Assert.notNull(indent);
 
         StringBuilder builder = new StringBuilder();
 
-        boolean newLine = true;
+        boolean newLine = indentFirst;
 
         for (int i = 0; i < value.length(); i++)
         {
