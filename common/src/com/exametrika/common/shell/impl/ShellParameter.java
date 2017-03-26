@@ -5,33 +5,34 @@ package com.exametrika.common.shell.impl;
 
 import java.util.List;
 
-import com.exametrika.common.shell.IParameterConverter;
+import com.exametrika.common.shell.IShellParameter;
+import com.exametrika.common.shell.IShellParameterConverter;
 import com.exametrika.common.utils.Assert;
 import com.exametrika.common.utils.Immutables;
 import com.exametrika.common.utils.Strings;
 
 /**
- * The {@link ShellCommandParameter} defines a shell command parameter.
+ * The {@link ShellParameter} defines a shell command parameter.
  * 
  * @threadsafety This class and its methods are not thread safe.
  * @author Medvedev-A
  */
-public class ShellCommandParameter
+public class ShellParameter implements IShellParameter
 {
     private final String key;
     private final List<String> names;
     private final String format;
     private final String description;
     private final boolean hasArgument;
-    private final IParameterConverter converter;
+    private final IShellParameterConverter converter;
     private final boolean unique;
     private final boolean required;
     private final Object defaultValue;
     
-    public ShellCommandParameter(String key, List<String> names, String format, String description, boolean hasArgument, 
-        IParameterConverter converter, boolean unique, boolean required, Object defaultValue)
+    public ShellParameter(String key, List<String> names, String format, String description, boolean hasArgument, 
+        IShellParameterConverter converter, boolean unique, boolean required, Object defaultValue)
     {
-        Assert.notNull(key);
+        Assert.isTrue(!Strings.isEmpty(key));
         Assert.notNull(format);
         Assert.notNull(description);
         
@@ -46,6 +47,7 @@ public class ShellCommandParameter
         this.defaultValue = defaultValue;
     }
     
+    @Override
     public Object getDefaultValue()
     {
         if (converter != null && defaultValue instanceof String)
@@ -54,46 +56,55 @@ public class ShellCommandParameter
         return defaultValue;
     }
 
+    @Override
     public String getKey()
     {
         return key;
     }
 
+    @Override
     public List<String> getNames()
     {
         return names;
     }
 
+    @Override
     public String getFormat()
     {
         return format;
     }
 
+    @Override
     public String getDescription()
     {
         return description;
     }
 
+    @Override
     public boolean hasArgument()
     {
         return hasArgument;
     }
 
-    public IParameterConverter getConverter()
+    @Override
+    public IShellParameterConverter getConverter()
     {
         return converter;
     }
 
+    @Override
     public boolean isUnique()
     {
         return unique;
     }
 
+    @Override
     public boolean isRequired()
     {
         return required;
     }
     
+    @Override
     public String getUsage()
     {
         StringBuilder builder = new StringBuilder();

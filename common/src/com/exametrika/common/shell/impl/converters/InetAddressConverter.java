@@ -5,7 +5,7 @@ package com.exametrika.common.shell.impl.converters;
 
 import java.net.InetAddress;
 
-import com.exametrika.common.shell.IParameterConverter;
+import com.exametrika.common.shell.IShellParameterConverter;
 import com.exametrika.common.utils.InvalidArgumentException;
 import com.exametrika.common.utils.Strings;
 
@@ -14,7 +14,7 @@ import com.exametrika.common.utils.Strings;
  * 
  * @author andreym
  */
-public class InetAddressConverter implements IParameterConverter
+public class InetAddressConverter implements IShellParameterConverter
 {
     @Override
     public Object convert(String value)

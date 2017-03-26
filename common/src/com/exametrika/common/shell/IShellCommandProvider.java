@@ -5,8 +5,6 @@ package com.exametrika.common.shell;
 
 import java.util.List;
 
-import com.exametrika.common.shell.impl.ShellCommand;
-
 /**
  * The {@link IShellCommandProvider} is a provider of shell commands.
  * 
@@ -19,5 +17,5 @@ public interface IShellCommandProvider
      *
      * @return list of shell commands
      */
-    List<ShellCommand> getCommands();
+    List<IShellCommand> getCommands();
 }

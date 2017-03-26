@@ -5,8 +5,10 @@ package com.exametrika.common.shell.impl;
 
 import java.util.List;
 
-import com.exametrika.common.shell.IParameterValidator;
+import com.exametrika.common.shell.IShellCommand;
 import com.exametrika.common.shell.IShellCommandExecutor;
+import com.exametrika.common.shell.IShellParameter;
+import com.exametrika.common.shell.IShellParameterValidator;
 import com.exametrika.common.utils.Assert;
 import com.exametrika.common.utils.Immutables;
 import com.exametrika.common.utils.Strings;
@@ -19,61 +21,79 @@ import com.exametrika.common.utils.Strings;
  * @threadsafety This class and its methods are not thread safe.
  * @author Medvedev-A
  */
-public final class ShellCommand
+public final class ShellCommand implements IShellCommand
 {
     private final String name;
     private final String description;
-    private final IParameterValidator validator;
-    private final List<ShellCommandParameter> parameters;
-    private final ShellCommandParameter unnamedParameter;
+    private final IShellParameterValidator validator;
+    private final List<IShellParameter> namedParameters;
+    private final List<IShellParameter> positionalParameters;
+    private final IShellParameter defaultParameter;
     private final IShellCommandExecutor executor;
 
-    public ShellCommand(String name, String description, IParameterValidator validator,
-        List<ShellCommandParameter> parameters, ShellCommandParameter unnamedParameter, IShellCommandExecutor executor)
+    public ShellCommand(String name, String description, IShellParameterValidator validator,
+        List<? extends IShellParameter> namedParameters, List<? extends IShellParameter> positionalParameters, 
+        IShellParameter defaultParameter, IShellCommandExecutor executor)
     {
-        Assert.notNull(name);
+        Assert.isTrue(!Strings.isEmpty(name));
+        Assert.checkState(!Shell.PREVIOUS_LEVEL_COMMAND.equals(name));
         Assert.notNull(description);
-        Assert.notNull(parameters);
+        Assert.notNull(namedParameters);
+        Assert.notNull(positionalParameters);
         Assert.notNull(executor);
         
         this.name = name;
         this.description = description;
         this.validator = validator;
-        this.parameters = Immutables.wrap(parameters);
-        this.unnamedParameter = unnamedParameter;
+        this.namedParameters = Immutables.wrap(namedParameters);
+        this.positionalParameters = Immutables.wrap(positionalParameters);
+        this.defaultParameter = defaultParameter;
         this.executor = executor;
     }
     
+    @Override
     public String getName()
     {
         return name;
     }
     
+    @Override
     public String getDescription()
     {
         return description;
     }
     
-    public IParameterValidator getValidator()
+    @Override
+    public IShellParameterValidator getValidator()
     {
         return validator;
     }
     
-    public List<ShellCommandParameter> getParameters()
+    @Override
+    public List<IShellParameter> getNamedParameters()
     {
-        return parameters;
+        return namedParameters;
     }
     
-    public ShellCommandParameter getUnnamedParameter()
+    @Override
+    public List<IShellParameter> getPositionalParameters()
     {
-        return unnamedParameter;
+        return positionalParameters;
     }
     
+    @Override
+    public IShellParameter getDefaultParameter()
+    {
+        return defaultParameter;
+    }
+    
+    @Override
     public IShellCommandExecutor getExecutor()
     {
         return executor;
     }
     
+    @Override
     public String getUsage()
     {
         StringBuilder builder = new StringBuilder();
@@ -81,18 +101,12 @@ public final class ShellCommand
         builder.append("\n\n");
         builder.append(description);
         
-        if (unnamedParameter != null)
-        {
-            builder.append("\n\n");
-            builder.append(Strings.indent(unnamedParameter.getUsage(), Shell.INDENT));
-        }
-        
-        if (!parameters.isEmpty())
+        if (!namedParameters.isEmpty())
         {
             builder.append("\n\n");
             
             boolean first = true;
-            for (ShellCommandParameter parameter : parameters)
+            for (IShellParameter parameter : namedParameters)
             {
                 if (first)
                     first = false;
@@ -101,6 +115,28 @@ public final class ShellCommand
                 
                 builder.append(Strings.indent(parameter.getUsage(), Shell.INDENT));
             }
+        }
+        
+        if (!positionalParameters.isEmpty())
+        {
+            builder.append("\n\n");
+            
+            boolean first = true;
+            for (IShellParameter parameter : positionalParameters)
+            {
+                if (first)
+                    first = false;
+                else
+                    builder.append("\n");
+                
+                builder.append(Strings.indent(parameter.getUsage(), Shell.INDENT));
+            }
+        }
+
+        if (defaultParameter != null)
+        {
+            builder.append("\n\n");
+            builder.append(Strings.indent(defaultParameter.getUsage(), Shell.INDENT));
         }
         
         return builder.toString();

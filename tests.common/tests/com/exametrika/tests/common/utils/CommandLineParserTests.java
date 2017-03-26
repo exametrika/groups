@@ -14,7 +14,7 @@ import java.util.Map;
 
 import org.junit.Test;
 
-import com.exametrika.common.shell.IParameterValidator;
+import com.exametrika.common.shell.IShellParameterValidator;
 import com.exametrika.common.shell.impl.ShellCommand;
 import com.exametrika.common.shell.impl.converters.FileConverter;
 import com.exametrika.common.shell.impl.converters.IntegerConverter;
@@ -157,7 +157,7 @@ public class CommandLineParserTests
             new Entry("key3", new File("/")), new Entry("key4", new URI("http://localhost")), new Entry("key5", Arrays.asList(123)),
             new Entry("key10", Arrays.asList(new URI("ftp://hello")))})));
         
-        parser.setValidator(new IParameterValidator()
+        parser.setValidator(new IShellParameterValidator()
         {
             @Override
             public void validate(Map<String, Object> parameters)

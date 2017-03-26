@@ -8,14 +8,14 @@ import java.util.Map;
 import com.exametrika.common.utils.InvalidArgumentException;
 
 /**
- * The {@link IParameterValidator} is used to perform additional parameter validation logic.
+ * The {@link IShellParameterValidator} is used to perform additional parameter validation logic.
  * 
  * @author Medvedev-A
  */
-public interface IParameterValidator
+public interface IShellParameterValidator
 {
     /**
-     * Validates command line parameters.
+     * Validates command parameters.
      *
      * @param parameters parameters to validate
      * @exception InvalidArgumentException if parameters are not valid

@@ -12,6 +12,9 @@ import java.util.Map;
 import com.exametrika.common.l10n.DefaultMessage;
 import com.exametrika.common.l10n.ILocalizedMessage;
 import com.exametrika.common.l10n.Messages;
+import com.exametrika.common.shell.IShellCommand;
+import com.exametrika.common.shell.IShellCommandParser;
+import com.exametrika.common.shell.IShellParameter;
 import com.exametrika.common.utils.Assert;
 import com.exametrika.common.utils.InvalidArgumentException;
 import com.exametrika.common.utils.Pair;
@@ -22,44 +25,48 @@ import com.exametrika.common.utils.Pair;
  * The {@link ShellCommandParser} defines a shell command parser.
  * 
  * @threadsafety This class and its methods are not thread safe.
- * @author Medvedev-A
  */
-public final class ShellCommandParser
+public final class ShellCommandParser implements IShellCommandParser
 {
-    static final IMessages messages = Messages.get(IMessages.class);
-    private final Map<String, ShellCommand> commandsMap;
-    private final ShellCommand defaultCommand;
+    private static final IMessages messages = Messages.get(IMessages.class);
+    private static final char PIPE = '|';
+    private final Map<String, IShellCommand> commandsMap;
+    private final IShellCommand defaultCommand;
+    private final char nameSeparator;
     
-    public ShellCommandParser(List<ShellCommand> commands, ShellCommand defaultCommand)
+    public ShellCommandParser(List<IShellCommand> commands, IShellCommand defaultCommand, char nameSeparator)
     {
         Assert.notNull(commands);
         
-        Map<String, ShellCommand> commandsMap = new HashMap<String, ShellCommand>();
-        for (ShellCommand command : commands)
+        Map<String, IShellCommand> commandsMap = new HashMap<String, IShellCommand>();
+        for (IShellCommand command : commands)
             commandsMap.put(command.getName(), command);
         
         this.commandsMap = commandsMap;
         this.defaultCommand = defaultCommand;
+        this.nameSeparator = nameSeparator;
     }
     
-    public List<Pair<ShellCommand, Map<String, Object>>> parseCommands(String context, String argsStr)
+    @Override
+    public List<Pair<IShellCommand, Map<String, Object>>> parseCommands(String context, String argsStr)
     {
         List<String> args = parseArgs(argsStr);
         return parseCommands(context, args);
     }
     
-    public List<Pair<ShellCommand, Map<String, Object>>> parseCommands(String context, List<String> args)
+    @Override
+    public List<Pair<IShellCommand, Map<String, Object>>> parseCommands(String context, List<String> args)
     {
-        List<Pair<ShellCommand, Map<String, Object>>> commands = new ArrayList<Pair<ShellCommand, Map<String, Object>>>();
+        List<Pair<IShellCommand, Map<String, Object>>> commands = new ArrayList<Pair<IShellCommand, Map<String, Object>>>();
         boolean first = true;
-        ShellCommand command = null;
+        IShellCommand command = null;
         Map<String, Object> parameters = null;
         List<String> commandArgs = new ArrayList<String>();
         for (String arg : args)
         {
             if (first)
             {
-                String commandName = context + ":" + arg;
+                String commandName = context + nameSeparator + arg;
                 command = commandsMap.get(commandName);
                 if (command == null)
                     command = defaultCommand;
@@ -68,26 +75,28 @@ public final class ShellCommandParser
                     throw new InvalidArgumentException(messages.unknownCommand(arg));
                 first = false;
             }
-            else if (arg.equals("|"))
+            else if (arg.equals(PIPE))
             {
                 Assert.notNull(command);
                 parameters = parseCommandParameters(command, commandArgs);
-                commands.add(new Pair<ShellCommand, Map<String,Object>>(command, parameters));
+                commands.add(new Pair<IShellCommand, Map<String,Object>>(command, parameters));
                 command = null;
                 parameters = null;
                 commandArgs.clear();
                 first = true;
             }
+            else
+                commandArgs.add(arg);
         }
         
         Assert.notNull(command);
         parameters = parseCommandParameters(command, commandArgs);
-        commands.add(new Pair<ShellCommand, Map<String,Object>>(command, parameters));
+        commands.add(new Pair<IShellCommand, Map<String,Object>>(command, parameters));
         
         return commands;
     }
     
-    private List<String> parseArgs(String argsStr)
+    public static List<String> parseArgs(String argsStr)
     {
         List<String> args = new ArrayList<String>();
         StringBuilder builder = new StringBuilder();
@@ -101,7 +110,7 @@ public final class ShellCommandParser
                 continue;
             }
             
-            if (!quote && (ch == ' ' || ch == '\t') || ch == '|')
+            if (!quote && (ch == ' ' || ch == '\t' || ch == '\r' || ch == '\n' || ch == PIPE))
             {
                 if (builder.length() > 0)
                 {
@@ -109,7 +118,7 @@ public final class ShellCommandParser
                     builder = new StringBuilder();
                 }
                 
-                if (ch == '|')
+                if (ch == PIPE)
                     args.add(Character.toString(ch));
                 
                 continue;
@@ -124,15 +133,18 @@ public final class ShellCommandParser
         return args;
     }
 
-    private  Map<String, Object> parseCommandParameters(ShellCommand command, List<String> args)
+    private  Map<String, Object> parseCommandParameters(IShellCommand command, List<String> args)
     {
         Map<String, Object> parsedParameters = new LinkedHashMap<String, Object>();
         
-        for (ShellCommandParameter parameter : command.getParameters())
+        for (IShellParameter parameter : command.getNamedParameters())
             parseParameter(parameter, args, parsedParameters);
         
-        if (command.getUnnamedParameter() != null)
-            parseParameter(command.getUnnamedParameter(), args, parsedParameters);
+        for (IShellParameter parameter : command.getPositionalParameters())
+            parseParameter(parameter, args, parsedParameters);
+        
+        if (command.getDefaultParameter() != null)
+            parseParameter(command.getDefaultParameter(), args, parsedParameters);
         
         if (args.size() == 1)
             throw new InvalidArgumentException(messages.unrecognizedParameter(args.get(0)));
@@ -159,7 +171,7 @@ public final class ShellCommandParser
         return parsedParameters;
     }
     
-    private void parseParameter(ShellCommandParameter parameter, List<String> args, Map<String, Object> parameterMap)
+    private void parseParameter(IShellParameter parameter, List<String> args, Map<String, Object> parameterMap)
     {
         List<Object> values = null;
         if (!parameter.isUnique())
@@ -178,7 +190,7 @@ public final class ShellCommandParser
                 String value = args.remove(i);
                 if (parameter.hasArgument() && parameter.getNames() != null)
                 {
-                    if (i >= args.size() || args.get(i).charAt(0) == '-')
+                    if (i >= args.size())
                         throw new InvalidArgumentException(messages.parameterArgumentNotFound(parameter.getFormat()));
                     value = args.remove(i);
                 }
@@ -191,7 +203,12 @@ public final class ShellCommandParser
                 if (parameter.isUnique())
                     parameterMap.put(parameter.getKey(), parameter.hasArgument() ? object : null);
                 else
+                {
+                    if (!parameterMap.containsKey(parameter.getKey()))
+                        parameterMap.put(parameter.getKey(), values);
+                    
                     values.add(object);
+                }
             }
             else 
             {
@@ -201,44 +218,43 @@ public final class ShellCommandParser
                         break;
                     if (!parameter.isRequired())
                     {
-                        if (parameter.hasArgument())
+                        if (parameter.hasArgument() && parameter.getDefaultValue() != null)
                             parameterMap.put(parameter.getKey(), parameter.getDefaultValue());
                         break;
                     }
                     
                     throw new InvalidArgumentException(messages.requiredParameterNotFound(parameter.getFormat()));
                 }
-
-                if (values.isEmpty() && !parameter.isRequired())
-                    values.add(parameter.getDefaultValue());
-                if (values.isEmpty() && parameter.isRequired())
-                    throw new InvalidArgumentException(messages.requiredParameterNotFound(parameter.getFormat()));
-                
-                parameterMap.put(parameter.getKey(), values);
-                break;
+                else
+                {
+                    if (values.isEmpty() && parameter.isRequired())
+                        throw new InvalidArgumentException(messages.requiredParameterNotFound(parameter.getFormat()));
+                    else if (values.isEmpty() && !parameter.isRequired() && parameter.getDefaultValue() != null)
+                        values.add(parameter.getDefaultValue());
+                    
+                    parameterMap.put(parameter.getKey(), values);
+                    break;
+                }
             }
         }
     }
     
     private int findParameter(List<String> names, List<String> args)
     {
-        for (int i = 0; i < args.size(); i++)
+        if (names != null)
         {
-            String arg = args.get(i);
-            if (names != null)
+            for (int i = 0; i < args.size(); i++)
             {
+                String arg = args.get(i);
                 for (String name : names)
                 {
                     if (arg.equals(name))
                         return i;
                 }
             }
-            else
-            {
-                if (arg.charAt(0) != '-')
-                    return i;
-            }
         }
+        else if (!args.isEmpty())
+            return 0;
         
         return -1;
     }

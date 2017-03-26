@@ -9,9 +9,11 @@ import java.util.List;
 import com.exametrika.common.l10n.DefaultMessage;
 import com.exametrika.common.l10n.ILocalizedMessage;
 import com.exametrika.common.l10n.Messages;
-import com.exametrika.common.shell.IParameterConverter;
-import com.exametrika.common.shell.IParameterValidator;
+import com.exametrika.common.shell.IShellCommand;
 import com.exametrika.common.shell.IShellCommandExecutor;
+import com.exametrika.common.shell.IShellParameter;
+import com.exametrika.common.shell.IShellParameterConverter;
+import com.exametrika.common.shell.IShellParameterValidator;
 import com.exametrika.common.utils.Assert;
 import com.exametrika.common.utils.InvalidArgumentException;
 
@@ -28,32 +30,34 @@ public final class ShellCommandBuilder
     private static final IMessages messages = Messages.get(IMessages.class);
     private String name;
     private String description;
-    private IParameterValidator validator;
-    private List<ShellCommandParameter> parameters = new ArrayList<ShellCommandParameter>();
-    private ShellCommandParameter unnamedParameter;
+    private IShellParameterValidator validator;
+    private List<IShellParameter> namedParameters = new ArrayList<IShellParameter>();
+    private List<IShellParameter> positionalParameters = new ArrayList<IShellParameter>();
+    private IShellParameter defaultParameter;
     private IShellCommandExecutor executor;
-    private List<ShellCommand> commands = new ArrayList<ShellCommand>();
+    private List<IShellCommand> commands = new ArrayList<IShellCommand>();
+    private boolean namespace;
 
-    public ShellCommandBuilder setName(String name)
+    public ShellCommandBuilder name(String name)
     {
         this.name = name;
         return this;
     }
     
-    public ShellCommandBuilder setDescription(String description)
+    public ShellCommandBuilder description(String description)
     {
         this.description = description;
         return this;
     }
     
-    public ShellCommandBuilder setValidator(IParameterValidator validator)
+    public ShellCommandBuilder validator(IShellParameterValidator validator)
     {
         this.validator = validator;
         return this;
     }
     
     /**
-     * Adds command line without argument.
+     * Adds named parameter without argument.
      *
      * @param key parameter key
      * @param paramNames list of parameter names
@@ -62,13 +66,13 @@ public final class ShellCommandBuilder
      * @param required is parameter required?
      * @return builder
      */
-    public ShellCommandBuilder addParameter(String key, List<String> paramNames, String format, String description, boolean required)
+    public ShellCommandBuilder addNamedParameter(String key, List<String> paramNames, String format, String description, boolean required)
     {
-        return addParameter(key, paramNames, format, description, required, false, true, null, null);
+        return addNamedParameter(key, paramNames, format, description, required, false, true, null, null);
     }
     
     /**
-     * Adds command parameter.
+     * Adds named parameter.
      *
      * @param key parameter key
      * @param paramNames list of parameter names
@@ -85,8 +89,8 @@ public final class ShellCommandBuilder
      * to convert default value
      * @return builder
      */
-    public ShellCommandBuilder addParameter(String key, List<String> paramNames, String format, String description, boolean required, 
-        boolean hasArgument, boolean unique, IParameterConverter converter, Object defaultValue)
+    public ShellCommandBuilder addNamedParameter(String key, List<String> paramNames, String format, String description, boolean required, 
+        boolean hasArgument, boolean unique, IShellParameterConverter converter, Object defaultValue)
     {
         Assert.notNull(key);
         Assert.notNull(paramNames);
@@ -98,25 +102,44 @@ public final class ShellCommandBuilder
         if (required && defaultValue != null)
             throw new InvalidArgumentException(messages.requiredDefaultValueError(key));
         
-        ShellCommandParameter parameter = new ShellCommandParameter(key, paramNames, format, description, hasArgument, converter, unique, required, defaultValue);
-        parameters.add(parameter);
+        ShellParameter parameter = new ShellParameter(key, paramNames, format, description, hasArgument, converter, unique, required, defaultValue);
+        namedParameters.add(parameter);
         return this;
     }
     
     /**
-     * Sets unnamed command parameter.
+     * Sets positional unnamed parameter.
+     *
+     * @param key parameter key
+     * @param format parameter format
+     * @param description parameter description
+     * @param converter parameter converter. If converter is not specified, {@link String} value type parameter is assumed
+     * @return builder
+     */
+    public ShellCommandBuilder addPositionalParameter(String key, String format, String description, IShellParameterConverter converter)
+    {
+        Assert.notNull(key);
+        Assert.notNull(format);
+        Assert.notNull(description);
+
+        positionalParameters.add(new ShellParameter(key, null, format, description, true, converter, true, true, null));
+        return this;
+    }
+    
+    /**
+     * Sets default unnamed (last) parameter.
      *
      * @param key parameter key
      * @param format parameter format
      * @param description parameter description
      * @param required is parameter required
      * @param unique is parameter unique
-     * @param converter parameter converter
+     * @param converter parameter converter. If converter is not specified, {@link String} value type parameter is assumed
      * @param defaultValue parameter default value
      * @return builder
      */
-    public ShellCommandBuilder setUnnamedParameter(String key, String format, String description, boolean required, 
-        boolean unique, IParameterConverter converter, Object defaultValue)
+    public ShellCommandBuilder defaultParameter(String key, String format, String description, boolean required, 
+        boolean unique, IShellParameterConverter converter, Object defaultValue)
     {
         Assert.notNull(key);
         Assert.notNull(format);
@@ -125,13 +148,19 @@ public final class ShellCommandBuilder
         if (required && defaultValue != null)
             throw new InvalidArgumentException(messages.requiredDefaultValueError(key));
         
-        unnamedParameter = new ShellCommandParameter(key, null, format, description, true, converter, unique, required, defaultValue);
+        defaultParameter = new ShellParameter(key, null, format, description, true, converter, unique, required, defaultValue);
         return this;
     }
     
-    public ShellCommandBuilder setExecutor(IShellCommandExecutor executor)
+    public ShellCommandBuilder executor(IShellCommandExecutor executor)
     {
         this.executor = executor;
+        return this;
+    }
+    
+    public ShellCommandBuilder namespace()
+    {
+        this.namespace = true;
         return this;
     }
     
@@ -143,18 +172,29 @@ public final class ShellCommandBuilder
         description = null;
         validator = null;
         executor = null;
-        parameters = new ArrayList<ShellCommandParameter>();
-        unnamedParameter = null;
+        namedParameters = new ArrayList<IShellParameter>();
+        positionalParameters = new ArrayList<IShellParameter>();
+        defaultParameter = null;
+        namespace = false;
        
         return this;
     }
     
-    public ShellCommand buildCommand()
+    public ShellCommandBuilder addNamespace()
     {
-        return new ShellCommand(name, description, validator, parameters, unnamedParameter, executor);
+        namespace = true;
+        return addCommand();
     }
     
-    public List<ShellCommand> build()
+    public IShellCommand buildCommand()
+    {
+        if (!namespace)
+            return new ShellCommand(name, description, validator, namedParameters, positionalParameters, defaultParameter, executor);
+        else
+            return new ShellCommandNamespace(name, description);
+    }
+    
+    public List<IShellCommand> build()
     {
         return commands;
     }

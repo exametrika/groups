@@ -9,7 +9,7 @@ import java.net.InetSocketAddress;
 import com.exametrika.common.l10n.DefaultMessage;
 import com.exametrika.common.l10n.ILocalizedMessage;
 import com.exametrika.common.l10n.Messages;
-import com.exametrika.common.shell.IParameterConverter;
+import com.exametrika.common.shell.IShellParameterConverter;
 import com.exametrika.common.utils.InvalidArgumentException;
 import com.exametrika.common.utils.Strings;
 
@@ -18,7 +18,7 @@ import com.exametrika.common.utils.Strings;
  * 
  * @author andreym
  */
-public class InetSocketAddressConverter implements IParameterConverter
+public class InetSocketAddressConverter implements IShellParameterConverter
 {
     static final IMessages messages = Messages.get(IMessages.class);
     
