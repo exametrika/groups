@@ -12,7 +12,6 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
 
 import org.jline.utils.AttributedStringBuilder;
-import org.jline.utils.AttributedStyle;
 
 import com.exametrika.common.shell.IShellContext;
 import com.exametrika.common.shell.IShellPromptProvider;
@@ -30,18 +29,24 @@ public final class DefaultShellPromptProvider implements IShellPromptProvider
     @Override
     public String[] getPrompt(IShellContext context)
     {
-        String leftPrompt = context.getPath() + ">";
-        String rightPrompt = new AttributedStringBuilder()
-            .style(AttributedStyle.DEFAULT.foreground(AttributedStyle.GREEN))
-            .append(LocalDate.now().format(DateTimeFormatter.ISO_DATE))
+        AttributedStringBuilder builder = new AttributedStringBuilder();
+        if (!context.getShell().isNoColors())
+            builder.style(ShellConstants.LEFT_PROMPT_STYLE);
+        builder.append(context.getPath() + ">");
+        String leftPrompt = builder.toAnsi();
+
+        builder = new AttributedStringBuilder();
+        if (!context.getShell().isNoColors())
+            builder.style(ShellConstants.RIGHT_PROMPT_STYLE);
+        builder .append(LocalDate.now().format(DateTimeFormatter.ISO_DATE))
             .append("\n")
-            .style(AttributedStyle.DEFAULT.foreground(AttributedStyle.GREEN))
             .append(LocalTime.now().format(new DateTimeFormatterBuilder()
                 .appendValue(HOUR_OF_DAY, 2)
                 .appendLiteral(':')
                 .appendValue(MINUTE_OF_HOUR, 2)
-                .toFormatter()))
-            .toAnsi(); 
+                .toFormatter()));
+        String rightPrompt = builder.toAnsi();
+        
         return new String[]{leftPrompt, rightPrompt};
     }
 }

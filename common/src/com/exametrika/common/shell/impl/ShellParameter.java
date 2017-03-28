@@ -5,8 +5,12 @@ package com.exametrika.common.shell.impl;
 
 import java.util.List;
 
+import org.jline.utils.AttributedStringBuilder;
+
 import com.exametrika.common.shell.IShellParameter;
+import com.exametrika.common.shell.IShellParameterCompleter;
 import com.exametrika.common.shell.IShellParameterConverter;
+import com.exametrika.common.shell.IShellParameterHighlighter;
 import com.exametrika.common.utils.Assert;
 import com.exametrika.common.utils.Immutables;
 import com.exametrika.common.utils.Strings;
@@ -28,9 +32,12 @@ public class ShellParameter implements IShellParameter
     private final boolean unique;
     private final boolean required;
     private final Object defaultValue;
+    private final IShellParameterCompleter completer;
+    private final IShellParameterHighlighter highlighter;
     
     public ShellParameter(String key, List<String> names, String format, String description, boolean hasArgument, 
-        IShellParameterConverter converter, boolean unique, boolean required, Object defaultValue)
+        IShellParameterConverter converter, boolean unique, boolean required, Object defaultValue,
+        IShellParameterCompleter completer, IShellParameterHighlighter highlighter)
     {
         Assert.isTrue(!Strings.isEmpty(key));
         Assert.notNull(format);
@@ -45,6 +52,8 @@ public class ShellParameter implements IShellParameter
         this.unique = unique;
         this.required = required;
         this.defaultValue = defaultValue;
+        this.completer = completer;
+        this.highlighter = highlighter;
     }
     
     @Override
@@ -105,10 +114,26 @@ public class ShellParameter implements IShellParameter
     }
     
     @Override
-    public String getUsage()
+    public IShellParameterCompleter getCompleter()
     {
-        StringBuilder builder = new StringBuilder();
+        return completer;
+    }
+
+    @Override
+    public IShellParameterHighlighter getHighlighter()
+    {
+        return highlighter;
+    }
+    
+    @Override
+    public String getUsage(boolean colorized)
+    {
+        AttributedStringBuilder builder = new AttributedStringBuilder();
+        if (colorized)
+            builder.style(ShellConstants.PARAMETER_STYLE);
         builder.append(format);
+        if (colorized)
+            builder.style(ShellConstants.DEFAULT_STYLE);
         
         if (format.length() < Shell.INDENT)
         {
@@ -121,12 +146,12 @@ public class ShellParameter implements IShellParameter
             builder.append(Strings.indent(description, Shell.INDENT * 2));
         }
         
-        return builder.toString();
+        return builder.toAnsi();
     }
     
     @Override
     public String toString()
     {
-        return getUsage();
+        return getUsage(false);
     }
 }

@@ -76,9 +76,24 @@ public interface IShellParameter
     Object getDefaultValue();
     
     /**
+     * Returns parameter completer.
+     *
+     * @return parameter completer or null if default completion is used
+     */
+    IShellParameterCompleter getCompleter();
+    
+    /**
+     * Returns parameter highlighter.
+     *
+     * @return parameter highlighter or null if default highlighting is used
+     */
+    IShellParameterHighlighter getHighlighter();
+    
+    /**
      * Returns parameter usage.
      *
+     * @param colorized if true colorized output will be used
      * @return parameter usage
      */
-    String getUsage();
+    String getUsage(boolean colorized);
 }

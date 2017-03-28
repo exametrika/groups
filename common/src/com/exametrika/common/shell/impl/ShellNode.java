@@ -81,4 +81,20 @@ public class ShellNode
         
         return node;
     }
+    
+    public IShellCommand find(String commandName, char nameSeparator)
+    {
+        String[] path = commandName.split("[" + nameSeparator + "]");
+        ShellNode node = this;
+        for (int i = 0; i < path.length; i++)
+        {
+            ShellNode child = node.children.get(path[i]);
+            if (child == null)
+                return null;
+            
+            node = child;
+        }
+        
+        return node.command;
+    }
 }

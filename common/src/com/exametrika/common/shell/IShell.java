@@ -56,9 +56,17 @@ public interface IShell
     char getNameSeparator();
     
     /**
+     * Is colors usage disabled?
+     *
+     * @return true if colors usage is disabled
+     */
+    boolean isNoColors();
+    
+    /**
      * Returns usage.
      *
+     * @param colorized if true colorized output will be used
      * @return usage
      */
-    String getUsage();
+    String getUsage(boolean colorized);
 }

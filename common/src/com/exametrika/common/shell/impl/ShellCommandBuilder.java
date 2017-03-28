@@ -12,7 +12,9 @@ import com.exametrika.common.l10n.Messages;
 import com.exametrika.common.shell.IShellCommand;
 import com.exametrika.common.shell.IShellCommandExecutor;
 import com.exametrika.common.shell.IShellParameter;
+import com.exametrika.common.shell.IShellParameterCompleter;
 import com.exametrika.common.shell.IShellParameterConverter;
+import com.exametrika.common.shell.IShellParameterHighlighter;
 import com.exametrika.common.shell.IShellParameterValidator;
 import com.exametrika.common.utils.Assert;
 import com.exametrika.common.utils.InvalidArgumentException;
@@ -68,7 +70,7 @@ public final class ShellCommandBuilder
      */
     public ShellCommandBuilder addNamedParameter(String key, List<String> paramNames, String format, String description, boolean required)
     {
-        return addNamedParameter(key, paramNames, format, description, required, false, true, null, null);
+        return addNamedParameter(key, paramNames, format, description, required, false, true, null, null, null, null);
     }
     
     /**
@@ -87,10 +89,13 @@ public final class ShellCommandBuilder
      * @param defaultValue parameter default value. Must not be specified if parameter does not have an argument or
      * parameter is required. If default value has type {@link String} and converter is specified, converter is used
      * to convert default value
+     * @param completer completer
+     * @param highlighter highlighter
      * @return builder
      */
     public ShellCommandBuilder addNamedParameter(String key, List<String> paramNames, String format, String description, boolean required, 
-        boolean hasArgument, boolean unique, IShellParameterConverter converter, Object defaultValue)
+        boolean hasArgument, boolean unique, IShellParameterConverter converter, Object defaultValue,
+        IShellParameterCompleter completer, IShellParameterHighlighter highlighter)
     {
         Assert.notNull(key);
         Assert.notNull(paramNames);
@@ -102,7 +107,8 @@ public final class ShellCommandBuilder
         if (required && defaultValue != null)
             throw new InvalidArgumentException(messages.requiredDefaultValueError(key));
         
-        ShellParameter parameter = new ShellParameter(key, paramNames, format, description, hasArgument, converter, unique, required, defaultValue);
+        ShellParameter parameter = new ShellParameter(key, paramNames, format, description, hasArgument, converter, unique, 
+            required, defaultValue, completer, highlighter);
         namedParameters.add(parameter);
         return this;
     }
@@ -114,15 +120,19 @@ public final class ShellCommandBuilder
      * @param format parameter format
      * @param description parameter description
      * @param converter parameter converter. If converter is not specified, {@link String} value type parameter is assumed
+     * @param completer completer
+     * @param highlighter highlighter
      * @return builder
      */
-    public ShellCommandBuilder addPositionalParameter(String key, String format, String description, IShellParameterConverter converter)
+    public ShellCommandBuilder addPositionalParameter(String key, String format, String description,
+        IShellParameterConverter converter, IShellParameterCompleter completer, IShellParameterHighlighter highlighter)
     {
         Assert.notNull(key);
         Assert.notNull(format);
         Assert.notNull(description);
 
-        positionalParameters.add(new ShellParameter(key, null, format, description, true, converter, true, true, null));
+        positionalParameters.add(new ShellParameter(key, null, format, description, true, converter, true, true, null,
+            completer, highlighter));
         return this;
     }
     
@@ -136,10 +146,13 @@ public final class ShellCommandBuilder
      * @param unique is parameter unique
      * @param converter parameter converter. If converter is not specified, {@link String} value type parameter is assumed
      * @param defaultValue parameter default value
+     * @param completer completer
+     * @param highlighter highlighter
      * @return builder
      */
     public ShellCommandBuilder defaultParameter(String key, String format, String description, boolean required, 
-        boolean unique, IShellParameterConverter converter, Object defaultValue)
+        boolean unique, IShellParameterConverter converter, Object defaultValue, IShellParameterCompleter completer,
+        IShellParameterHighlighter highlighter)
     {
         Assert.notNull(key);
         Assert.notNull(format);
@@ -148,7 +161,8 @@ public final class ShellCommandBuilder
         if (required && defaultValue != null)
             throw new InvalidArgumentException(messages.requiredDefaultValueError(key));
         
-        defaultParameter = new ShellParameter(key, null, format, description, true, converter, unique, required, defaultValue);
+        defaultParameter = new ShellParameter(key, null, format, description, true, converter, unique, required, 
+            defaultValue, completer, highlighter);
         return this;
     }
     

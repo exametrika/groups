@@ -4,7 +4,6 @@
 package com.exametrika.common.shell.impl;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -29,20 +28,16 @@ import com.exametrika.common.utils.Pair;
 public final class ShellCommandParser implements IShellCommandParser
 {
     private static final IMessages messages = Messages.get(IMessages.class);
-    private static final char PIPE = '|';
-    private final Map<String, IShellCommand> commandsMap;
+    public static final char PIPE = '|';
+    private final ShellNode rootNode;
     private final IShellCommand defaultCommand;
     private final char nameSeparator;
     
-    public ShellCommandParser(List<IShellCommand> commands, IShellCommand defaultCommand, char nameSeparator)
+    public ShellCommandParser(ShellNode rootNode, IShellCommand defaultCommand, char nameSeparator)
     {
-        Assert.notNull(commands);
+        Assert.notNull(rootNode);
         
-        Map<String, IShellCommand> commandsMap = new HashMap<String, IShellCommand>();
-        for (IShellCommand command : commands)
-            commandsMap.put(command.getName(), command);
-        
-        this.commandsMap = commandsMap;
+        this.rootNode = rootNode;
         this.defaultCommand = defaultCommand;
         this.nameSeparator = nameSeparator;
     }
@@ -66,8 +61,13 @@ public final class ShellCommandParser implements IShellCommandParser
         {
             if (first)
             {
-                String commandName = context + nameSeparator + arg;
-                command = commandsMap.get(commandName);
+                String commandName;
+                if (!context.isEmpty())
+                    commandName = context + nameSeparator + arg;
+                else
+                    commandName = arg;
+                
+                command = rootNode.find(commandName, nameSeparator);
                 if (command == null)
                     command = defaultCommand;
                 
@@ -133,7 +133,7 @@ public final class ShellCommandParser implements IShellCommandParser
         return args;
     }
 
-    private  Map<String, Object> parseCommandParameters(IShellCommand command, List<String> args)
+    private Map<String, Object> parseCommandParameters(IShellCommand command, List<String> args)
     {
         Map<String, Object> parsedParameters = new LinkedHashMap<String, Object>();
         

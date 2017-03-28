@@ -6,8 +6,6 @@ package com.exametrika.common.shell.impl;
 import java.io.PrintWriter;
 import java.util.Map;
 
-import org.jline.reader.LineReader;
-
 import com.exametrika.common.l10n.DefaultMessage;
 import com.exametrika.common.l10n.ILocalizedMessage;
 import com.exametrika.common.l10n.Messages;
@@ -25,15 +23,12 @@ import com.exametrika.common.utils.InvalidArgumentException;
 public class ShellContext implements IShellContext
 {
     private static final IMessages messages = Messages.get(IMessages.class);
-    private final LineReader lineReader;
     private final Shell shell;
 
-    public ShellContext(LineReader lineReader, Shell shell)
+    public ShellContext(Shell shell)
     {
-        Assert.notNull(lineReader);
         Assert.notNull(shell);
         
-        this.lineReader = lineReader;
         this.shell = shell;
     }
     
@@ -46,13 +41,13 @@ public class ShellContext implements IShellContext
     @Override
     public PrintWriter getWriter()
     {
-        return lineReader.getTerminal().writer();
+        return shell.getLineReader().getTerminal().writer();
     }
     
     @Override
     public void flush()
     {
-        lineReader.getTerminal().flush();
+        shell.getLineReader().getTerminal().flush();
     }
 
     @Override

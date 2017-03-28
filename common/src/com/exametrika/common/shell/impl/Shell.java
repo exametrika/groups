@@ -17,8 +17,9 @@ import org.jline.reader.LineReaderBuilder;
 import org.jline.reader.UserInterruptException;
 import org.jline.terminal.Terminal;
 import org.jline.terminal.TerminalBuilder;
+import org.jline.terminal.impl.DumbTerminal;
+import org.jline.terminal.impl.ExternalTerminal;
 import org.jline.utils.AttributedStringBuilder;
-import org.jline.utils.AttributedStyle;
 
 import com.exametrika.common.l10n.DefaultMessage;
 import com.exametrika.common.l10n.ILocalizedMessage;
@@ -58,12 +59,14 @@ public final class Shell implements IShell, Runnable
     private final String historyFilePath;
     private final IShellPromptProvider promptProvider;
     private final char nameSeparator;
+    private boolean noColors;
     private final ShellNode rootNode = new ShellNode("", null, null);
+    private final ShellContext context = new ShellContext(this);
     private ShellNode contextNode = rootNode;
     private LineReader lineReader;
     
     public Shell(String title, List<IShellCommand> commands, IShellCommand defaultCommand, boolean loadFromServices,
-        String historyFilePath, IShellPromptProvider promptProvider, char nameSeparator)
+        String historyFilePath, IShellPromptProvider promptProvider, char nameSeparator, boolean noColors)
     {
         Assert.notNull(commands);
         
@@ -81,17 +84,19 @@ public final class Shell implements IShell, Runnable
         for (IShellCommand command : commands)
         {
             String name = command.getName();
-            commandsMap.put(name, command);
+            if (command instanceof ShellCommand)
+                commandsMap.put(name, command);
             String[] path = name.split("[" + nameSeparator + "]");
             rootNode.ensure(Arrays.asList(path), command);
         }
         this.commands = Immutables.wrap(commands);
         this.commandsMap = commandsMap;
         this.defaultCommand = defaultCommand;
-        this.parser = new ShellCommandParser(commands, defaultCommand, nameSeparator);
+        this.parser = new ShellCommandParser(rootNode, defaultCommand, nameSeparator);
         this.historyFilePath = historyFilePath;
         this.promptProvider = promptProvider;
         this.nameSeparator = nameSeparator;
+        this.noColors = noColors;
     }
     
     public LineReader getLineReader()
@@ -143,12 +148,25 @@ public final class Shell implements IShell, Runnable
     }
     
     @Override
-    public String getUsage()
+    public boolean isNoColors()
     {
-        StringBuilder builder = new StringBuilder();
+        return noColors;
+    }
+    
+    @Override
+    public String getUsage(boolean colorized)
+    {
+        if (noColors)
+            colorized = false;
+        
+        AttributedStringBuilder builder = new AttributedStringBuilder();
         if (title != null)
         {
+            if (colorized)
+                builder.style(ShellConstants.APPLICATION_STYLE);
             builder.append(title);
+            if (colorized)
+                builder.style(ShellConstants.DEFAULT_STYLE);
             builder.append("\n\n");
         }
         
@@ -160,10 +178,10 @@ public final class Shell implements IShell, Runnable
             else
                 builder.append("\n\n");
             
-            builder.append(command.getUsage());
+            builder.appendAnsi(command.getUsage(colorized));
         }
         
-        return builder.toString();
+        return builder.toAnsi();
     }
     
     @Override
@@ -173,9 +191,22 @@ public final class Shell implements IShell, Runnable
         try
         {
             terminal = TerminalBuilder.builder().system(true).jna(true).build();
+            if (terminal instanceof DumbTerminal || terminal instanceof ExternalTerminal)
+                noColors = true;
             
             if (title != null)
-                terminal.writer().print(title + "\n\n");
+            {
+                AttributedStringBuilder builder = new AttributedStringBuilder();
+                if (!noColors)
+                    builder.style(ShellConstants.APPLICATION_STYLE);
+                builder.append(title);
+                if (!noColors)
+                    builder.style(ShellConstants.DEFAULT_STYLE);
+                builder.append("\n\n");
+               
+                terminal.writer().print(builder.toAnsi());
+            }
+            
             
             LineReaderBuilder lineReaderBuilder = LineReaderBuilder.builder().terminal(terminal).appName(title)
                 .completer(createCompleter()).highlighter(createHighlighter());
@@ -184,7 +215,6 @@ public final class Shell implements IShell, Runnable
             
             String[] defaultPrompt = new String[]{null, null};
             lineReader = lineReaderBuilder.build();
-            ShellContext context = new ShellContext(lineReader, this);
             while (true)
             {
                 String[] prompt;
@@ -210,9 +240,14 @@ public final class Shell implements IShell, Runnable
                 }
                 catch (InvalidArgumentException e)
                 {
-                    terminal.writer().write(new AttributedStringBuilder()
-                        .style(AttributedStyle.DEFAULT.background(AttributedStyle.RED))
-                        .append(e.getMessage()).toAnsi());
+                    AttributedStringBuilder builder = new AttributedStringBuilder();
+                    if (!noColors)
+                        builder.style(ShellConstants.ERROR_STYLE);
+                    builder.append(e.getMessage());
+                    if (!noColors)
+                        builder.style(ShellConstants.DEFAULT_STYLE);
+                   
+                    terminal.writer().print(builder.toAnsi());
                 }
             }
         }
@@ -245,14 +280,12 @@ public final class Shell implements IShell, Runnable
     
     private Highlighter createHighlighter()
     {
-        // TODO Auto-generated method stub
-        return null;
+        return new ShellHighlighter(rootNode, defaultCommand, nameSeparator, context);
     }
 
     private Completer createCompleter()
     {
-        // TODO Auto-generated method stub
-        return null;
+        return new ShellCompleter(rootNode, defaultCommand, nameSeparator, context);
     }
 
     private void execute(ShellContext context, List<Pair<IShellCommand, Map<String, Object>>> parsedCommands)

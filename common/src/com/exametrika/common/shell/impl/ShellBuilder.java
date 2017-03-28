@@ -26,51 +26,59 @@ public final class ShellBuilder
     private String historyFilePath;
     private IShellPromptProvider promptProvider = new DefaultShellPromptProvider();
     private char nameSeparator = ':';
+    private boolean noColors;
     
-    public ShellBuilder setTitle(String title)
+    public ShellBuilder title(String title)
     {
         this.title = title;
         return this;
     }
 
-    public ShellBuilder setCommands(List<IShellCommand> commands)
+    public ShellBuilder commands(List<IShellCommand> commands)
     {
         this.commands = commands;
         return this;
     }
 
-    public ShellBuilder setDefaultCommand(IShellCommand defaultCommand)
+    public ShellBuilder defaultCommand(IShellCommand defaultCommand)
     {
         this.defaultCommand = defaultCommand;
         return this;
     }
 
-    public ShellBuilder setLoadFromServices(boolean loadFromServices)
+    public ShellBuilder loadFromServices(boolean loadFromServices)
     {
         this.loadFromServices = loadFromServices;
         return this;
     }
 
-    public ShellBuilder setHistoryFilePath(String historyFilePath)
+    public ShellBuilder historyFilePath(String historyFilePath)
     {
         this.historyFilePath = historyFilePath;
         return this;
     }
 
-    public ShellBuilder setPromptProvider(IShellPromptProvider promptProvider)
+    public ShellBuilder promptProvider(IShellPromptProvider promptProvider)
     {
         this.promptProvider = promptProvider;
         return this;
     }
 
-    public ShellBuilder setNameSeparator(char nameSeparator)
+    public ShellBuilder nameSeparator(char nameSeparator)
     {
         this.nameSeparator = nameSeparator;
         return this;
     }
     
+    public ShellBuilder noCokors(boolean noColors)
+    {
+        this.noColors = noColors;
+        return this;
+    }
+    
     public IShell build()
     {
-        return new Shell(title, commands, defaultCommand, loadFromServices, historyFilePath, promptProvider, nameSeparator);
+        return new Shell(title, commands, defaultCommand, loadFromServices, historyFilePath, promptProvider, nameSeparator,
+            noColors);
     }
 }

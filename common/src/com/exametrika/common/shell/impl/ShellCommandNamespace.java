@@ -7,6 +7,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
+import org.jline.utils.AttributedStringBuilder;
+
 import com.exametrika.common.shell.IShellCommand;
 import com.exametrika.common.shell.IShellCommandExecutor;
 import com.exametrika.common.shell.IShellContext;
@@ -81,15 +83,24 @@ public final class ShellCommandNamespace implements IShellCommand
     }
     
     @Override
-    public String getUsage()
+    public String getUsage(boolean colorized)
     {
-        return name + " - " + description;
+        AttributedStringBuilder builder = new AttributedStringBuilder();
+        if (colorized)
+            builder.style(ShellConstants.COMMAND_STYLE);
+        builder.append(name);
+        if (colorized)
+            builder.style(ShellConstants.DEFAULT_STYLE);
+        
+        builder.append(" - ");
+        builder.append(description);
+        return builder.toAnsi();
     }
 
     @Override
     public String toString()
     {
-        return getUsage();
+        return getUsage(false);
     }
     
     private class Executor implements IShellCommandExecutor

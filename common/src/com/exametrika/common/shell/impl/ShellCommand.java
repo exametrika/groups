@@ -5,6 +5,8 @@ package com.exametrika.common.shell.impl;
 
 import java.util.List;
 
+import org.jline.utils.AttributedStringBuilder;
+
 import com.exametrika.common.shell.IShellCommand;
 import com.exametrika.common.shell.IShellCommandExecutor;
 import com.exametrika.common.shell.IShellParameter;
@@ -94,12 +96,16 @@ public final class ShellCommand implements IShellCommand
     }
     
     @Override
-    public String getUsage()
+    public String getUsage(boolean colorized)
     {
-        StringBuilder builder = new StringBuilder();
+        AttributedStringBuilder builder = new AttributedStringBuilder();
+        if (colorized)
+            builder.style(ShellConstants.COMMAND_STYLE);
         builder.append(name);
+        if (colorized)
+            builder.style(ShellConstants.DEFAULT_STYLE);
         builder.append("\n\n");
-        builder.append(description);
+        builder.append(Strings.indent(description, Shell.INDENT));
         
         if (!namedParameters.isEmpty())
         {
@@ -113,7 +119,7 @@ public final class ShellCommand implements IShellCommand
                 else
                     builder.append("\n");
                 
-                builder.append(Strings.indent(parameter.getUsage(), Shell.INDENT));
+                builder.appendAnsi(Strings.indent(parameter.getUsage(colorized), Shell.INDENT));
             }
         }
         
@@ -129,22 +135,22 @@ public final class ShellCommand implements IShellCommand
                 else
                     builder.append("\n");
                 
-                builder.append(Strings.indent(parameter.getUsage(), Shell.INDENT));
+                builder.appendAnsi(Strings.indent(parameter.getUsage(colorized), Shell.INDENT));
             }
         }
 
         if (defaultParameter != null)
         {
             builder.append("\n\n");
-            builder.append(Strings.indent(defaultParameter.getUsage(), Shell.INDENT));
+            builder.append(Strings.indent(defaultParameter.getUsage(colorized), Shell.INDENT));
         }
         
-        return builder.toString();
+        return builder.toAnsi();
     }
 
     @Override
     public String toString()
     {
-        return getUsage();
+        return getUsage(false);
     }
 }
