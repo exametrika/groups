@@ -4,10 +4,9 @@
 package com.exametrika.common.shell.impl;
 
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
+import java.util.Set;
 
 import org.jline.reader.Candidate;
 import org.jline.reader.Completer;
@@ -16,10 +15,8 @@ import org.jline.reader.ParsedLine;
 
 import com.exametrika.common.shell.IShellCommand;
 import com.exametrika.common.shell.IShellContext;
-import com.exametrika.common.shell.IShellParameterHighlighter;
-import com.exametrika.common.shell.impl.ShellHighlighter.TokenInfo;
+import com.exametrika.common.shell.IShellParameter;
 import com.exametrika.common.utils.Assert;
-import com.exametrika.common.utils.Collections;
 
 /**
  * The {@link ShellCompleter} is a shell command completer.
@@ -28,13 +25,6 @@ import com.exametrika.common.utils.Collections;
  */
 public class ShellCompleter implements Completer
 {
-    // TODO:
-    // - привязать к TokenInfo параметры и их аргументы(парсингом аналргично остальным), и сложить в Set все найденные параметры
-    // - взять последний аргумент, если строка больше, и привязан параметр с аргументом, комлетить аргумент,
-    //   если нет параметра или нетаргумента, взять любой не заданный параметр командыне или заданный не уникальный
-    // - если последний аргумент равен строке (пробелов между последним параметром и окончанием строки нет). Найти предыдущий
-    //   аргумент, если он привязан к параметру с аргументом, комлетить аргумент по заданному префиксу, иначе комплетить
-    //   параметр по заданному префиксу среди любых не заданеых или заданеых неуникальных
     private final ShellNode rootNode;
     private final IShellCommand defaultCommand;
     private final char nameSeparator;
@@ -53,15 +43,98 @@ public class ShellCompleter implements Completer
     }
     
     @Override
-    public void complete(LineReader reader, ParsedLine line, List<Candidate> candidates)
+    public void complete(LineReader reader, ParsedLine parsedLine, List<Candidate> candidates)
     {
-        List<TokenInfo> args = parseArgs(line.line().substring(0, line.cursor()));
-        // TODO Auto-generated method stub
+        String line = parsedLine.line().substring(0, parsedLine.cursor());
+        List<TokenInfo> args = parseArgs(line);
+        Set<IShellParameter> parameters = new HashSet<IShellParameter>();
+        CompletionInfo completionInfo = parseCommands(context.getPath(), line, args, parameters);
+        if (completionInfo == null)
+            return;
         
+        if (completionInfo.type == CompletionType.COMMAND)
+        {
+            ShellNode contextNode = ((Shell)context.getShell()).getContextNode();
+            for (ShellNode child : contextNode.getChildren().values())
+            {
+                if (child.getName().startsWith(completionInfo.prefix))
+                {
+                    Candidate candidate = new Candidate(child.getName());
+                    candidates.add(candidate);
+                }
+            }
+        }
+        else if (completionInfo.type == CompletionType.PARAMETER)
+        {
+            IShellCommand command = completionInfo.command;
+            for (IShellParameter parameter : command.getNamedParameters())
+            {
+                for (String name : parameter.getNames())
+                {
+                    if (name.startsWith(completionInfo.prefix) && (!parameter.isUnique() || !parameters.contains(parameter)))
+                        candidates.add(new Candidate(name));
+                }
+            }
+             
+            boolean positionalsNotSet = false;
+            for (IShellParameter parameter : command.getPositionalParameters())
+            {
+                if (!parameters.contains(parameter))
+                {
+                    if (parameter.getCompleter() != null)
+                    {
+                        List<String> list = parameter.getCompleter().complete(context, completionInfo.prefix);
+                        for (String value : list)
+                            candidates.add(new Candidate(value));
+                    }
+                    else
+                        candidates.add(new Candidate("", parameter.getFormat(), null, null, null, null, true));
+                    
+                    positionalsNotSet = true;
+                    break;
+                }
+            }
+            
+            IShellParameter defaultParameter = command.getDefaultParameter();
+            if (!positionalsNotSet && defaultParameter != null && (!defaultParameter.isUnique() || !parameters.contains(defaultParameter)))
+            {
+                if (defaultParameter.getCompleter() != null)
+                {
+                    List<String> list = defaultParameter.getCompleter().complete(context, completionInfo.prefix);
+                    for (String value : list)
+                        candidates.add(new Candidate(value));
+                }
+                else
+                    candidates.add(new Candidate("", defaultParameter.getFormat(), null, null, null, null, true));
+            }
+        }
+        else if (completionInfo.type == CompletionType.PARAMETER_ARGUMENT)
+        {
+            IShellParameter parameter = completionInfo.parameter;
+            if (parameter.getCompleter() != null)
+            {
+                List<String> list = parameter.getCompleter().complete(context, completionInfo.prefix);
+                for (String value : list)
+                    candidates.add(new Candidate(value));
+            }
+            else
+                candidates.add(new Candidate("", parameter.getFormat(), null, null, null, null, true));
+        }
+        else
+            Assert.error();
     }
     
-    private CompletionInfo parseCommands(String context, String line, List<TokenInfo> args)
+    private CompletionInfo parseCommands(String context, String line, List<TokenInfo> args,
+        Set<IShellParameter> parameters)
     {
+        CompletionInfo completionInfo = new CompletionInfo();
+        if (args.isEmpty())
+        {
+            completionInfo.type = CompletionType.COMMAND;
+            completionInfo.prefix = "";
+            return completionInfo;
+        }
+        
         boolean first = true;
         IShellCommand command = null;
         List<TokenInfo> commandArgs = new ArrayList<TokenInfo>();
@@ -84,11 +157,10 @@ public class ShellCompleter implements Completer
                 
                 if (last)
                 {
-                    CompletionInfo completionInfo = new CompletionInfo();
                     if (arg.start + arg.length == line.length())
                     {
                         completionInfo.type = CompletionType.COMMAND;
-                        completionInfo.prefix = commandName;
+                        completionInfo.prefix = line.substring(arg.start, arg.start + arg.length);
                     }
                     else if (command != null)
                     {
@@ -112,7 +184,40 @@ public class ShellCompleter implements Completer
         }
         
         Assert.notNull(command);
-        parseCommandParameters(command, line, commandArgs);
+        Assert.checkState(args.size() > 1);
+        parseCommandParameters(command, line, commandArgs, parameters);
+        
+        completionInfo.command = command;
+        TokenInfo lastToken = args.get(args.size() - 1);
+        if (lastToken.start + lastToken.length == line.length())
+        {
+            if (lastToken.argument)
+            {
+                completionInfo.type = CompletionType.PARAMETER_ARGUMENT;
+                completionInfo.prefix = line.substring(lastToken.start, lastToken.start + lastToken.length);
+                completionInfo.parameter = lastToken.parameter;
+            }
+            else
+            {
+                completionInfo.type = CompletionType.PARAMETER;
+                completionInfo.prefix = line.substring(lastToken.start, lastToken.start + lastToken.length);
+            }
+        }
+        else
+        {
+            if (lastToken.parameter != null && lastToken.parameter.hasArgument() && !lastToken.argument)
+            {
+                completionInfo.type = CompletionType.PARAMETER_ARGUMENT;
+                completionInfo.prefix = "";
+                completionInfo.parameter = lastToken.parameter;
+            }
+            else
+            {
+                completionInfo.type = CompletionType.PARAMETER;
+                completionInfo.prefix = "";
+            }
+        }
+        return completionInfo;
     }
     
     private List<TokenInfo> parseArgs(String argsStr)
@@ -162,10 +267,73 @@ public class ShellCompleter implements Completer
         return args;
     }
     
+    private void parseCommandParameters(IShellCommand command, String line, List<TokenInfo> args,
+        Set<IShellParameter> parameters)
+    {
+        for (IShellParameter parameter : command.getNamedParameters())
+            parseParameter(parameter, line, args, parameters);
+        
+        for (IShellParameter parameter : command.getPositionalParameters())
+            parseParameter(parameter, line, args, parameters);
+        
+        if (command.getDefaultParameter() != null)
+            parseParameter(command.getDefaultParameter(), line, args, parameters);
+    }
+    
+    private void parseParameter(IShellParameter parameter, String line, List<TokenInfo> args,
+        Set<IShellParameter> parameters)
+    {
+        while (true)
+        {
+            int i = findParameter(parameter.getNames(), line, args);
+            if (i != -1)
+            {
+                TokenInfo value = args.remove(i);
+                value.parameter = parameter;
+                parameters.add(parameter);
+                
+                if (parameter.hasArgument() && parameter.getNames() != null)
+                {
+                    if (i < args.size())
+                    {
+                        value = args.remove(i);
+                        value.parameter = parameter;
+                        value.argument = true;
+                    }
+                }
+            }
+            else
+                break;
+        }
+    }
+    
+    private int findParameter(List<String> names, String line, List<TokenInfo> args)
+    {
+        if (names != null)
+        {
+            for (int i = 0; i < args.size(); i++)
+            {
+                TokenInfo token = args.get(i);
+                String arg = line.substring(token.start, token.start + token.length);
+                for (String name : names)
+                {
+                    if (arg.equals(name))
+                        return i;
+                }
+            }
+        }
+        else if (!args.isEmpty())
+            return 0;
+        
+        return -1;
+    }
+    
     private static class TokenInfo
     {
         int start;
         int length;
+        IShellParameter parameter;
+        boolean argument;
     }
     
     private enum CompletionType
@@ -180,5 +348,6 @@ public class ShellCompleter implements Completer
         CompletionType type;
         String prefix;
         IShellCommand command;
+        IShellParameter parameter;
     }
 }

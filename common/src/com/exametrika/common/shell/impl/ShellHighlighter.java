@@ -256,8 +256,9 @@ public class ShellHighlighter implements Highlighter
                         commandToken.style = Style.WARNING;
                     else if (values.isEmpty() && !parameter.isRequired() && parameter.getDefaultValue() != null)
                         values.add(parameter.getDefaultValue());
-                    break;
                 }
+                
+                break;
             }
         }
     }
