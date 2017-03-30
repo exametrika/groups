@@ -10,7 +10,7 @@ import java.util.List;
  * 
  * @author Medvedev-A
  */
-public interface IShell
+public interface IShell extends Runnable
 {
     /**
      * Returns shell title.

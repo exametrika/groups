@@ -24,6 +24,7 @@ import com.exametrika.common.messaging.IMessagePart;
 import com.exametrika.common.messaging.IReceiver;
 import com.exametrika.common.utils.Assert;
 import com.exametrika.common.utils.ILifecycle;
+import com.exametrika.impl.groups.simulator.messages.ActionMessage;
 import com.exametrika.impl.groups.simulator.messages.ActionMessageSerializer;
 import com.exametrika.impl.groups.simulator.messages.ActionResponseMessageSerializer;
 
@@ -55,7 +56,7 @@ public final class SimAgentChannel implements IReceiver, IChannelListener, ISeri
         this.host = host;
         this.port = port;
         minReconnectPeriod = 60000;
-        executor = new SimExecutor();
+        executor = new SimExecutor(this);
         marker = Loggers.getMarker(channelName);
     }
     
@@ -139,7 +140,8 @@ public final class SimAgentChannel implements IReceiver, IChannelListener, ISeri
     @Override
     public void receive(final IMessage message)
     {
-        executor.onActionReceive(message);
+        if (message.getPart() instanceof ActionMessage)
+            executor.onActionReceive((ActionMessage)message.getPart());
     }
 
     @Override
@@ -183,7 +185,7 @@ public final class SimAgentChannel implements IReceiver, IChannelListener, ISeri
         state = State.STARTED;
         lastConnectTime = currentTime;
         if (address != null)
-            executor.onNodeFailed(address);
+            executor.onDisconnected();
         
         if (logger.isLogEnabled(LogLevel.DEBUG))
             logger.log(LogLevel.DEBUG, marker, messages.disconnected());

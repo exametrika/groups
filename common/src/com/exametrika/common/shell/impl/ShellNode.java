@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
+import com.exametrika.common.shell.IShell;
 import com.exametrika.common.shell.IShellCommand;
 import com.exametrika.common.utils.Assert;
 import com.exametrika.common.utils.Collections;
@@ -18,18 +19,26 @@ import com.exametrika.common.utils.Collections;
  */
 public class ShellNode
 {
+    private final IShell shell;
     private final String name;
     private final ShellNode parent;
     private final Map<String, ShellNode> children = new TreeMap<String, ShellNode>();
     private IShellCommand command;
     
-    public ShellNode(String name, ShellNode parent, IShellCommand command)
+    public ShellNode(IShell shell, String name, ShellNode parent, IShellCommand command)
     {
+        Assert.notNull(shell);
         Assert.notNull(name);
         
+        this.shell = shell;
         this.name = name;
         this.parent = parent;
         this.command = command;
+    }
+    
+    public IShell getShell()
+    {
+        return shell;
     }
     
     public String getName()
@@ -64,12 +73,12 @@ public class ShellNode
             ShellNode child = node.children.get(segment);
             if (child == null)
             {
-                child = new ShellNode(segment, node, !last ? new ShellCommandNamespace(segment, "") : null);
+                child = new ShellNode(shell, segment, node, !last ? new ShellCommandNamespace(segment, "") : null);
                 node.children.put(segment, child);
-                if (node.parent != null && !last)
+                if (node.parent != null)
                 {
                     if (!node.children.containsKey(Shell.PREVIOUS_LEVEL_COMMAND))
-                        node.children.put(Shell.PREVIOUS_LEVEL_COMMAND, new ShellNode(Shell.PREVIOUS_LEVEL_COMMAND, node, 
+                        node.children.put(Shell.PREVIOUS_LEVEL_COMMAND, new ShellNode(shell, Shell.PREVIOUS_LEVEL_COMMAND, node, 
                             new ShellCommandNamespace(Shell.PREVIOUS_LEVEL_COMMAND, Shell.PREVIOUS_LEVEL_COMMAND_DESCRIPTION)));
                 }
             }
@@ -82,15 +91,15 @@ public class ShellNode
         return node;
     }
     
-    public IShellCommand find(String commandName, char nameSeparator)
+    public IShellCommand find(String commandName)
     {
-        String[] path = commandName.split("[" + nameSeparator + "]");
+        String[] path = commandName.split("[" + shell.getNameSeparator() + "]");
         ShellNode node = this;
         for (int i = 0; i < path.length; i++)
         {
             ShellNode child = node.children.get(path[i]);
             if (child == null)
-                return null;
+                return shell.findCommand(commandName);
             
             node = child;
         }

@@ -29,9 +29,10 @@ public class ShellCompleter implements Completer
     private final IShellCommand defaultCommand;
     private final char nameSeparator;
     private final IShellContext context;
+    private final char namedParameterPrefix;
 
     public ShellCompleter(ShellNode rootNode, IShellCommand defaultCommand, char nameSeparator,
-        IShellContext context)
+        IShellContext context, char namedParameterPrefix)
     {
         Assert.notNull(rootNode);
         Assert.notNull(context);
@@ -40,6 +41,7 @@ public class ShellCompleter implements Completer
         this.defaultCommand = defaultCommand;
         this.nameSeparator = nameSeparator;
         this.context = context;
+        this.namedParameterPrefix = namedParameterPrefix;
     }
     
     @Override
@@ -144,16 +146,30 @@ public class ShellCompleter implements Completer
             boolean last = i == args.size() - 1;
             if (first)
             {
-                String prefix;
-                if (!context.isEmpty())
-                    prefix = context + nameSeparator;
+                String argStr = line.substring(arg.start, arg.start + arg.length);
+                String qualifiedCommandName;
+                String commandName;
+                if (argStr.startsWith("/"))
+                {
+                    qualifiedCommandName = argStr.substring(1);
+                    commandName = qualifiedCommandName;
+                }
                 else
-                    prefix = "";
+                {
+                    commandName = argStr;
+                    if (!context.isEmpty())
+                        qualifiedCommandName = context + nameSeparator + argStr;
+                    else
+                        qualifiedCommandName = argStr;
+                }
                 
-                String commandName = prefix + line.substring(arg.start, arg.start + arg.length);
-                command = rootNode.find(commandName, nameSeparator);
+                command = rootNode.find(qualifiedCommandName);
                 if (command == null)
-                    command = defaultCommand;
+                {
+                    command = rootNode.getShell().findCommand(commandName);
+                    if (command == null)
+                        command = defaultCommand;
+                }
                 
                 if (last)
                 {
@@ -271,17 +287,17 @@ public class ShellCompleter implements Completer
         Set<IShellParameter> parameters)
     {
         for (IShellParameter parameter : command.getNamedParameters())
-            parseParameter(parameter, line, args, parameters);
+            parseParameter(parameter, line, args, parameters, false);
         
         for (IShellParameter parameter : command.getPositionalParameters())
-            parseParameter(parameter, line, args, parameters);
+            parseParameter(parameter, line, args, parameters, true);
         
         if (command.getDefaultParameter() != null)
-            parseParameter(command.getDefaultParameter(), line, args, parameters);
+            parseParameter(command.getDefaultParameter(), line, args, parameters, false);
     }
     
     private void parseParameter(IShellParameter parameter, String line, List<TokenInfo> args,
-        Set<IShellParameter> parameters)
+        Set<IShellParameter> parameters, boolean positional)
     {
         while (true)
         {
@@ -304,6 +320,9 @@ public class ShellCompleter implements Completer
             }
             else
                 break;
+            
+            if (positional)
+                break;
         }
     }
     
@@ -322,8 +341,16 @@ public class ShellCompleter implements Completer
                 }
             }
         }
-        else if (!args.isEmpty())
-            return 0;
+        else
+        {
+            for (int i = 0; i < args.size(); i++)
+            {
+                TokenInfo token = args.get(i);
+                String arg = line.substring(token.start, token.start + token.length);
+                if (arg.charAt(0) != namedParameterPrefix)
+                    return i;
+            }
+        }
         
         return -1;
     }

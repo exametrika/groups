@@ -21,6 +21,7 @@ import com.exametrika.common.shell.IShellCommand;
 import com.exametrika.common.shell.IShellCommandExecutor;
 import com.exametrika.common.shell.IShellCommandProvider;
 import com.exametrika.common.shell.IShellContext;
+import com.exametrika.common.utils.Collections;
 import com.exametrika.common.utils.ICondition;
 import com.exametrika.common.utils.Strings;
 
@@ -45,7 +46,7 @@ public final class DefaultShellCommandProvider implements IShellCommandProvider
             .name("quit").description(messages.exitCommand().toString()).executor(new ExitShellCommand()).addCommand()
             .name("help").description(messages.helpCommand().toString())
                 .defaultParameter("command", messages.helpCommandParameterFormat().toString(), 
-                    messages.helpCommandParameterDescription().toString(), true, false, null, null, null, null).executor(new HelpShellCommand()).addCommand()
+                    messages.helpCommandParameterDescription().toString(), false, false, null, null, null, null).executor(new HelpShellCommand()).addCommand()
             .name("eval").description(messages.evalCommand().toString())
                 .defaultParameter("expression", messages.evalExpressionParameterFormat().toString(), 
                     messages.evalExpressionParameterDescription().toString(), true, true, null, null, null, null).executor(new EvalShellCommand()).addCommand()
@@ -55,7 +56,7 @@ public final class DefaultShellCommandProvider implements IShellCommandProvider
                 .addPositionalParameter("filter", messages.grepFilterParameterFormat().toString(), 
                     messages.grepFilterParameterDescription().toString(), null, null, null)
                 .defaultParameter("expression", messages.grepExpressionParameterFormat().toString(), 
-                    messages.grepExpressionParameterDescription().toString(), true, false, null, null, null, null).executor(new GrepShellCommand()).addCommand()
+                    messages.grepExpressionParameterDescription().toString(), false, false, null, null, null, null).executor(new GrepShellCommand()).addCommand()
             .build();
     }
     
@@ -87,10 +88,10 @@ public final class DefaultShellCommandProvider implements IShellCommandProvider
         {
             ShellNode contextNode = ((Shell)context.getShell()).getContextNode();
             AttributedStringBuilder builder = new AttributedStringBuilder();
-            builder.append("\n\n");
+            builder.append("\n");
             
             List<String> commands = (List<String>)parameters.get("command");
-            if (commands == null)
+            if (Collections.isEmpty(commands))
             {
                 boolean first = true;
                 for (ShellNode child : contextNode.getChildren().values())
@@ -113,28 +114,27 @@ public final class DefaultShellCommandProvider implements IShellCommandProvider
             else
             {
                 boolean first = true;
-                for (String command : commands)
+                for (String commandName : commands)
                 {
                     if (first)
                         first = false;
                     else
                         builder.append("\n\n");
                     
-                    ShellNode node = contextNode.getChildren().get(command);
-                    if (node != null)
-                        builder.appendAnsi(node.getCommand().getUsage(!context.getShell().isNoColors()));
+                    IShellCommand command = contextNode.find(commandName);
+                    if (command != null)
+                        builder.appendAnsi(command.getUsage(!context.getShell().isNoColors()));
                     else 
                     {
                         if (!context.getShell().isNoColors())
                             builder.style(ShellConstants.ERROR_STYLE);
-                        builder.append(messages.commandNotFound(command).toString());
+                        builder.append(messages.commandNotFound(commandName).toString());
                         if (!context.getShell().isNoColors())
                             builder.style(ShellConstants.DEFAULT_STYLE);
                     }
                 }
             }
             
-            builder.append("\n\n");
             return builder.toAnsi();
         }
     }
@@ -160,11 +160,17 @@ public final class DefaultShellCommandProvider implements IShellCommandProvider
             List<Object> result = new ArrayList<Object>();
             for (Object value : expression)
             {
-                if (condition.evaluate(value.toString()))
-                    result.add(value);
+                String[] parts = value.toString().split("[\r\n]");
+                for (String part : parts)
+                {
+                    if (part.trim().isEmpty())
+                        continue;
+                    if (condition.evaluate(part))
+                        result.add(part);
+                }
             }
             
-            return result;
+            return Strings.toString(result, false);
         }
     }
     

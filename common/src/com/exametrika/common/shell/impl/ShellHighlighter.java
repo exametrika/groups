@@ -28,9 +28,10 @@ public class ShellHighlighter implements Highlighter
     private final IShellCommand defaultCommand;
     private final char nameSeparator;
     private final IShellContext context;
+    private final char namedParameterPrefix;
 
     public ShellHighlighter(ShellNode rootNode, IShellCommand defaultCommand, char nameSeparator,
-        IShellContext context)
+        IShellContext context, char namedParameterPrefix)
     {
         Assert.notNull(rootNode);
         Assert.notNull(context);
@@ -39,6 +40,7 @@ public class ShellHighlighter implements Highlighter
         this.defaultCommand = defaultCommand;
         this.nameSeparator = nameSeparator;
         this.context = context;
+        this.namedParameterPrefix = namedParameterPrefix;
     }
     
     @Override
@@ -90,6 +92,9 @@ public class ShellHighlighter implements Highlighter
     
     private void parseCommands(String context, String line, List<TokenInfo> args)
     {
+        if (args.isEmpty())
+            return;
+        
         boolean first = true;
         IShellCommand command = null;
         TokenInfo commandToken = null;
@@ -98,21 +103,35 @@ public class ShellHighlighter implements Highlighter
         {
             if (first)
             {
-                String prefix;
-                if (!context.isEmpty())
-                    prefix = context + nameSeparator;
+                String argStr = line.substring(arg.start, arg.start + arg.length);
+                String qualifiedCommandName;
+                String commandName;
+                if (argStr.startsWith("/"))
+                {
+                    qualifiedCommandName = argStr.substring(1);
+                    commandName = qualifiedCommandName;
+                }
                 else
-                    prefix = "";
+                {
+                    commandName = argStr;
+                    if (!context.isEmpty())
+                        qualifiedCommandName = context + nameSeparator + argStr;
+                    else
+                        qualifiedCommandName = argStr;
+                }
                 
-                String commandName = prefix + line.substring(arg.start, arg.start + arg.length);
-                command = rootNode.find(commandName, nameSeparator);
+                command = rootNode.find(qualifiedCommandName);
                 if (command == null)
-                    command = defaultCommand;
+                {
+                    command = rootNode.getShell().findCommand(commandName);
+                    if (command == null)
+                        command = defaultCommand;
+                }
                 
                 if (command == null)
                 {
                     arg.style = Style.ERROR;
-                    break;
+                    return;
                 }
                 arg.style = Style.COMMAND;
                 commandToken = arg;
@@ -131,8 +150,8 @@ public class ShellHighlighter implements Highlighter
                 commandArgs.add(arg);
         }
         
-        Assert.notNull(command);
-        parseCommandParameters(command, line, commandToken, commandArgs);
+        if (command != null)
+            parseCommandParameters(command, line, commandToken, commandArgs);
     }
     
     private List<TokenInfo> parseArgs(String argsStr)
@@ -191,19 +210,20 @@ public class ShellHighlighter implements Highlighter
     private void parseCommandParameters(IShellCommand command, String line, TokenInfo commandToken, List<TokenInfo> args)
     {
         for (IShellParameter parameter : command.getNamedParameters())
-            parseParameter(parameter, line, commandToken, args);
+            parseParameter(parameter, line, commandToken, args, false);
         
         for (IShellParameter parameter : command.getPositionalParameters())
-            parseParameter(parameter, line, commandToken, args);
+            parseParameter(parameter, line, commandToken, args, true);
         
         if (command.getDefaultParameter() != null)
-            parseParameter(command.getDefaultParameter(), line, commandToken, args);
+            parseParameter(command.getDefaultParameter(), line, commandToken, args, false);
         
         for (TokenInfo arg : args)
             arg.style = Style.ERROR;
     }
     
-    private void parseParameter(IShellParameter parameter, String line, TokenInfo commandToken, List<TokenInfo> args)
+    private void parseParameter(IShellParameter parameter, String line, TokenInfo commandToken, List<TokenInfo> args,
+        boolean positional)
     {
         List<Object> values = null;
         if (!parameter.isUnique())
@@ -260,6 +280,9 @@ public class ShellHighlighter implements Highlighter
                 
                 break;
             }
+            
+            if (positional)
+                break;
         }
     }
     
@@ -278,8 +301,16 @@ public class ShellHighlighter implements Highlighter
                 }
             }
         }
-        else if (!args.isEmpty())
-            return 0;
+        else
+        {
+            for (int i = 0; i < args.size(); i++)
+            {
+                TokenInfo token = args.get(i);
+                String arg = line.substring(token.start, token.start + token.length);
+                if (arg.charAt(0) != namedParameterPrefix)
+                    return i;
+            }
+        }
         
         return -1;
     }

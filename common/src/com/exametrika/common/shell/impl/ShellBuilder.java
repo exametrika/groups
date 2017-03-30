@@ -3,6 +3,7 @@
  */
 package com.exametrika.common.shell.impl;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import com.exametrika.common.shell.IShell;
@@ -20,12 +21,13 @@ import com.exametrika.common.shell.IShellPromptProvider;
 public final class ShellBuilder
 {
     private String title;
-    private List<IShellCommand> commands;
+    private List<IShellCommand> commands = new ArrayList<IShellCommand>();
     private IShellCommand defaultCommand;
     private boolean loadFromServices = true;
     private String historyFilePath;
     private IShellPromptProvider promptProvider = new DefaultShellPromptProvider();
     private char nameSeparator = ':';
+    private char namedParameterPrefix = '-';
     private boolean noColors;
     
     public ShellBuilder title(String title)
@@ -70,7 +72,13 @@ public final class ShellBuilder
         return this;
     }
     
-    public ShellBuilder noCokors(boolean noColors)
+    public ShellBuilder namedParameterPrefix(char namedParameterPrefix)
+    {
+        this.namedParameterPrefix = namedParameterPrefix;
+        return this;
+    }
+    
+    public ShellBuilder noColors(boolean noColors)
     {
         this.noColors = noColors;
         return this;
@@ -79,6 +87,6 @@ public final class ShellBuilder
     public IShell build()
     {
         return new Shell(title, commands, defaultCommand, loadFromServices, historyFilePath, promptProvider, nameSeparator,
-            noColors);
+            namedParameterPrefix, noColors);
     }
 }

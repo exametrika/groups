@@ -4,6 +4,7 @@
 package com.exametrika.common.shell.impl;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -32,14 +33,17 @@ public final class ShellCommandParser implements IShellCommandParser
     private final ShellNode rootNode;
     private final IShellCommand defaultCommand;
     private final char nameSeparator;
+    private final char namedParameterPrefix;
     
-    public ShellCommandParser(ShellNode rootNode, IShellCommand defaultCommand, char nameSeparator)
+    public ShellCommandParser(ShellNode rootNode, IShellCommand defaultCommand, char nameSeparator,
+        char namedParameterPrefix)
     {
         Assert.notNull(rootNode);
         
         this.rootNode = rootNode;
         this.defaultCommand = defaultCommand;
         this.nameSeparator = nameSeparator;
+        this.namedParameterPrefix = namedParameterPrefix;
     }
     
     @Override
@@ -52,6 +56,9 @@ public final class ShellCommandParser implements IShellCommandParser
     @Override
     public List<Pair<IShellCommand, Map<String, Object>>> parseCommands(String context, List<String> args)
     {
+        if (args.isEmpty())
+            return Collections.emptyList();
+        
         List<Pair<IShellCommand, Map<String, Object>>> commands = new ArrayList<Pair<IShellCommand, Map<String, Object>>>();
         boolean first = true;
         IShellCommand command = null;
@@ -61,21 +68,35 @@ public final class ShellCommandParser implements IShellCommandParser
         {
             if (first)
             {
+                String qualifiedCommandName;
                 String commandName;
-                if (!context.isEmpty())
-                    commandName = context + nameSeparator + arg;
+                if (arg.startsWith("/"))
+                {
+                    qualifiedCommandName = arg.substring(1);
+                    commandName = qualifiedCommandName;
+                }
                 else
+                {
                     commandName = arg;
+                    if (!context.isEmpty())
+                        qualifiedCommandName = context + nameSeparator + arg;
+                    else
+                        qualifiedCommandName = arg;
+                }
                 
-                command = rootNode.find(commandName, nameSeparator);
+                command = rootNode.find(qualifiedCommandName);
                 if (command == null)
-                    command = defaultCommand;
+                {
+                    command = rootNode.getShell().findCommand(commandName);
+                    if (command == null)
+                        command = defaultCommand;
+                }
                 
                 if (command == null)
                     throw new InvalidArgumentException(messages.unknownCommand(arg));
                 first = false;
             }
-            else if (arg.equals(PIPE))
+            else if (arg.length() == 1 && arg.charAt(0) == PIPE)
             {
                 Assert.notNull(command);
                 parameters = parseCommandParameters(command, commandArgs);
@@ -89,9 +110,11 @@ public final class ShellCommandParser implements IShellCommandParser
                 commandArgs.add(arg);
         }
         
-        Assert.notNull(command);
-        parameters = parseCommandParameters(command, commandArgs);
-        commands.add(new Pair<IShellCommand, Map<String,Object>>(command, parameters));
+        if (command != null)
+        {
+            parameters = parseCommandParameters(command, commandArgs);
+            commands.add(new Pair<IShellCommand, Map<String,Object>>(command, parameters));
+        }
         
         return commands;
     }
@@ -138,13 +161,13 @@ public final class ShellCommandParser implements IShellCommandParser
         Map<String, Object> parsedParameters = new LinkedHashMap<String, Object>();
         
         for (IShellParameter parameter : command.getNamedParameters())
-            parseParameter(parameter, args, parsedParameters);
+            parseParameter(parameter, args, parsedParameters, false);
         
         for (IShellParameter parameter : command.getPositionalParameters())
-            parseParameter(parameter, args, parsedParameters);
+            parseParameter(parameter, args, parsedParameters, true);
         
         if (command.getDefaultParameter() != null)
-            parseParameter(command.getDefaultParameter(), args, parsedParameters);
+            parseParameter(command.getDefaultParameter(), args, parsedParameters, false);
         
         if (args.size() == 1)
             throw new InvalidArgumentException(messages.unrecognizedParameter(args.get(0)));
@@ -171,7 +194,8 @@ public final class ShellCommandParser implements IShellCommandParser
         return parsedParameters;
     }
     
-    private void parseParameter(IShellParameter parameter, List<String> args, Map<String, Object> parameterMap)
+    private void parseParameter(IShellParameter parameter, List<String> args, Map<String, Object> parameterMap,
+        boolean positional)
     {
         List<Object> values = null;
         if (!parameter.isUnique())
@@ -236,6 +260,9 @@ public final class ShellCommandParser implements IShellCommandParser
                     break;
                 }
             }
+            
+            if (positional)
+                break;
         }
     }
     
@@ -253,8 +280,15 @@ public final class ShellCommandParser implements IShellCommandParser
                 }
             }
         }
-        else if (!args.isEmpty())
-            return 0;
+        else
+        {
+            for (int i = 0; i < args.size(); i++)
+            {
+                String arg = args.get(i);
+                if (arg.charAt(0) != namedParameterPrefix)
+                    return i;
+            }
+        }
         
         return -1;
     }

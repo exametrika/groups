@@ -45,7 +45,7 @@ import com.exametrika.common.utils.Pair;
  * @threadsafety This class and its methods are not thread safe.
  * @author Medvedev-A
  */
-public final class Shell implements IShell, Runnable
+public final class Shell implements IShell
 {
     private static final IMessages messages = Messages.get(IMessages.class);
     public static final int INDENT = 4;
@@ -59,14 +59,15 @@ public final class Shell implements IShell, Runnable
     private final String historyFilePath;
     private final IShellPromptProvider promptProvider;
     private final char nameSeparator;
+    private final char namedParameterPrefix;
     private boolean noColors;
-    private final ShellNode rootNode = new ShellNode("", null, null);
+    private final ShellNode rootNode = new ShellNode(this, "", null, null);
     private final ShellContext context = new ShellContext(this);
     private ShellNode contextNode = rootNode;
     private LineReader lineReader;
     
     public Shell(String title, List<IShellCommand> commands, IShellCommand defaultCommand, boolean loadFromServices,
-        String historyFilePath, IShellPromptProvider promptProvider, char nameSeparator, boolean noColors)
+        String historyFilePath, IShellPromptProvider promptProvider, char nameSeparator, char namedParameterPrefix, boolean noColors)
     {
         Assert.notNull(commands);
         
@@ -92,10 +93,11 @@ public final class Shell implements IShell, Runnable
         this.commands = Immutables.wrap(commands);
         this.commandsMap = commandsMap;
         this.defaultCommand = defaultCommand;
-        this.parser = new ShellCommandParser(rootNode, defaultCommand, nameSeparator);
+        this.parser = new ShellCommandParser(rootNode, defaultCommand, nameSeparator, namedParameterPrefix);
         this.historyFilePath = historyFilePath;
         this.promptProvider = promptProvider;
         this.nameSeparator = nameSeparator;
+        this.namedParameterPrefix = namedParameterPrefix;
         this.noColors = noColors;
     }
     
@@ -199,6 +201,7 @@ public final class Shell implements IShell, Runnable
                 AttributedStringBuilder builder = new AttributedStringBuilder();
                 if (!noColors)
                     builder.style(ShellConstants.APPLICATION_STYLE);
+                builder.append("\n");
                 builder.append(title);
                 if (!noColors)
                     builder.style(ShellConstants.DEFAULT_STYLE);
@@ -206,7 +209,6 @@ public final class Shell implements IShell, Runnable
                
                 terminal.writer().print(builder.toAnsi());
             }
-            
             
             LineReaderBuilder lineReaderBuilder = LineReaderBuilder.builder().terminal(terminal).appName(title)
                 .completer(createCompleter()).highlighter(createHighlighter());
@@ -226,6 +228,8 @@ public final class Shell implements IShell, Runnable
                 try
                 {
                     String line = lineReader.readLine(prompt[0], prompt[1], null, null);
+                    if (line.trim().isEmpty())
+                        continue;
                     
                     List<Pair<IShellCommand, Map<String, Object>>> parsedCommands = parser.parseCommands(context.getPath(), line);
                     execute(context, parsedCommands);
@@ -247,6 +251,8 @@ public final class Shell implements IShell, Runnable
                     if (!noColors)
                         builder.style(ShellConstants.DEFAULT_STYLE);
                    
+                    builder.append("\n\n");
+                    
                     terminal.writer().print(builder.toAnsi());
                 }
             }
@@ -264,6 +270,10 @@ public final class Shell implements IShell, Runnable
 
     public void changeLevel(String name)
     {
+        int pos = name.lastIndexOf(nameSeparator);
+        if (pos != -1)
+            name = name.substring(pos + 1);
+        
         if (name.equals(PREVIOUS_LEVEL_COMMAND))
         {
             Assert.checkState(contextNode.getParent() != null);
@@ -280,12 +290,12 @@ public final class Shell implements IShell, Runnable
     
     private Highlighter createHighlighter()
     {
-        return new ShellHighlighter(rootNode, defaultCommand, nameSeparator, context);
+        return null;//TODO:new ShellHighlighter(rootNode, defaultCommand, nameSeparator, context, namedParameterPrefix);
     }
 
     private Completer createCompleter()
     {
-        return new ShellCompleter(rootNode, defaultCommand, nameSeparator, context);
+        return null;//TODO:new ShellCompleter(rootNode, defaultCommand, nameSeparator, context, namedParameterPrefix);
     }
 
     private void execute(ShellContext context, List<Pair<IShellCommand, Map<String, Object>>> parsedCommands)
@@ -324,7 +334,7 @@ public final class Shell implements IShell, Runnable
         }
         
         if (result != null)
-            lineReader.getTerminal().writer().print(result.toString());
+            lineReader.getTerminal().writer().print(result.toString() + "\n\n");
     }
     
     interface IMessages
