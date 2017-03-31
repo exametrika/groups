@@ -4,6 +4,7 @@
 package com.exametrika.impl.groups.simulator.coordinator;
 
 import com.exametrika.common.messaging.IMessage;
+import com.exametrika.common.utils.Assert;
 
 
 
@@ -16,6 +17,15 @@ import com.exametrika.common.messaging.IMessage;
  */
 public final class SimCoordinator
 {
+    private final SimCoordinatorChannel channel;
+
+    public SimCoordinator(SimCoordinatorChannel channel)
+    {
+        Assert.notNull(channel);
+        
+        this.channel = channel;
+    }
+    
     public void onTimer(long currentTime)
     {
     }
@@ -23,4 +33,26 @@ public final class SimCoordinator
     public void receive(final IMessage message)
     {
     }
+    
+    public void start(long delay, double timeSpeed)
+    {
+        
+    }
+    
+    public void stop(String condition)
+    {
+        
+    }
+    
+    public void suspend()
+    {
+        
+    }
+    
+    public void resume()
+    {
+        
+    }
+    
+    
 }

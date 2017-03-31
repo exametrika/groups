@@ -141,7 +141,7 @@ public final class SimAgentChannel implements IReceiver, IChannelListener, ISeri
     public void receive(final IMessage message)
     {
         if (message.getPart() instanceof ActionMessage)
-            executor.onActionReceive((ActionMessage)message.getPart());
+            executor.onActionReceived((ActionMessage)message.getPart());
     }
 
     @Override

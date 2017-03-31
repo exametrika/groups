@@ -45,12 +45,12 @@ public final class SimCoordinatorChannel implements IReceiver, IChannelListener,
     private boolean started;
     private IChannel channel;
     private volatile long currentTime;
-    private Map<IAddress, SimCoordinatorAgentChannel> agents = new LinkedHashMap<IAddress, SimCoordinatorAgentChannel>();
+    private volatile Map<IAddress, SimCoordinatorAgentChannel> agents = new LinkedHashMap<IAddress, SimCoordinatorAgentChannel>();
 
     public SimCoordinatorChannel(String chanelName)
     {
         marker = Loggers.getMarker(chanelName);
-        coordinator = new SimCoordinator();
+        coordinator = new SimCoordinator(this);
     }
     
     public void setChannel(IChannel channel)
@@ -59,6 +59,11 @@ public final class SimCoordinatorChannel implements IReceiver, IChannelListener,
         Assert.isNull(this.channel);
         
         this.channel = channel;
+    }
+    
+    public Map<IAddress, SimCoordinatorAgentChannel> getAgents()
+    {
+        return agents;
     }
     
     @Override

@@ -3,6 +3,10 @@
  */
 package com.exametrika.impl.groups.simulator.agent;
 
+import com.exametrika.common.expression.CompileContext;
+import com.exametrika.common.expression.Expressions;
+import com.exametrika.common.expression.IExpression;
+import com.exametrika.common.expression.impl.ExpressionCondition;
 import com.exametrika.common.messaging.IMessage;
 import com.exametrika.common.tasks.ThreadInterruptedException;
 import com.exametrika.common.utils.Assert;
@@ -12,10 +16,6 @@ import com.exametrika.common.utils.Times;
 import com.exametrika.common.utils.TrueCondition;
 import com.exametrika.impl.groups.simulator.messages.ActionMessage;
 import com.exametrika.impl.groups.simulator.messages.ActionResponseMessage;
-
-import com.exametrika.common.expression.CompileContext;
-import com.exametrika.common.expression.Expressions;
-import com.exametrika.common.expression.impl.ExpressionCondition;
 
 /**
  * The {@link SimExecutor} represents a simulator executor.
@@ -30,10 +30,12 @@ public final class SimExecutor
     private long delayPeriod;
     private boolean oneTimeDelay;
     private ICondition<IMessage> suspendCondition = new TrueCondition<IMessage>();
+    private ICondition<IMessage> logFilter;
+    private IExpression logExpression;
+    private boolean logEnabled;
     private volatile IMessage message;
     private boolean suspended;
-    private boolean log;
-    
+   
     public SimExecutor(SimAgentChannel channel)
     {
         Assert.notNull(channel);
@@ -73,14 +75,55 @@ public final class SimExecutor
         this.oneTimeDelay = oneTimeDelay;
     }
     
+    public void print(String expressionStr)
+    {
+        IMessage currentMessage = this.message;
+        if (currentMessage != null)
+        {
+            Object result;
+            if (expressionStr != null)
+                result = Expressions.evaluate(expressionStr, currentMessage, null);
+            else
+                result = currentMessage;
+            
+            channel.send(new ActionResponseMessage(result.toString()));
+        }
+    }
+    
+    public synchronized void log(String filter, String expression, boolean enabled)
+    {
+        if (expression != null)
+            logExpression = Expressions.compile(expression, compileContext);
+        else
+            logFilter = null;
+        
+        if (expression != null)
+            logExpression = Expressions.compile(expression, compileContext);
+        else
+            logExpression = null;
+        
+        logEnabled = enabled;
+    }
+    
     public void intercept(IMessage message)
     {
-        if (log)
-            channel.send(new ActionResponseMessage(message.toString()));
-            
         long delayPeriod;
         synchronized (this)
         {
+            if (logEnabled)
+            {
+                if (logFilter == null || logFilter.evaluate(message))
+                {
+                    Object result;
+                    if (logExpression != null)
+                        result = logExpression.execute(message, null);
+                    else
+                        result = message;
+                    
+                    channel.send(new ActionResponseMessage(result.toString()));
+                }
+            }
+            
             this.message = message;
             try
             {
@@ -113,10 +156,9 @@ public final class SimExecutor
     
     public void onTimer(long currentTime)
     {
-        // TODO:
     }
     
-    public synchronized void onActionReceive(ActionMessage message)
+    public synchronized void onActionReceived(ActionMessage message)
     {
         if (message.getActionName().equals("start"))
         {
@@ -141,15 +183,10 @@ public final class SimExecutor
         else if (message.getActionName().equals("delay"))
             delay((long)message.getParameters().get("period"), Boolean.TRUE.equals(message.getParameters().get("oneTime")));
         else if (message.getActionName().equals("print"))
-        {
-            IMessage currentMessage = this.message;
-            if (currentMessage != null)
-                channel.send(new ActionResponseMessage(currentMessage.toString()));
-        }
+            print((String)message.getParameters().get("expression"));
         else if (message.getActionName().equals("log"))
-        {
-            
-        }
+            log((String)message.getParameters().get("filter"), (String)message.getParameters().get("expression"),
+                (Boolean)message.getParameters().get("enabled"));
         else if (message.getActionName().equals("time"))
             Times.setTest((long)message.getParameters().get("value"));
         else if (message.getActionName().equals("kill"))
@@ -158,6 +195,5 @@ public final class SimExecutor
     
     public void onDisconnected()
     {
-        // TODO:
     }
 }
