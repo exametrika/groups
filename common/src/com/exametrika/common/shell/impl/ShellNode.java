@@ -73,13 +73,15 @@ public class ShellNode
             ShellNode child = node.children.get(segment);
             if (child == null)
             {
-                child = new ShellNode(shell, segment, node, !last ? new ShellCommandNamespace(segment, "") : null);
+                child = new ShellNode(shell, segment, node, !last ? new ShellCommandNamespace(
+                    java.util.Collections.singletonList(buildName(path, i)), "", "") : null);
                 node.children.put(segment, child);
                 if (node.parent != null)
                 {
                     if (!node.children.containsKey(Shell.PREVIOUS_LEVEL_COMMAND))
                         node.children.put(Shell.PREVIOUS_LEVEL_COMMAND, new ShellNode(shell, Shell.PREVIOUS_LEVEL_COMMAND, node, 
-                            new ShellCommandNamespace(Shell.PREVIOUS_LEVEL_COMMAND, Shell.PREVIOUS_LEVEL_COMMAND_DESCRIPTION)));
+                            new ShellCommandNamespace(java.util.Collections.singletonList(Shell.PREVIOUS_LEVEL_COMMAND), 
+                                Shell.PREVIOUS_LEVEL_COMMAND_DESCRIPTION, Shell.PREVIOUS_LEVEL_COMMAND_SHORT_DESCRIPTION)));
                 }
             }
             
@@ -87,6 +89,22 @@ public class ShellNode
         }
         
         node.command = command;
+        
+        return node;
+    }
+    
+    public ShellNode findNode(String commandName)
+    {
+        String[] path = commandName.split("[" + shell.getNameSeparator() + "]");
+        ShellNode node = this;
+        for (int i = 0; i < path.length; i++)
+        {
+            ShellNode child = node.children.get(path[i]);
+            if (child == null)
+                return null;
+            
+            node = child;
+        }
         
         return node;
     }
@@ -105,5 +123,22 @@ public class ShellNode
         }
         
         return node.command;
+    }
+    
+    private String buildName(List<String> path, int index)
+    {
+        StringBuilder builder = new StringBuilder();
+        boolean first = true;
+        for (int i= 0; i <= index; i++)
+        {
+            if (first)
+                first = false;
+            else
+                builder.append(shell.getNameSeparator());
+            
+            builder.append(path.get(i));
+        }
+        
+        return builder.toString();
     }
 }

@@ -13,11 +13,11 @@ import java.util.List;
 public interface IShellCommand
 {
     /**
-     * Returns command name. Command name can be hierarchical, where each name segment is separated by {@link IShell#getNameSeparator()}.
+     * Returns list of command names. Command name can be hierarchical, where each name segment is separated by {@link IShell#getNameSeparator()}.
      *
-     * @return command name
+     * @return command names
      */
-    String getName();
+    List<String> getNames();
     
     /**
      * Returns command description.
@@ -25,6 +25,13 @@ public interface IShellCommand
      * @return command description
      */
     String getDescription();
+    
+    /**
+     * Returns command short description to be used in completer.
+     *
+     * @return command short description or null if not set
+     */
+    String getShortDescription();
     
     /**
      * Returns command validator.

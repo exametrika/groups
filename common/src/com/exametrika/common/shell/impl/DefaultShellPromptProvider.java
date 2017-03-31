@@ -31,13 +31,13 @@ public final class DefaultShellPromptProvider implements IShellPromptProvider
     {
         AttributedStringBuilder builder = new AttributedStringBuilder();
         if (!context.getShell().isNoColors())
-            builder.style(ShellConstants.LEFT_PROMPT_STYLE);
+            builder.style(ShellStyles.LEFT_PROMPT_STYLE);
         builder.append(context.getPath() + ">");
         String leftPrompt = builder.toAnsi();
 
         builder = new AttributedStringBuilder();
         if (!context.getShell().isNoColors())
-            builder.style(ShellConstants.RIGHT_PROMPT_STYLE);
+            builder.style(ShellStyles.RIGHT_PROMPT_STYLE);
         builder .append(LocalDate.now().format(DateTimeFormatter.ISO_DATE))
             .append("\n")
             .append(LocalTime.now().format(new DateTimeFormatterBuilder()

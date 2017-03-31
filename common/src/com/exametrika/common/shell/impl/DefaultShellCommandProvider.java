@@ -21,6 +21,8 @@ import com.exametrika.common.shell.IShellCommand;
 import com.exametrika.common.shell.IShellCommandExecutor;
 import com.exametrika.common.shell.IShellCommandProvider;
 import com.exametrika.common.shell.IShellContext;
+import com.exametrika.common.shell.IShellParameterCompleter;
+import com.exametrika.common.shell.IShellParameterHighlighter;
 import com.exametrika.common.utils.Collections;
 import com.exametrika.common.utils.ICondition;
 import com.exametrika.common.utils.Strings;
@@ -41,22 +43,24 @@ public final class DefaultShellCommandProvider implements IShellCommandProvider
     public List<IShellCommand> getCommands()
     {
         return new ShellCommandBuilder()
-            .name("clear").description(messages.clearCommand().toString()).executor(new ClearShellCommand()).addCommand()
-            .name("exit").description(messages.exitCommand().toString()).executor(new ExitShellCommand()).addCommand()
-            .name("quit").description(messages.exitCommand().toString()).executor(new ExitShellCommand()).addCommand()
-            .name("help").description(messages.helpCommand().toString())
+            .names("clear", "cls").description(messages.clearCommand().toString()).executor(new ClearShellCommand()).addCommand()
+            .names("quit", "exit", "q").description(messages.exitCommand().toString()).executor(new ExitShellCommand()).addCommand()
+            .names("help", "?").description(messages.helpCommand().toString())
                 .defaultParameter("command", messages.helpCommandParameterFormat().toString(), 
-                    messages.helpCommandParameterDescription().toString(), false, false, null, null, null, null).executor(new HelpShellCommand()).addCommand()
-            .name("eval").description(messages.evalCommand().toString())
+                    messages.helpCommandParameterDescription().toString(), null, false, false, null, null, 
+                    new HelpCommandCompleter(), new HelpCommandHighlighter()).executor(new HelpShellCommand()).addCommand()
+            .names("eval").description(messages.evalCommand().toString())
                 .defaultParameter("expression", messages.evalExpressionParameterFormat().toString(), 
-                    messages.evalExpressionParameterDescription().toString(), true, true, null, null, null, null).executor(new EvalShellCommand()).addCommand()
-            .name("grep").description(messages.grepCommand().toString())
+                    messages.evalExpressionParameterDescription().toString(), null, true, true, null, null, null, 
+                    null).executor(new EvalShellCommand()).addCommand()
+            .names("grep").description(messages.grepCommand().toString())
                 .addNamedParameter("caseInsensitive", Arrays.asList("-c", "--case-insensitive"), messages.grepCaseParameterFormat().toString(), 
-                    messages.grepCaseParameterDescription().toString(), false)
+                    messages.grepCaseParameterDescription().toString(), null, false)
                 .addPositionalParameter("filter", messages.grepFilterParameterFormat().toString(), 
-                    messages.grepFilterParameterDescription().toString(), null, null, null)
+                    messages.grepFilterParameterDescription().toString(), null, null, null, null)
                 .defaultParameter("expression", messages.grepExpressionParameterFormat().toString(), 
-                    messages.grepExpressionParameterDescription().toString(), false, false, null, null, null, null).executor(new GrepShellCommand()).addCommand()
+                    messages.grepExpressionParameterDescription().toString(), null, false, false, null, null, null, 
+                    null).executor(new GrepShellCommand()).addCommand()
             .build();
     }
     
@@ -102,10 +106,10 @@ public final class DefaultShellCommandProvider implements IShellCommandProvider
                         builder.append("\n");
                     
                     if (!context.getShell().isNoColors())
-                        builder.style(ShellConstants.COMMAND_STYLE);
+                        builder.style(ShellStyles.COMMAND_STYLE);
                     builder.append(child.getName());
                     if (!context.getShell().isNoColors())
-                        builder.style(ShellConstants.DEFAULT_STYLE);
+                        builder.style(ShellStyles.DEFAULT_STYLE);
                     
                     builder.append(" - ")
                         .append(child.getCommand().getDescription());
@@ -127,14 +131,50 @@ public final class DefaultShellCommandProvider implements IShellCommandProvider
                     else 
                     {
                         if (!context.getShell().isNoColors())
-                            builder.style(ShellConstants.ERROR_STYLE);
+                            builder.style(ShellStyles.ERROR_STYLE);
                         builder.append(messages.commandNotFound(commandName).toString());
                         if (!context.getShell().isNoColors())
-                            builder.style(ShellConstants.DEFAULT_STYLE);
+                            builder.style(ShellStyles.DEFAULT_STYLE);
                     }
                 }
             }
             
+            return builder.toAnsi();
+        }
+    }
+    
+    private static class HelpCommandCompleter implements IShellParameterCompleter
+    {
+        @Override
+        public List<Candidate> complete(IShellContext context, String value)
+        {
+            List<Candidate> candidates = new ArrayList<Candidate>();
+            ShellNode contextNode = ((Shell)context.getShell()).getContextNode();
+            for (ShellNode node : contextNode.getChildren().values())
+            {
+                Candidate candidate = new Candidate();
+                candidate.value = node.getName();
+                candidate.displayName = node.getName();
+                candidate.description = node.getCommand().getShortDescription();
+                candidates.add(candidate);
+            }
+            return candidates;
+        }
+    }
+    
+    private static class HelpCommandHighlighter implements IShellParameterHighlighter
+    {
+        @Override
+        public String highlight(IShellContext context, String value)
+        {
+            ShellNode contextNode = ((Shell)context.getShell()).getContextNode();
+            AttributedStringBuilder builder = new AttributedStringBuilder();
+            if (contextNode.find(value) != null)
+                builder.style(ShellStyles.PARAMETER_STYLE);
+            else
+                builder.style(ShellStyles.ERROR_STYLE);
+                
+            builder.append(value);
             return builder.toAnsi();
         }
     }

@@ -51,6 +51,7 @@ public final class Shell implements IShell
     public static final int INDENT = 4;
     public static final String PREVIOUS_LEVEL_COMMAND = "..";
     public static final String PREVIOUS_LEVEL_COMMAND_DESCRIPTION = messages.previousLevelCommandDescription().toString();
+    public static final String PREVIOUS_LEVEL_COMMAND_SHORT_DESCRIPTION = messages.previousLevelCommandShortDescription().toString();
     private final String title;
     private final List<IShellCommand> commands;
     private final Map<String, IShellCommand> commandsMap;
@@ -84,11 +85,14 @@ public final class Shell implements IShell
         Map<String, IShellCommand> commandsMap = new TreeMap<String, IShellCommand>();
         for (IShellCommand command : commands)
         {
-            String name = command.getName();
-            if (command instanceof ShellCommand)
-                commandsMap.put(name, command);
-            String[] path = name.split("[" + nameSeparator + "]");
-            rootNode.ensure(Arrays.asList(path), command);
+            List<String> names = command.getNames();
+            for (String name : names)
+            {
+                if (command instanceof ShellCommand)
+                    commandsMap.put(name, command);
+                String[] path = name.split("[" + nameSeparator + "]");
+                rootNode.ensure(Arrays.asList(path), command);
+            }
         }
         this.commands = Immutables.wrap(commands);
         this.commandsMap = commandsMap;
@@ -165,10 +169,10 @@ public final class Shell implements IShell
         if (title != null)
         {
             if (colorized)
-                builder.style(ShellConstants.APPLICATION_STYLE);
+                builder.style(ShellStyles.APPLICATION_STYLE);
             builder.append(title);
             if (colorized)
-                builder.style(ShellConstants.DEFAULT_STYLE);
+                builder.style(ShellStyles.DEFAULT_STYLE);
             builder.append("\n\n");
         }
         
@@ -200,11 +204,11 @@ public final class Shell implements IShell
             {
                 AttributedStringBuilder builder = new AttributedStringBuilder();
                 if (!noColors)
-                    builder.style(ShellConstants.APPLICATION_STYLE);
+                    builder.style(ShellStyles.APPLICATION_STYLE);
                 builder.append("\n");
                 builder.append(title);
                 if (!noColors)
-                    builder.style(ShellConstants.DEFAULT_STYLE);
+                    builder.style(ShellStyles.DEFAULT_STYLE);
                 builder.append("\n\n");
                
                 terminal.writer().print(builder.toAnsi());
@@ -227,9 +231,14 @@ public final class Shell implements IShell
                 
                 try
                 {
-                    String line = lineReader.readLine(prompt[0], prompt[1], null, null);
-                    if (line.trim().isEmpty())
+                    String line = lineReader.readLine(prompt[0], prompt[1], null, null).trim();
+                    if (line.isEmpty())
                         continue;
+                    if (line.equals("/"))
+                    {
+                        contextNode = rootNode;
+                        continue;
+                    }
                     
                     List<Pair<IShellCommand, Map<String, Object>>> parsedCommands = parser.parseCommands(context.getPath(), line);
                     execute(context, parsedCommands);
@@ -246,10 +255,10 @@ public final class Shell implements IShell
                 {
                     AttributedStringBuilder builder = new AttributedStringBuilder();
                     if (!noColors)
-                        builder.style(ShellConstants.ERROR_STYLE);
+                        builder.style(ShellStyles.ERROR_STYLE);
                     builder.append(e.getMessage());
                     if (!noColors)
-                        builder.style(ShellConstants.DEFAULT_STYLE);
+                        builder.style(ShellStyles.DEFAULT_STYLE);
                    
                     builder.append("\n\n");
                     
@@ -270,10 +279,6 @@ public final class Shell implements IShell
 
     public void changeLevel(String name)
     {
-        int pos = name.lastIndexOf(nameSeparator);
-        if (pos != -1)
-            name = name.substring(pos + 1);
-        
         if (name.equals(PREVIOUS_LEVEL_COMMAND))
         {
             Assert.checkState(contextNode.getParent() != null);
@@ -281,7 +286,7 @@ public final class Shell implements IShell
         }
         else
         {
-            ShellNode child = contextNode.getChildren().get(name);
+            ShellNode child = rootNode.findNode(name);
             Assert.notNull(child);
             Assert.checkState(child.getCommand() instanceof ShellCommandNamespace);
             contextNode = child;
@@ -290,12 +295,12 @@ public final class Shell implements IShell
     
     private Highlighter createHighlighter()
     {
-        return null;//TODO:new ShellHighlighter(rootNode, defaultCommand, nameSeparator, context, namedParameterPrefix);
+        return new ShellHighlighter(rootNode, defaultCommand, nameSeparator, context, namedParameterPrefix);
     }
 
     private Completer createCompleter()
     {
-        return null;//TODO:new ShellCompleter(rootNode, defaultCommand, nameSeparator, context, namedParameterPrefix);
+        return new ShellCompleter(rootNode, defaultCommand, nameSeparator, context, namedParameterPrefix);
     }
 
     private void execute(ShellContext context, List<Pair<IShellCommand, Map<String, Object>>> parsedCommands)
@@ -341,5 +346,7 @@ public final class Shell implements IShell
     {
         @DefaultMessage("go to previous level")
         ILocalizedMessage previousLevelCommandDescription();
+        @DefaultMessage("level up")
+        ILocalizedMessage previousLevelCommandShortDescription();
     }
 }

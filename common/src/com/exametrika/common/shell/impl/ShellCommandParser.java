@@ -214,7 +214,7 @@ public final class ShellCommandParser implements IShellCommandParser
                 String value = args.remove(i);
                 if (parameter.hasArgument() && parameter.getNames() != null)
                 {
-                    if (i >= args.size())
+                    if (i >= args.size() || args.get(i).charAt(0) == namedParameterPrefix)
                         throw new InvalidArgumentException(messages.parameterArgumentNotFound(parameter.getFormat()));
                     value = args.remove(i);
                 }

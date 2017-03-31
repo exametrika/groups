@@ -4,6 +4,7 @@
 package com.exametrika.common.shell.impl;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import com.exametrika.common.l10n.DefaultMessage;
@@ -30,8 +31,9 @@ import com.exametrika.common.utils.InvalidArgumentException;
 public final class ShellCommandBuilder
 {
     private static final IMessages messages = Messages.get(IMessages.class);
-    private String name;
+    private List<String> names;
     private String description;
+    private String shortDescription;
     private IShellParameterValidator validator;
     private List<IShellParameter> namedParameters = new ArrayList<IShellParameter>();
     private List<IShellParameter> positionalParameters = new ArrayList<IShellParameter>();
@@ -40,15 +42,21 @@ public final class ShellCommandBuilder
     private List<IShellCommand> commands = new ArrayList<IShellCommand>();
     private boolean namespace;
 
-    public ShellCommandBuilder name(String name)
+    public ShellCommandBuilder names(String... names)
     {
-        this.name = name;
+        this.names = Arrays.asList(names);
         return this;
     }
     
     public ShellCommandBuilder description(String description)
     {
         this.description = description;
+        return this;
+    }
+    
+    public ShellCommandBuilder shortDescription(String description)
+    {
+        this.shortDescription = description;
         return this;
     }
     
@@ -65,12 +73,14 @@ public final class ShellCommandBuilder
      * @param paramNames list of parameter names
      * @param format parameter format
      * @param description parameter description
+     * @param shortDescription parameter short description or null
      * @param required is parameter required?
      * @return builder
      */
-    public ShellCommandBuilder addNamedParameter(String key, List<String> paramNames, String format, String description, boolean required)
+    public ShellCommandBuilder addNamedParameter(String key, List<String> paramNames, String format, String description,
+        String shortDescription, boolean required)
     {
-        return addNamedParameter(key, paramNames, format, description, required, false, true, null, null, null, null);
+        return addNamedParameter(key, paramNames, format, description, shortDescription, required, false, true, null, null, null, null);
     }
     
     /**
@@ -80,6 +90,7 @@ public final class ShellCommandBuilder
      * @param paramNames list of parameter names
      * @param format parameter format
      * @param description parameter description
+     * @param shortDescription parameter short description or null
      * @param required is parameter required
      * @param hasArgument does parameter have an argument?
      * @param unique is parameter unique? Parameter must be unique if it does not have an argument
@@ -93,7 +104,8 @@ public final class ShellCommandBuilder
      * @param highlighter highlighter
      * @return builder
      */
-    public ShellCommandBuilder addNamedParameter(String key, List<String> paramNames, String format, String description, boolean required, 
+    public ShellCommandBuilder addNamedParameter(String key, List<String> paramNames, String format, String description, 
+        String shortDescription, boolean required, 
         boolean hasArgument, boolean unique, IShellParameterConverter converter, Object defaultValue,
         IShellParameterCompleter completer, IShellParameterHighlighter highlighter)
     {
@@ -107,8 +119,8 @@ public final class ShellCommandBuilder
         if (required && defaultValue != null)
             throw new InvalidArgumentException(messages.requiredDefaultValueError(key));
         
-        ShellParameter parameter = new ShellParameter(key, paramNames, format, description, hasArgument, converter, unique, 
-            required, defaultValue, completer, highlighter);
+        ShellParameter parameter = new ShellParameter(key, paramNames, format, description, shortDescription, 
+            hasArgument, converter, unique, required, defaultValue, completer, highlighter);
         namedParameters.add(parameter);
         return this;
     }
@@ -119,20 +131,21 @@ public final class ShellCommandBuilder
      * @param key parameter key
      * @param format parameter format
      * @param description parameter description
+     * @param shortDescription parameter short description or null
      * @param converter parameter converter. If converter is not specified, {@link String} value type parameter is assumed
      * @param completer completer
      * @param highlighter highlighter
      * @return builder
      */
-    public ShellCommandBuilder addPositionalParameter(String key, String format, String description,
+    public ShellCommandBuilder addPositionalParameter(String key, String format, String description, String shortDescription,
         IShellParameterConverter converter, IShellParameterCompleter completer, IShellParameterHighlighter highlighter)
     {
         Assert.notNull(key);
         Assert.notNull(format);
         Assert.notNull(description);
 
-        positionalParameters.add(new ShellParameter(key, null, format, description, true, converter, true, true, null,
-            completer, highlighter));
+        positionalParameters.add(new ShellParameter(key, null, format, description, shortDescription, true, converter, 
+            true, true, null, completer, highlighter));
         return this;
     }
     
@@ -142,6 +155,7 @@ public final class ShellCommandBuilder
      * @param key parameter key
      * @param format parameter format
      * @param description parameter description
+     * @param shortDescription parameter short description or null
      * @param required is parameter required
      * @param unique is parameter unique
      * @param converter parameter converter. If converter is not specified, {@link String} value type parameter is assumed
@@ -150,7 +164,7 @@ public final class ShellCommandBuilder
      * @param highlighter highlighter
      * @return builder
      */
-    public ShellCommandBuilder defaultParameter(String key, String format, String description, boolean required, 
+    public ShellCommandBuilder defaultParameter(String key, String format, String description, String shortDescription, boolean required, 
         boolean unique, IShellParameterConverter converter, Object defaultValue, IShellParameterCompleter completer,
         IShellParameterHighlighter highlighter)
     {
@@ -161,7 +175,7 @@ public final class ShellCommandBuilder
         if (required && defaultValue != null)
             throw new InvalidArgumentException(messages.requiredDefaultValueError(key));
         
-        defaultParameter = new ShellParameter(key, null, format, description, true, converter, unique, required, 
+        defaultParameter = new ShellParameter(key, null, format, description, shortDescription, true, converter, unique, required, 
             defaultValue, completer, highlighter);
         return this;
     }
@@ -182,8 +196,9 @@ public final class ShellCommandBuilder
     {
         commands.add(buildCommand());
         
-        name = null;
+        names = null;
         description = null;
+        shortDescription = null;
         validator = null;
         executor = null;
         namedParameters = new ArrayList<IShellParameter>();
@@ -203,9 +218,9 @@ public final class ShellCommandBuilder
     public IShellCommand buildCommand()
     {
         if (!namespace)
-            return new ShellCommand(name, description, validator, namedParameters, positionalParameters, defaultParameter, executor);
+            return new ShellCommand(names, description, shortDescription, validator, namedParameters, positionalParameters, defaultParameter, executor);
         else
-            return new ShellCommandNamespace(name, description);
+            return new ShellCommandNamespace(names, description, shortDescription);
     }
     
     public List<IShellCommand> build()

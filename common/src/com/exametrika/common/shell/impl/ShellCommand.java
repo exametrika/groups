@@ -12,6 +12,7 @@ import com.exametrika.common.shell.IShellCommandExecutor;
 import com.exametrika.common.shell.IShellParameter;
 import com.exametrika.common.shell.IShellParameterValidator;
 import com.exametrika.common.utils.Assert;
+import com.exametrika.common.utils.Collections;
 import com.exametrika.common.utils.Immutables;
 import com.exametrika.common.utils.Strings;
 
@@ -25,27 +26,29 @@ import com.exametrika.common.utils.Strings;
  */
 public final class ShellCommand implements IShellCommand
 {
-    private final String name;
+    private final List<String> names;
     private final String description;
+    private final String shortDescription;
     private final IShellParameterValidator validator;
     private final List<IShellParameter> namedParameters;
     private final List<IShellParameter> positionalParameters;
     private final IShellParameter defaultParameter;
     private final IShellCommandExecutor executor;
 
-    public ShellCommand(String name, String description, IShellParameterValidator validator,
+    public ShellCommand(List<String> names, String description, String shortDescription, IShellParameterValidator validator,
         List<? extends IShellParameter> namedParameters, List<? extends IShellParameter> positionalParameters, 
         IShellParameter defaultParameter, IShellCommandExecutor executor)
     {
-        Assert.isTrue(!Strings.isEmpty(name));
-        Assert.checkState(!Shell.PREVIOUS_LEVEL_COMMAND.equals(name));
+        Assert.isTrue(!Collections.isEmpty(names));
+        Assert.checkState(names.indexOf(Shell.PREVIOUS_LEVEL_COMMAND) == -1);
         Assert.notNull(description);
         Assert.notNull(namedParameters);
         Assert.notNull(positionalParameters);
         Assert.notNull(executor);
         
-        this.name = name;
+        this.names = Immutables.wrap(names);
         this.description = description;
+        this.shortDescription = shortDescription;
         this.validator = validator;
         this.namedParameters = Immutables.wrap(namedParameters);
         this.positionalParameters = Immutables.wrap(positionalParameters);
@@ -54,15 +57,21 @@ public final class ShellCommand implements IShellCommand
     }
     
     @Override
-    public String getName()
+    public List<String> getNames()
     {
-        return name;
+        return names;
     }
     
     @Override
     public String getDescription()
     {
         return description;
+    }
+    
+    @Override
+    public String getShortDescription()
+    {
+        return shortDescription;
     }
     
     @Override
@@ -100,10 +109,10 @@ public final class ShellCommand implements IShellCommand
     {
         AttributedStringBuilder builder = new AttributedStringBuilder();
         if (colorized)
-            builder.style(ShellConstants.COMMAND_STYLE);
-        builder.append(name);
+            builder.style(ShellStyles.COMMAND_STYLE);
+        builder.append(buildName(names));
         if (colorized)
-            builder.style(ShellConstants.DEFAULT_STYLE);
+            builder.style(ShellStyles.DEFAULT_STYLE);
         builder.append("\n\n");
         builder.append(Strings.indent(description, Shell.INDENT));
         
@@ -152,5 +161,22 @@ public final class ShellCommand implements IShellCommand
     public String toString()
     {
         return getUsage(false);
+    }
+    
+    private String buildName(List<String> names)
+    {
+        StringBuilder builder = new StringBuilder();
+        boolean first = true;
+        for (String name : names)
+        {
+            if (first)
+                first = false;
+            else
+                builder.append(", ");
+            
+            builder.append(name);
+        }
+            
+        return builder.toString();
     }
 }

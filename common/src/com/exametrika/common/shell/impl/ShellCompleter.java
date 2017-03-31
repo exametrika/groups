@@ -16,6 +16,7 @@ import org.jline.reader.ParsedLine;
 import com.exametrika.common.shell.IShellCommand;
 import com.exametrika.common.shell.IShellContext;
 import com.exametrika.common.shell.IShellParameter;
+import com.exametrika.common.shell.IShellParameterCompleter;
 import com.exametrika.common.utils.Assert;
 
 /**
@@ -61,7 +62,8 @@ public class ShellCompleter implements Completer
             {
                 if (child.getName().startsWith(completionInfo.prefix))
                 {
-                    Candidate candidate = new Candidate(child.getName());
+                    Candidate candidate = new Candidate(child.getName(), child.getName(), null, 
+                        child.getCommand().getShortDescription(), null, null, true);
                     candidates.add(candidate);
                 }
             }
@@ -74,7 +76,7 @@ public class ShellCompleter implements Completer
                 for (String name : parameter.getNames())
                 {
                     if (name.startsWith(completionInfo.prefix) && (!parameter.isUnique() || !parameters.contains(parameter)))
-                        candidates.add(new Candidate(name));
+                        candidates.add(new Candidate(name, name, null, parameter.getShortDescription(), null, null, true));
                 }
             }
              
@@ -85,12 +87,12 @@ public class ShellCompleter implements Completer
                 {
                     if (parameter.getCompleter() != null)
                     {
-                        List<String> list = parameter.getCompleter().complete(context, completionInfo.prefix);
-                        for (String value : list)
-                            candidates.add(new Candidate(value));
+                        List<IShellParameterCompleter.Candidate> list = parameter.getCompleter().complete(context, completionInfo.prefix);
+                        for (IShellParameterCompleter.Candidate value : list)
+                            candidates.add(new Candidate(value.value, value.displayName, null, value.description, null, null, true));
                     }
                     else
-                        candidates.add(new Candidate("", parameter.getFormat(), null, null, null, null, true));
+                        candidates.add(new Candidate("", parameter.getFormat(), null, parameter.getShortDescription(), null, null, true));
                     
                     positionalsNotSet = true;
                     break;
@@ -102,12 +104,12 @@ public class ShellCompleter implements Completer
             {
                 if (defaultParameter.getCompleter() != null)
                 {
-                    List<String> list = defaultParameter.getCompleter().complete(context, completionInfo.prefix);
-                    for (String value : list)
-                        candidates.add(new Candidate(value));
+                    List<IShellParameterCompleter.Candidate> list = defaultParameter.getCompleter().complete(context, completionInfo.prefix);
+                    for (IShellParameterCompleter.Candidate value : list)
+                        candidates.add(new Candidate(value.value, value.displayName, null, value.description, null, null, true));
                 }
                 else
-                    candidates.add(new Candidate("", defaultParameter.getFormat(), null, null, null, null, true));
+                    candidates.add(new Candidate("", defaultParameter.getFormat(), null, defaultParameter.getShortDescription(), null, null, true));
             }
         }
         else if (completionInfo.type == CompletionType.PARAMETER_ARGUMENT)
@@ -115,12 +117,12 @@ public class ShellCompleter implements Completer
             IShellParameter parameter = completionInfo.parameter;
             if (parameter.getCompleter() != null)
             {
-                List<String> list = parameter.getCompleter().complete(context, completionInfo.prefix);
-                for (String value : list)
-                    candidates.add(new Candidate(value));
+                List<IShellParameterCompleter.Candidate> list = parameter.getCompleter().complete(context, completionInfo.prefix);
+                for (IShellParameterCompleter.Candidate value : list)
+                    candidates.add(new Candidate(value.value, value.displayName, null, value.description, null, null, true));
             }
             else
-                candidates.add(new Candidate("", parameter.getFormat(), null, null, null, null, true));
+                candidates.add(new Candidate("", parameter.getFormat(), null, parameter.getShortDescription(), null, null, true));
         }
         else
             Assert.error();
@@ -308,14 +310,19 @@ public class ShellCompleter implements Completer
                 value.parameter = parameter;
                 parameters.add(parameter);
                 
-                if (parameter.hasArgument() && parameter.getNames() != null)
+                if (parameter.hasArgument())
                 {
-                    if (i < args.size())
+                    if (parameter.getNames() != null)
                     {
-                        value = args.remove(i);
-                        value.parameter = parameter;
-                        value.argument = true;
+                        if (i < args.size() && line.charAt(args.get(i).start) != namedParameterPrefix)
+                        {
+                            value = args.remove(i);
+                            value.parameter = parameter;
+                            value.argument = true;
+                        }
                     }
+                    else
+                        value.argument = true;
                 }
             }
             else

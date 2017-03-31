@@ -12,6 +12,17 @@ import java.util.List;
  */
 public interface IShellParameterCompleter
 {
+    /** Completion candidate. */
+    class Candidate
+    {
+        /** Value to be inserted.*/
+        public String value;
+        /**Display name.*/
+        public String displayName;
+        /** Description.*/
+        public String description;
+    }
+    
     /**
      * Reurns variants of parameter value completion.
      *
@@ -19,5 +30,5 @@ public interface IShellParameterCompleter
      * @param value string parameter representation
      * @return variants of parameter value completion
      */
-    List<String> complete(IShellContext context, String value);
+    List<Candidate> complete(IShellContext context, String value);
 }

@@ -27,6 +27,7 @@ public class ShellParameter implements IShellParameter
     private final List<String> names;
     private final String format;
     private final String description;
+    private final String shortDescription;
     private final boolean hasArgument;
     private final IShellParameterConverter converter;
     private final boolean unique;
@@ -35,8 +36,8 @@ public class ShellParameter implements IShellParameter
     private final IShellParameterCompleter completer;
     private final IShellParameterHighlighter highlighter;
     
-    public ShellParameter(String key, List<String> names, String format, String description, boolean hasArgument, 
-        IShellParameterConverter converter, boolean unique, boolean required, Object defaultValue,
+    public ShellParameter(String key, List<String> names, String format, String description, String shortDescription,
+        boolean hasArgument, IShellParameterConverter converter, boolean unique, boolean required, Object defaultValue,
         IShellParameterCompleter completer, IShellParameterHighlighter highlighter)
     {
         Assert.isTrue(!Strings.isEmpty(key));
@@ -47,6 +48,7 @@ public class ShellParameter implements IShellParameter
         this.names = Immutables.wrap(names);
         this.format = format;
         this.description = description;
+        this.shortDescription = shortDescription;
         this.hasArgument = hasArgument;
         this.converter = converter;
         this.unique = unique;
@@ -90,6 +92,12 @@ public class ShellParameter implements IShellParameter
     }
 
     @Override
+    public String getShortDescription()
+    {
+        return shortDescription;
+    }
+    
+    @Override
     public boolean hasArgument()
     {
         return hasArgument;
@@ -130,10 +138,10 @@ public class ShellParameter implements IShellParameter
     {
         AttributedStringBuilder builder = new AttributedStringBuilder();
         if (colorized)
-            builder.style(ShellConstants.PARAMETER_STYLE);
+            builder.style(ShellStyles.PARAMETER_STYLE);
         builder.append(format);
         if (colorized)
-            builder.style(ShellConstants.DEFAULT_STYLE);
+            builder.style(ShellStyles.DEFAULT_STYLE);
         
         if (format.length() < Shell.INDENT)
         {

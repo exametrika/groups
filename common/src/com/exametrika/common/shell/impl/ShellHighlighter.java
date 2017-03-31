@@ -46,45 +46,48 @@ public class ShellHighlighter implements Highlighter
     @Override
     public AttributedString highlight(LineReader reader, String buffer)
     {
+        if (buffer.trim().equals("/"))
+            return new AttributedString(buffer);
+        
         List<TokenInfo> args = parseArgs(buffer);
         parseCommands(context.getPath(), buffer, args);
         AttributedStringBuilder builder = new AttributedStringBuilder();
         int k = 0;
         for (int i = 0; i < buffer.length(); i++)
         {
-            if (k == args.size())
-                break;
+            TokenInfo arg = null;
+            if (k < args.size())
+                arg = args.get(k);
             
-            TokenInfo arg = args.get(k);
-            if (arg.start == i)
+            if (arg != null && arg.start == i)
             {
                 if (arg.style == Style.COMMAND)
-                    builder.style(ShellConstants.COMMAND_STYLE);
+                    builder.style(ShellStyles.COMMAND_STYLE);
                 else if (arg.style == Style.PARAMETER)
-                    builder.style(ShellConstants.PARAMETER_STYLE);
+                    builder.style(ShellStyles.PARAMETER_STYLE);
                 else if (arg.style == Style.PARAMETER_ARGUMENT)
                 {
                     if (arg.highlighter == null)
-                        builder.style(ShellConstants.PARAMETER_ARGUMENT_STYLE);
-                    else
-                    {
-                        String value = buffer.substring(arg.start, arg.start + arg.length);
-                        builder.appendAnsi(arg.highlighter.highlight(context, value));
-                        k++;
-                        i += value.length() - 1;
-                        continue;
-                    }
+                        builder.style(ShellStyles.PARAMETER_ARGUMENT_STYLE);
                 }
                 else if (arg.style == Style.WARNING)
-                    builder.style(ShellConstants.WARNING_STYLE);
+                    builder.style(ShellStyles.WARNING_STYLE);
                 else if (arg.style == Style.ERROR)
-                    builder.style(ShellConstants.ERROR_STYLE);
+                    builder.style(ShellStyles.ERROR_STYLE);
                 else if (arg.style == Style.PIPE)
-                    builder.style(ShellConstants.DEFAULT_STYLE);
+                    builder.style(ShellStyles.DEFAULT_STYLE);
+                
+                String value = buffer.substring(arg.start, arg.start + arg.length);
+                if (arg.highlighter != null)
+                    builder.appendAnsi(arg.highlighter.highlight(context, value));
+                else
+                    builder.append(value);
                 
                 k++;
+                i += value.length() - 1;
             }
-            builder.append(buffer.charAt(i));
+            else
+                builder.append(buffer.charAt(i));
         }
 
         return builder.toAttributedString();
@@ -242,13 +245,21 @@ public class ShellHighlighter implements Highlighter
                 else
                     value.style = Style.PARAMETER;
                
-                if (parameter.hasArgument() && parameter.getNames() != null)
+                if (parameter.hasArgument())
                 {
-                    if (i >= args.size())
-                        value.style = Style.WARNING;
+                    if (parameter.getNames() != null)
+                    {
+                        if (i >= args.size() || line.charAt(args.get(i).start) == namedParameterPrefix)
+                            value.style = Style.WARNING;
+                        else
+                        {
+                            value = args.remove(i);
+                            value.style = Style.PARAMETER_ARGUMENT;
+                            value.highlighter = parameter.getHighlighter();
+                        }
+                    }
                     else
                     {
-                        value = args.remove(i);
                         value.style = Style.PARAMETER_ARGUMENT;
                         value.highlighter = parameter.getHighlighter();
                     }

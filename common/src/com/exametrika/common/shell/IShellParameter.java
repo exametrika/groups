@@ -41,6 +41,13 @@ public interface IShellParameter
     String getDescription();
     
     /**
+     * Returns parameter short description to be used in completer.
+     *
+     * @return parameter short description or null if not set
+     */
+    String getShortDescription();
+    
+    /**
      * Does parameter have argument?
      *
      * @return true if parameter has argument
