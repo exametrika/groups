@@ -4,7 +4,6 @@
 package com.exametrika.common.shell.impl;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -42,32 +41,38 @@ public final class DefaultShellCommandProvider implements IShellCommandProvider
     @Override
     public List<IShellCommand> getCommands()
     {
-        return new ShellCommandBuilder()
-            .names("clear", "cls").description(messages.clearCommand().toString()).executor(new ClearShellCommand()).addCommand()
-            .names("quit", "exit", "q").description(messages.exitCommand().toString()).executor(new ExitShellCommand()).addCommand()
-            .names("help", "?").description(messages.helpCommand().toString())
-                .defaultParameter("command", messages.helpCommandParameterFormat().toString(), 
-                    messages.helpCommandParameterDescription().toString(), null, false, false, null, null, 
-                    new HelpCommandCompleter(), new HelpCommandHighlighter()).executor(new HelpShellCommand()).addCommand()
-            .names("eval").description(messages.evalCommand().toString())
-                .defaultParameter("expression", messages.evalExpressionParameterFormat().toString(), 
-                    messages.evalExpressionParameterDescription().toString(), null, true, true, null, null, null, 
-                    null).executor(new EvalShellCommand()).addCommand()
-            .names("grep").description(messages.grepCommand().toString())
-                .addNamedParameter("caseInsensitive", Arrays.asList("-c", "--case-insensitive"), messages.grepCaseParameterFormat().toString(), 
-                    messages.grepCaseParameterDescription().toString(), null, false)
-                .addPositionalParameter("filter", messages.grepFilterParameterFormat().toString(), 
-                    messages.grepFilterParameterDescription().toString(), null, null, null, null)
-                .defaultParameter("expression", messages.grepExpressionParameterFormat().toString(), 
-                    messages.grepExpressionParameterDescription().toString(), null, false, false, null, null, null, 
-                    null).executor(new GrepShellCommand()).addCommand()
+        return new ShellCommandsBuilder()
+            .command().key("clear").names("clear", "cls").description(messages.clearCommand().toString()).executor(new ClearShellCommand()).end()
+            .command().key("quit").names("quit", "exit", "q").description(messages.exitCommand().toString()).executor(new ExitShellCommand()).end()
+            .command().key("help").names("help", "?").description(messages.helpCommand().toString())
+                .defaultParameter()
+                    .key("command").format(messages.helpCommandParameterFormat().toString()) 
+                    .description(messages.helpCommandParameterDescription().toString()).completer(new HelpCommandCompleter())
+                    .highlighter(new HelpCommandHighlighter()).end()
+                .executor(new HelpShellCommand()).end()
+            .command().key("eval").names("eval").description(messages.evalCommand().toString())
+                .defaultParameter()
+                    .key("expression").format(messages.evalExpressionParameterFormat().toString()) 
+                    .description(messages.evalExpressionParameterDescription().toString()).required().end() 
+                .executor(new EvalShellCommand()).end()
+            .command().key("grep").names("grep").description(messages.grepCommand().toString())
+                .namedParameter()
+                    .key("caseInsensitive").names("-c", "--case-insensitive").format(messages.grepCaseParameterFormat().toString()) 
+                    .description(messages.grepCaseParameterDescription().toString()).end()
+                .positionalParameter()
+                    .key("filter").format(messages.grepFilterParameterFormat().toString()) 
+                    .description(messages.grepFilterParameterDescription().toString()).end()
+                .defaultParameter()
+                    .key("expression").format(messages.grepExpressionParameterFormat().toString()) 
+                    .description(messages.grepExpressionParameterDescription().toString()).end()
+                .executor(new GrepShellCommand()).end()
             .build();
     }
     
     private static class ClearShellCommand implements IShellCommandExecutor
     {
         @Override
-        public Object execute(IShellContext context, Map<String, Object> parameters)
+        public Object execute(IShellCommand command, IShellContext context, Map<String, Object> parameters)
         {
             Terminal terminal = ((Shell)context.getShell()).getLineReader().getTerminal();
             terminal.puts(Capability.clear_screen);
@@ -79,7 +84,7 @@ public final class DefaultShellCommandProvider implements IShellCommandProvider
     private static class ExitShellCommand implements IShellCommandExecutor
     {
         @Override
-        public Object execute(IShellContext context, Map<String, Object> parameters)
+        public Object execute(IShellCommand command, IShellContext context, Map<String, Object> parameters)
         {
             throw new UserInterruptException("");
         }
@@ -88,7 +93,7 @@ public final class DefaultShellCommandProvider implements IShellCommandProvider
     private static class HelpShellCommand implements IShellCommandExecutor
     {
         @Override
-        public Object execute(IShellContext context, Map<String, Object> parameters)
+        public Object execute(IShellCommand c, IShellContext context, Map<String, Object> parameters)
         {
             ShellNode contextNode = ((Shell)context.getShell()).getContextNode();
             AttributedStringBuilder builder = new AttributedStringBuilder();
@@ -182,7 +187,7 @@ public final class DefaultShellCommandProvider implements IShellCommandProvider
     private static class EvalShellCommand implements IShellCommandExecutor
     {
         @Override
-        public Object execute(IShellContext context, Map<String, Object> parameters)
+        public Object execute(IShellCommand command, IShellContext context, Map<String, Object> parameters)
         {
             String expression = (String)parameters.get("expression");
             return Expressions.evaluate(expression, context, null);
@@ -192,7 +197,7 @@ public final class DefaultShellCommandProvider implements IShellCommandProvider
     private static class GrepShellCommand implements IShellCommandExecutor
     {
         @Override
-        public Object execute(IShellContext context, Map<String, Object> parameters)
+        public Object execute(IShellCommand command, IShellContext context, Map<String, Object> parameters)
         {
             String filter = (String)parameters.get("filter");
             ICondition<String> condition = Strings.createFilterCondition(filter, !parameters.containsKey("caseInsensitive"));

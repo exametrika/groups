@@ -4,5 +4,6 @@
 	<classpathentry excluding="dist|out" including="META-INF/" kind="src" path=""/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
 	<classpathentry combineaccessrules="false" kind="src" path="/common"/>
+	<classpathentry kind="lib" path="/lib/jline-3.2.0.jar" sourcepath="/lib/jline-3.2.0-sources.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

@@ -73,14 +73,16 @@ public class ShellNode
             ShellNode child = node.children.get(segment);
             if (child == null)
             {
+                String name = buildName(path, i);
                 child = new ShellNode(shell, segment, node, !last ? new ShellCommandNamespace(
-                    java.util.Collections.singletonList(buildName(path, i)), "", "") : null);
+                    name, java.util.Collections.singletonList(name), "", "") : null);
                 node.children.put(segment, child);
                 if (node.parent != null)
                 {
                     if (!node.children.containsKey(Shell.PREVIOUS_LEVEL_COMMAND))
                         node.children.put(Shell.PREVIOUS_LEVEL_COMMAND, new ShellNode(shell, Shell.PREVIOUS_LEVEL_COMMAND, node, 
-                            new ShellCommandNamespace(java.util.Collections.singletonList(Shell.PREVIOUS_LEVEL_COMMAND), 
+                            new ShellCommandNamespace(Shell.PREVIOUS_LEVEL_COMMAND, 
+                                java.util.Collections.singletonList(Shell.PREVIOUS_LEVEL_COMMAND), 
                                 Shell.PREVIOUS_LEVEL_COMMAND_DESCRIPTION, Shell.PREVIOUS_LEVEL_COMMAND_SHORT_DESCRIPTION)));
                 }
             }

@@ -3,6 +3,8 @@
  */
 package com.exametrika.impl.groups.simulator.coordinator;
 
+import java.util.Map;
+
 import com.exametrika.common.messaging.IMessage;
 import com.exametrika.common.utils.Assert;
 import com.exametrika.common.utils.MapBuilder;
@@ -33,6 +35,11 @@ public final class SimCoordinator
         this.channel = channel;
         startTime = channel.getCurrentTime();
         simulationTime = startTime;
+    }
+    
+    public SimCoordinatorChannel getChannel()
+    {
+        return channel;
     }
     
     public void onTimer(long currentTime)
@@ -105,5 +112,11 @@ public final class SimCoordinator
     public void kill(String agentNamePattern)
     {
         channel.send(agentNamePattern, new ActionMessage("kill", new MapBuilder().toMap()));
+    }
+
+    public void execute(String actionName, Map<String, Object> parameters)
+    {
+        // TODO Auto-generated method stub
+        
     }
 }

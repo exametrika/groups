@@ -7,12 +7,16 @@ import java.util.List;
 
 import org.jline.utils.AttributedStringBuilder;
 
+import com.exametrika.common.l10n.DefaultMessage;
+import com.exametrika.common.l10n.ILocalizedMessage;
+import com.exametrika.common.l10n.Messages;
 import com.exametrika.common.shell.IShellParameter;
 import com.exametrika.common.shell.IShellParameterCompleter;
 import com.exametrika.common.shell.IShellParameterConverter;
 import com.exametrika.common.shell.IShellParameterHighlighter;
 import com.exametrika.common.utils.Assert;
 import com.exametrika.common.utils.Immutables;
+import com.exametrika.common.utils.InvalidArgumentException;
 import com.exametrika.common.utils.Strings;
 
 /**
@@ -23,6 +27,7 @@ import com.exametrika.common.utils.Strings;
  */
 public class ShellParameter implements IShellParameter
 {
+    private static final IMessages messages = Messages.get(IMessages.class);
     private final String key;
     private final List<String> names;
     private final String format;
@@ -43,6 +48,13 @@ public class ShellParameter implements IShellParameter
         Assert.isTrue(!Strings.isEmpty(key));
         Assert.notNull(format);
         Assert.notNull(description);
+        
+        if (!hasArgument && (converter != null || !unique || defaultValue != null))
+            throw new InvalidArgumentException(messages.noArgumentConverterNonUniqueDefaultValueError(key));
+        if (!hasArgument && (completer != null || highlighter != null))
+            throw new InvalidArgumentException(messages.noArgumentCompleterOrHighlighterError(key));
+        if (required && defaultValue != null)
+            throw new InvalidArgumentException(messages.requiredDefaultValueError(key));
         
         this.key = key;
         this.names = Immutables.wrap(names);
@@ -161,5 +173,15 @@ public class ShellParameter implements IShellParameter
     public String toString()
     {
         return getUsage(false);
+    }
+    
+    interface IMessages
+    {
+        @DefaultMessage("Converter, non-uniqueness or default value must not be specified for parameter without argument ''{0}''.")
+        ILocalizedMessage noArgumentConverterNonUniqueDefaultValueError(Object parameter);
+        @DefaultMessage("Completer or highlighter must not be specified for parameter without argument ''{0}''.")
+        ILocalizedMessage noArgumentCompleterOrHighlighterError(Object parameter);
+        @DefaultMessage("Default value must not be specified for required parameter ''{0}''.")
+        ILocalizedMessage requiredDefaultValueError(Object parameter);
     }
 }

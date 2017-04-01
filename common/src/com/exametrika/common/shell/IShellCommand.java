@@ -13,6 +13,13 @@ import java.util.List;
 public interface IShellCommand
 {
     /**
+     * Returns unique command key.
+     *
+     * @return unique command key
+     */
+    String getKey();
+    
+    /**
      * Returns list of command names. Command name can be hierarchical, where each name segment is separated by {@link IShell#getNameSeparator()}.
      *
      * @return command names

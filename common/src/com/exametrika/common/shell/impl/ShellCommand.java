@@ -26,6 +26,7 @@ import com.exametrika.common.utils.Strings;
  */
 public final class ShellCommand implements IShellCommand
 {
+    private final String key;
     private final List<String> names;
     private final String description;
     private final String shortDescription;
@@ -35,10 +36,11 @@ public final class ShellCommand implements IShellCommand
     private final IShellParameter defaultParameter;
     private final IShellCommandExecutor executor;
 
-    public ShellCommand(List<String> names, String description, String shortDescription, IShellParameterValidator validator,
+    public ShellCommand(String key, List<String> names, String description, String shortDescription, IShellParameterValidator validator,
         List<? extends IShellParameter> namedParameters, List<? extends IShellParameter> positionalParameters, 
         IShellParameter defaultParameter, IShellCommandExecutor executor)
     {
+        Assert.notNull(key);
         Assert.isTrue(!Collections.isEmpty(names));
         Assert.checkState(names.indexOf(Shell.PREVIOUS_LEVEL_COMMAND) == -1);
         Assert.notNull(description);
@@ -46,6 +48,7 @@ public final class ShellCommand implements IShellCommand
         Assert.notNull(positionalParameters);
         Assert.notNull(executor);
         
+        this.key = key;
         this.names = Immutables.wrap(names);
         this.description = description;
         this.shortDescription = shortDescription;
@@ -54,6 +57,12 @@ public final class ShellCommand implements IShellCommand
         this.positionalParameters = Immutables.wrap(positionalParameters);
         this.defaultParameter = defaultParameter;
         this.executor = executor;
+    }
+    
+    @Override
+    public String getKey()
+    {
+        return key;
     }
     
     @Override

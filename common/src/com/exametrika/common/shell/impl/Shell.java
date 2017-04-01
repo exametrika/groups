@@ -335,7 +335,7 @@ public final class Shell implements IShell
                 }
             }
             
-            result = command.getExecutor().execute(context, parameters);
+            result = command.getExecutor().execute(command, context, parameters);
         }
         
         if (result != null)

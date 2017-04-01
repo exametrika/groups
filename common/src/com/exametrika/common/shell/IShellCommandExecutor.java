@@ -15,9 +15,10 @@ public interface IShellCommandExecutor
     /**
      * Executes command with specified parameters.
      *
+     * @param command command
      * @param context context
      * @param parameters parameters
      * @return result of command execution or null
      */
-    Object execute(IShellContext context, Map<String, Object> parameters);
+    Object execute(IShellCommand command, IShellContext context, Map<String, Object> parameters);
 }

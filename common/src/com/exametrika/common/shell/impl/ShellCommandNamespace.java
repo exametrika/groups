@@ -27,20 +27,29 @@ import com.exametrika.common.utils.Immutables;
  */
 public final class ShellCommandNamespace implements IShellCommand
 {
+    private final String key;
     private final List<String> names;
     private final String description;
     private final String shortDescription;
     private final IShellCommandExecutor executor;
 
-    public ShellCommandNamespace(List<String> names, String description, String shortDescription)
+    public ShellCommandNamespace(String key, List<String> names, String description, String shortDescription)
     {
+        Assert.notNull(key);
         Assert.notNull(names);
         Assert.notNull(description);
         
+        this.key = key;
         this.names = Immutables.wrap(names);
         this.description = description;
         this.shortDescription = shortDescription;
         this.executor = new Executor();
+    }
+    
+    @Override
+    public String getKey()
+    {
+        return key;
     }
     
     @Override
@@ -115,7 +124,7 @@ public final class ShellCommandNamespace implements IShellCommand
     private class Executor implements IShellCommandExecutor
     {
         @Override
-        public Object execute(IShellContext context, Map<String, Object> parameters)
+        public Object execute(IShellCommand command, IShellContext context, Map<String, Object> parameters)
         {
             ((Shell)context.getShell()).changeLevel(names.get(0));
             return null;

@@ -405,7 +405,7 @@ public final class LogContext
 
             int color = colors[i];
             if (color == highlight)
-                builder.append(getHighlighColor());
+                builder.append(getHighlightColor());
             else
                 builder.append(color);
         }
@@ -521,7 +521,7 @@ public final class LogContext
         return format;
     }
  
-    private int getHighlighColor()
+    private int getHighlightColor()
     {
         switch (event.getLevel())
         {

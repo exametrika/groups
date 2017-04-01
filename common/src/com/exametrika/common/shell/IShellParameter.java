@@ -55,14 +55,16 @@ public interface IShellParameter
     boolean hasArgument();
     
     /**
-     * Returns parameter converter.
+     * Returns parameter converter. Must not be specified if parameter does not have an argument. If converter
+     * is not specified, {@link String} value type parameter is assumed. Parameters without arguments always have
+     * null as parameter value.
      *
      * @return parameter converter or null if converter is not set
      */
     IShellParameterConverter getConverter();
     
     /**
-     * Is parameter unique?
+     * Is parameter unique? Parameter must be unique if it does not have an argument.
      *
      * @return true if parameter is unique
      */
@@ -76,21 +78,23 @@ public interface IShellParameter
     boolean isRequired();
     
     /**
-     * Returns parameter default value.
+     * Returns parameter default value. Must not be specified if parameter does not have an argument or
+     * parameter is required. If default value has type {@link String} and converter is specified, converter is used
+     * to convert default value
      *
      * @return parameter default value or null if default value is not set
      */
     Object getDefaultValue();
     
     /**
-     * Returns parameter completer.
+     * Returns parameter completer. Must not be specified if parameter does not have an argument.
      *
      * @return parameter completer or null if default completion is used
      */
     IShellParameterCompleter getCompleter();
     
     /**
-     * Returns parameter highlighter.
+     * Returns parameter highlighter. Must not be specified if parameter does not have an argument.
      *
      * @return parameter highlighter or null if default highlighting is used
      */

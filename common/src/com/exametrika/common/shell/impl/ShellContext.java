@@ -77,7 +77,7 @@ public class ShellContext implements IShellContext
     {
         IShellCommand command = shell.findCommand(commandName);
         if (command != null)
-            return command.getExecutor().execute(this, parameters);
+            return command.getExecutor().execute(command, this, parameters);
         else
             throw new InvalidArgumentException(messages.commandNotFound(commandName));
     }

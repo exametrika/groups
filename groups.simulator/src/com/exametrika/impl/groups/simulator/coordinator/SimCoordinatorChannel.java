@@ -69,6 +69,18 @@ public final class SimCoordinatorChannel implements IReceiver, IChannelListener,
         return agents;
     }
     
+    public SimCoordinatorAgentChannel findAgent(String name)
+    {
+        Map<IAddress, SimCoordinatorAgentChannel> agents = this.agents;
+        for (Map.Entry<IAddress, SimCoordinatorAgentChannel> entry : agents.entrySet())
+        {
+            if (entry.getKey().getName().equals(name))
+                return entry.getValue();
+        }
+        
+        return null;
+    }
+
     @Override
     public void onTimer(long currentTime)
     {
