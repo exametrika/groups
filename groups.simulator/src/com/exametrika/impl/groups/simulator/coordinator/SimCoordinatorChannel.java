@@ -20,10 +20,13 @@ import com.exametrika.common.messaging.IAddress;
 import com.exametrika.common.messaging.IChannel;
 import com.exametrika.common.messaging.IChannelListener;
 import com.exametrika.common.messaging.IMessage;
+import com.exametrika.common.messaging.IMessagePart;
 import com.exametrika.common.messaging.IReceiver;
 import com.exametrika.common.time.ITimeService;
 import com.exametrika.common.utils.Assert;
+import com.exametrika.common.utils.ICondition;
 import com.exametrika.common.utils.ILifecycle;
+import com.exametrika.common.utils.Strings;
 import com.exametrika.impl.groups.simulator.messages.ActionMessageSerializer;
 import com.exametrika.impl.groups.simulator.messages.ActionResponseMessageSerializer;
 
@@ -167,6 +170,24 @@ public final class SimCoordinatorChannel implements IReceiver, IChannelListener,
     public long getCurrentTime()
     {
         return currentTime;
+    }
+    
+    public void send(String agentNamePattern, IMessagePart part)
+    {
+        ICondition<String> filter;
+        if (agentNamePattern != null)
+            filter = Strings.createFilterCondition(agentNamePattern, true);
+        else
+            filter = null;
+        
+        Map<IAddress, SimCoordinatorAgentChannel> agents = this.agents;
+        for (Map.Entry<IAddress, SimCoordinatorAgentChannel> entry : agents.entrySet())
+        {
+            if (filter != null && !filter.evaluate(entry.getKey().getName()))
+                continue;
+            
+            entry.getValue().send(part);
+        }
     }
     
     private interface IMessages
