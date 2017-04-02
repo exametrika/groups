@@ -38,7 +38,7 @@ public final class ShellBuilder
 
     public ShellBuilder commands(List<IShellCommand> commands)
     {
-        this.commands = commands;
+        this.commands.addAll(commands);
         return this;
     }
 

@@ -3,7 +3,11 @@
  */
 package com.exametrika.common.shell;
 
+import java.io.PrintWriter;
 import java.util.List;
+import java.util.Map;
+
+import com.exametrika.common.utils.Pair;
 
 /**
  * The {@link IShell} is an interactive command line shell.
@@ -69,4 +73,40 @@ public interface IShell extends Runnable
      * @return usage
      */
     String getUsage(boolean colorized);
+    
+    /**
+     * Parses specified arguments.
+     *
+     * @param args arguments
+     * @return map of parsed arguments or null if there are some errors, errors and usage are printed to standard output
+     */
+    List<Pair<IShellCommand, Map<String, Object>>> parse(String[] args);
+    
+    /**
+     * Returns shell context.
+     *
+     * @return shell context
+     */
+    IShellContext getContext();
+    
+    /**
+     * Returns terminal writer.
+     *
+     * @return terminal writer
+     */
+    PrintWriter getWriter();
+    
+    /**
+     * Flushes terminal.
+     */
+    void flush();
+    
+    /**
+     * Executes command with specified parameters.
+     *
+     * @param commandName command name
+     * @param parameters parameters
+     * @return result of command execution or null
+     */
+    Object execute(String commandName, Map<String, Object> parameters);
 }

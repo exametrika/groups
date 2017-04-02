@@ -114,16 +114,19 @@ public final class ShellCommand implements IShellCommand
     }
     
     @Override
-    public String getUsage(boolean colorized)
+    public String getUsage(boolean colorized, boolean parametersOnly)
     {
         AttributedStringBuilder builder = new AttributedStringBuilder();
-        if (colorized)
-            builder.style(ShellStyles.COMMAND_STYLE);
-        builder.append(buildName(names));
-        if (colorized)
-            builder.style(ShellStyles.DEFAULT_STYLE);
-        builder.append("\n\n");
-        builder.append(Strings.indent(description, Shell.INDENT));
+        if (!parametersOnly)
+        {
+            if (colorized)
+                builder.style(ShellStyles.COMMAND_STYLE);
+            builder.append(buildName(names));
+            if (colorized)
+                builder.style(ShellStyles.DEFAULT_STYLE);
+            builder.append("\n\n");
+            builder.append(Strings.indent(description, Shell.INDENT));
+        }
         
         if (!namedParameters.isEmpty())
         {
@@ -169,7 +172,7 @@ public final class ShellCommand implements IShellCommand
     @Override
     public String toString()
     {
-        return getUsage(false);
+        return getUsage(false, false);
     }
     
     private String buildName(List<String> names)

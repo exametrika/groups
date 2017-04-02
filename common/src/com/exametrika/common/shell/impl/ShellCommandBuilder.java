@@ -6,8 +6,11 @@ package com.exametrika.common.shell.impl;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
+import com.exametrika.common.shell.IShellCommand;
 import com.exametrika.common.shell.IShellCommandExecutor;
+import com.exametrika.common.shell.IShellContext;
 import com.exametrika.common.shell.IShellParameter;
 import com.exametrika.common.shell.IShellParameterValidator;
 import com.exametrika.common.shell.impl.ShellParameterBuilder.Type;
@@ -34,6 +37,22 @@ public final class ShellCommandBuilder
     private IShellParameter defaultParameter;
     private IShellCommandExecutor executor;
 
+    public ShellCommandBuilder()
+    {
+        this.parent = null;
+        this.key = "default";
+        this.names = Arrays.asList("default");
+        this.description = "";
+        this.executor = new IShellCommandExecutor()
+        {
+            @Override
+            public Object execute(IShellCommand command, IShellContext context, Map<String, Object> parameters)
+            {
+                return null;
+            }
+        };
+    }
+    
     public ShellCommandBuilder(ShellCommandsBuilder parent)
     {
         Assert.notNull(parent);
@@ -94,11 +113,14 @@ public final class ShellCommandBuilder
     
     public ShellCommandsBuilder end()
     {
-        ShellCommand command = new ShellCommand(key, names, description, shortDescription, validator, namedParameters, 
-            positionalParameters, defaultParameter, executor);
-        
-        parent.addCommand(command);
+        parent.addCommand(build());
         return parent;
+    }
+    
+    public ShellCommand build()
+    {
+        return new ShellCommand(key, names, description, shortDescription, validator, namedParameters, 
+            positionalParameters, defaultParameter, executor);
     }
     
     void addNamed(IShellParameter parameter)

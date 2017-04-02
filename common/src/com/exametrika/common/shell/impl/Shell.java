@@ -3,6 +3,7 @@
  */
 package com.exametrika.common.shell.impl;
 
+import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -30,6 +31,7 @@ import com.exametrika.common.shell.IShell;
 import com.exametrika.common.shell.IShellCommand;
 import com.exametrika.common.shell.IShellCommandParser;
 import com.exametrika.common.shell.IShellCommandProvider;
+import com.exametrika.common.shell.IShellContext;
 import com.exametrika.common.shell.IShellPromptProvider;
 import com.exametrika.common.utils.Assert;
 import com.exametrika.common.utils.IOs;
@@ -184,10 +186,91 @@ public final class Shell implements IShell
             else
                 builder.append("\n\n");
             
-            builder.appendAnsi(command.getUsage(colorized));
+            builder.appendAnsi(command.getUsage(colorized, false));
         }
         
         return builder.toAnsi();
+    }
+    
+    @Override
+    public List<Pair<IShellCommand, Map<String, Object>>> parse(String[] args)
+    {
+        try
+        {
+            return parser.parseCommands("", Arrays.asList(args));
+        }
+        catch (InvalidArgumentException e)
+        {
+            Terminal terminal = null;
+            try
+            {
+                terminal = TerminalBuilder.builder().system(true).jna(true).build();
+                if (terminal instanceof DumbTerminal || terminal instanceof ExternalTerminal)
+                    noColors = true;
+                
+                boolean colorized = true;
+                if (noColors)
+                    colorized = false;
+                
+                AttributedStringBuilder builder = new AttributedStringBuilder();
+                if (title != null)
+                {
+                    if (colorized)
+                        builder.style(ShellStyles.APPLICATION_STYLE);
+                    builder.append(title);
+                    if (colorized)
+                        builder.style(ShellStyles.DEFAULT_STYLE);
+                    builder.append("\n\n");
+                }
+                if (colorized)
+                    builder.style(ShellStyles.ERROR_STYLE);
+                builder.append(e.getMessage());
+                builder.append("\n\n");
+                if (colorized)
+                    builder.style(ShellStyles.DEFAULT_STYLE);
+                
+                builder.append(defaultCommand.getUsage(colorized, true));
+                
+                terminal.writer().print(builder.toAnsi());
+            }
+            catch (Exception ee)
+            {
+                throw new SystemException(ee);
+            }
+            finally
+            {
+                IOs.close(terminal);
+            }
+            return null;
+        }    
+    }
+    
+    @Override
+    public PrintWriter getWriter()
+    {
+        return lineReader.getTerminal().writer();
+    }
+    
+    @Override
+    public void flush()
+    {
+        lineReader.getTerminal().flush();
+    }
+
+    @Override
+    public IShellContext getContext()
+    {
+        return context;
+    }
+    
+    @Override
+    public Object execute(String commandName, Map<String, Object> parameters)
+    {
+        IShellCommand command = findCommand(commandName);
+        if (command != null)
+            return command.getExecutor().execute(command, context, parameters);
+        else
+            throw new InvalidArgumentException(messages.commandNotFound(commandName));
     }
     
     @Override
@@ -348,5 +431,7 @@ public final class Shell implements IShell
         ILocalizedMessage previousLevelCommandDescription();
         @DefaultMessage("level up")
         ILocalizedMessage previousLevelCommandShortDescription();
+        @DefaultMessage("Command ''{0}'' is not found.")
+        ILocalizedMessage commandNotFound(String command);
     }
 }

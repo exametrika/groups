@@ -4,6 +4,7 @@
 package com.exametrika.impl.groups.simulator.messages;
 
 import com.exametrika.common.messaging.IMessagePart;
+import com.exametrika.common.utils.Assert;
 
 /**
  * The {@link ActionResponseMessage} is an action response message.
@@ -13,11 +14,20 @@ import com.exametrika.common.messaging.IMessagePart;
  */
 public final class ActionResponseMessage implements IMessagePart
 {
+    private final String actionName;
     private final Object result;
 
-    public ActionResponseMessage(Object result)
+    public ActionResponseMessage(String actionName, Object result)
     {
+        Assert.notNull(actionName);
+        
+        this.actionName = actionName;
         this.result = result;
+    }
+    
+    public String getActionName()
+    {
+        return actionName;
     }
     
     public Object getResult()
@@ -34,7 +44,7 @@ public final class ActionResponseMessage implements IMessagePart
     @Override 
     public String toString()
     {
-        return result != null ? result.toString() : "";
+        return actionName + "=" + result != null ? result.toString() : "";
     }
 }
 

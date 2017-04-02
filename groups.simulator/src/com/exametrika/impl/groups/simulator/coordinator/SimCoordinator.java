@@ -6,9 +6,11 @@ package com.exametrika.impl.groups.simulator.coordinator;
 import java.util.Map;
 
 import com.exametrika.common.messaging.IMessage;
+import com.exametrika.common.shell.IShell;
 import com.exametrika.common.utils.Assert;
 import com.exametrika.common.utils.MapBuilder;
 import com.exametrika.impl.groups.simulator.messages.ActionMessage;
+import com.exametrika.impl.groups.simulator.messages.ActionResponseMessage;
 
 
 
@@ -21,6 +23,7 @@ import com.exametrika.impl.groups.simulator.messages.ActionMessage;
  */
 public final class SimCoordinator
 {
+    private IShell shell;
     private final SimCoordinatorChannel channel;
     private final long updateTimePeriod = 10000;
     private long startTime;
@@ -35,6 +38,14 @@ public final class SimCoordinator
         this.channel = channel;
         startTime = channel.getCurrentTime();
         simulationTime = startTime;
+    }
+
+    public void setShell(IShell shell)
+    {
+        Assert.notNull(shell);
+        Assert.isNull(this.shell);
+        
+        this.shell = shell;
     }
     
     public SimCoordinatorChannel getChannel()
@@ -53,70 +64,39 @@ public final class SimCoordinator
         }
     }
     
-    public void receive(final IMessage message)
+    public void receive(IMessage message)
     {
+        if (message.getPart() instanceof ActionResponseMessage)
+        {
+            ActionResponseMessage actionResponse = message.getPart();
+            if ((actionResponse.getActionName().equals("print") || actionResponse.getActionName().equals("log")) &&
+                actionResponse.getResult() != null)
+                shell.getWriter().write(actionResponse.getResult().toString() + "\n\n");
+        }
     }
     
-    public void start(String agentNamePattern, long delay, long timeIncrement)
+    public Object execute(String actionName, Map<String, Object> parameters)
     {
-        this.timeIncrement = timeIncrement;
-        channel.send(agentNamePattern, new ActionMessage("start", new MapBuilder().put("delay", delay).toMap()));
-    }
-    
-    public void delay(String agentNamePattern, long period, boolean oneTime)
-    {
-        channel.send(agentNamePattern, new ActionMessage("delay", new MapBuilder().put("period", period).put("oneTime", oneTime).toMap()));
-    }
-    
-    public void timeSpeed(long increment)
-    {
-        this.timeIncrement = increment;
-    }
-    
-    public String time()
-    {
-        long period = simulationTime - startTime;
-        long hours = period / (60 * 60 * 1000);
-        long minutes = (period - hours * (60 * 60 * 1000)) / (60 * 1000);
-        long seconds = (period - hours * (60 * 60 * 1000) - minutes * (60 * 1000)) / 1000;
-        long millis = period - hours * (60 * 60 * 1000) - minutes * (60 * 1000) - seconds * 1000;
-        return hours + ":" + minutes + ":" + seconds + "." + millis;
-    }
-    
-    public void stop(String agentNamePattern, String condition)
-    {
-        channel.send(agentNamePattern, new ActionMessage("stop", new MapBuilder().put("condition", condition).toMap()));
-    }
-    
-    public void suspend(String agentNamePattern)
-    {
-        channel.send(agentNamePattern, new ActionMessage("suspend", new MapBuilder().toMap()));
-    }
-    
-    public void resume(String agentNamePattern)
-    {
-        channel.send(agentNamePattern, new ActionMessage("resume", new MapBuilder().toMap()));
-    }
-    
-    public void print(String agentNamePattern, String expression)
-    {
-        channel.send(agentNamePattern, new ActionMessage("print", new MapBuilder().put("expression", expression).toMap()));
-    }
-    
-    public void log(String agentNamePattern, String filter, String expression, boolean enabled)
-    {
-        channel.send(agentNamePattern, new ActionMessage("log", new MapBuilder().put("filter", filter).put("expression", 
-            expression).put("enabled", enabled).toMap()));
-    }
-    
-    public void kill(String agentNamePattern)
-    {
-        channel.send(agentNamePattern, new ActionMessage("kill", new MapBuilder().toMap()));
-    }
-
-    public void execute(String actionName, Map<String, Object> parameters)
-    {
-        // TODO Auto-generated method stub
+        if (actionName.equals("time"))
+        {
+            long period = simulationTime - startTime;
+            long hours = period / (60 * 60 * 1000);
+            long minutes = (period - hours * (60 * 60 * 1000)) / (60 * 1000);
+            long seconds = (period - hours * (60 * 60 * 1000) - minutes * (60 * 1000)) / 1000;
+            long millis = period - hours * (60 * 60 * 1000) - minutes * (60 * 1000) - seconds * 1000;
+            return hours + ":" + minutes + ":" + seconds + "." + millis;
+        }
         
+        if (actionName.equals("timeSpeed"))
+        {
+            timeIncrement = (long)parameters.get("timeIncrement");
+            return null;
+            
+        }
+        if (actionName.equals("start"))
+            timeIncrement = (long)parameters.get("timeIncrement");
+        
+        channel.send((String)parameters.get("agentNamePattern"), new ActionMessage(actionName, parameters));
+        return null;
     }
 }

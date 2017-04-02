@@ -45,7 +45,7 @@ public final class SimShellCommandProvider implements IShellCommandProvider
     public List<IShellCommand> getCommands()
     {
         return new ShellCommandsBuilder()
-            .namespace().names("sim").description("Messaging simulation framework.").end()
+            .namespace().key("sim").names("sim").description("Messaging simulation framework.").end()
             .command().key("start").names("sim:start").description("Starts simulation.")
                 .namedParameter().key("delay").names("-d", "--delay").format("-d, --delay <millis> [unique, default=5000ms]")
                     .description("Agent delay in milliseconds.").unique().hasArgument().converter(new LongConverter()).defaultValue(5000).end() 
@@ -68,7 +68,7 @@ public final class SimShellCommandProvider implements IShellCommandProvider
                     .description("Simulation time increment in milliseconds per 10s time tick.").unique().hasArgument()
                     .converter(new LongConverter()).defaultValue(100).end() 
                 .executor(new SimShellCommandExecutor()).end()
-            .command().key("time").names("time").description("Time period since simulation start in simulation time.")
+            .command().key("time").names("sim:time").description("Time period since simulation start in simulation time.")
                 .executor(new SimShellCommandExecutor()).end()
             .command().key("stop").names("sim:stop").description("Stops simulation.")
                 .namedParameter().key("condition").names("-c", "--condition").format("-c, --condition <expression> [unique]")
@@ -112,8 +112,7 @@ public final class SimShellCommandProvider implements IShellCommandProvider
         @Override
         public Object execute(IShellCommand command, IShellContext context, Map<String, Object> parameters)
         {
-            coordinator.execute(command.getKey(), parameters);
-            return null;
+            return coordinator.execute(command.getKey(), parameters);
         }
     }
     

@@ -64,6 +64,11 @@ public final class SimCoordinatorChannel implements IReceiver, IChannelListener,
         this.channel = channel;
     }
     
+    public SimCoordinator getCoordinator()
+    {
+        return coordinator;
+    }
+    
     public Map<IAddress, SimCoordinatorAgentChannel> getAgents()
     {
         return agents;

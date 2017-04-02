@@ -101,7 +101,7 @@ public final class ShellCommandNamespace implements IShellCommand
     }
     
     @Override
-    public String getUsage(boolean colorized)
+    public String getUsage(boolean colorized, boolean parametersOnly)
     {
         AttributedStringBuilder builder = new AttributedStringBuilder();
         if (colorized)
@@ -118,7 +118,7 @@ public final class ShellCommandNamespace implements IShellCommand
     @Override
     public String toString()
     {
-        return getUsage(false);
+        return getUsage(false, false);
     }
     
     private class Executor implements IShellCommandExecutor

@@ -78,8 +78,9 @@ public interface IShellCommand
     /**
      * Returns command usage.
      *
+     * @param parametersOnly if true only parameters are printed
      * @param colorized if true colorized output will be used
      * @return command usage
      */
-    String getUsage(boolean colorized);
+    String getUsage(boolean colorized, boolean parametersOnly);
 }

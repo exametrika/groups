@@ -56,7 +56,7 @@ public final class ShellCommandParser implements IShellCommandParser
     @Override
     public List<Pair<IShellCommand, Map<String, Object>>> parseCommands(String context, List<String> args)
     {
-        if (args.isEmpty())
+        if (args.isEmpty() && defaultCommand == null)
             return Collections.emptyList();
         
         List<Pair<IShellCommand, Map<String, Object>>> commands = new ArrayList<Pair<IShellCommand, Map<String, Object>>>();
@@ -109,6 +109,9 @@ public final class ShellCommandParser implements IShellCommandParser
             else
                 commandArgs.add(arg);
         }
+        
+        if (command == null)
+            command = defaultCommand;
         
         if (command != null)
         {

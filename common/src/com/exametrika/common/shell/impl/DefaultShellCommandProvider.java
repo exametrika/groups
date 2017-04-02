@@ -47,24 +47,25 @@ public final class DefaultShellCommandProvider implements IShellCommandProvider
             .command().key("help").names("help", "?").description(messages.helpCommand().toString())
                 .defaultParameter()
                     .key("command").format(messages.helpCommandParameterFormat().toString()) 
-                    .description(messages.helpCommandParameterDescription().toString()).completer(new HelpCommandCompleter())
+                    .description(messages.helpCommandParameterDescription().toString()).hasArgument()
+                    .completer(new HelpCommandCompleter())
                     .highlighter(new HelpCommandHighlighter()).end()
                 .executor(new HelpShellCommand()).end()
             .command().key("eval").names("eval").description(messages.evalCommand().toString())
                 .defaultParameter()
                     .key("expression").format(messages.evalExpressionParameterFormat().toString()) 
-                    .description(messages.evalExpressionParameterDescription().toString()).required().end() 
+                    .description(messages.evalExpressionParameterDescription().toString()).unique().required().hasArgument().end() 
                 .executor(new EvalShellCommand()).end()
             .command().key("grep").names("grep").description(messages.grepCommand().toString())
                 .namedParameter()
                     .key("caseInsensitive").names("-c", "--case-insensitive").format(messages.grepCaseParameterFormat().toString()) 
-                    .description(messages.grepCaseParameterDescription().toString()).end()
+                    .description(messages.grepCaseParameterDescription().toString()).unique().end()
                 .positionalParameter()
                     .key("filter").format(messages.grepFilterParameterFormat().toString()) 
-                    .description(messages.grepFilterParameterDescription().toString()).end()
+                    .description(messages.grepFilterParameterDescription().toString()).unique().hasArgument().end()
                 .defaultParameter()
                     .key("expression").format(messages.grepExpressionParameterFormat().toString()) 
-                    .description(messages.grepExpressionParameterDescription().toString()).end()
+                    .description(messages.grepExpressionParameterDescription().toString()).hasArgument().end()
                 .executor(new GrepShellCommand()).end()
             .build();
     }
@@ -132,7 +133,7 @@ public final class DefaultShellCommandProvider implements IShellCommandProvider
                     
                     IShellCommand command = contextNode.find(commandName);
                     if (command != null)
-                        builder.appendAnsi(command.getUsage(!context.getShell().isNoColors()));
+                        builder.appendAnsi(command.getUsage(!context.getShell().isNoColors(), false));
                     else 
                     {
                         if (!context.getShell().isNoColors())

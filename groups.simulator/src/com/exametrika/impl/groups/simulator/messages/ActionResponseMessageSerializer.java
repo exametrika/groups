@@ -29,14 +29,16 @@ public final class ActionResponseMessageSerializer extends AbstractSerializer
     {
         ActionResponseMessage part = (ActionResponseMessage)object;
 
+        serialization.writeString(part.getActionName());
         serialization.writeObject(part.getResult());
     }
     
     @Override
     public Object deserialize(IDeserialization deserialization, UUID id)
     {
+        String actionName = deserialization.readString();
         Object result = deserialization.readObject();
         
-        return new ActionResponseMessage(result);
+        return new ActionResponseMessage(actionName, result);
     }
 }

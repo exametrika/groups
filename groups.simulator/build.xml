@@ -13,6 +13,7 @@
     
     <path id="dependencies">
         <pathelement path="${common}" />
+        <pathelement path="${groups}" />
     </path>
         
 </project>

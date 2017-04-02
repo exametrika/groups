@@ -19,18 +19,13 @@ import com.exametrika.common.utils.Assert;
  */
 public final class SimInterceptorProtocol extends AbstractProtocol
 {
-    private SimExecutor executor;
+    private final SimExecutor executor;
     
-    public SimInterceptorProtocol(String channelName, IMessageFactory messageFactory)
+    public SimInterceptorProtocol(String channelName, IMessageFactory messageFactory, SimExecutor executor)
     {
         super(channelName, messageFactory);
-    }
-    
-    public void setExecutor(SimExecutor executor)
-    {
-        Assert.notNull(executor);
-        Assert.isNull(this.executor);
         
+        Assert.notNull(executor);
         this.executor = executor;
     }
     

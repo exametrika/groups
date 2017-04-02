@@ -3,6 +3,7 @@
  */
 package com.exametrika.impl.groups.simulator.agent;
 
+import com.exametrika.api.groups.cluster.IGroupChannel;
 import com.exametrika.common.expression.CompileContext;
 import com.exametrika.common.expression.Expressions;
 import com.exametrika.common.expression.IExpression;
@@ -25,8 +26,9 @@ import com.exametrika.impl.groups.simulator.messages.ActionResponseMessage;
  */
 public final class SimExecutor
 {
-    private final SimAgentChannel channel;
+    private final SimAgentChannel agentChannel;
     private final CompileContext compileContext;
+    private IGroupChannel groupChannel;
     private long delayPeriod;
     private boolean oneTimeDelay;
     private ICondition<IMessage> suspendCondition = new TrueCondition<IMessage>();
@@ -36,13 +38,21 @@ public final class SimExecutor
     private volatile IMessage message;
     private boolean suspended;
    
-    public SimExecutor(SimAgentChannel channel)
+    public SimExecutor(SimAgentChannel agentChannel)
     {
-        Assert.notNull(channel);
+        Assert.notNull(agentChannel);
         
-        this.channel = channel;
+        this.agentChannel = agentChannel;
         this.compileContext = Expressions.createCompileContext(null);
         Times.setTest(Times.getCurrentTime());
+    }
+    
+    public void setGroupChannel(IGroupChannel groupChannel)
+    {
+        Assert.notNull(groupChannel);
+        Assert.isNull(this.groupChannel);
+        
+        this.groupChannel = groupChannel;
     }
     
     public synchronized boolean isSuspended()
@@ -86,7 +96,7 @@ public final class SimExecutor
             else
                 result = currentMessage;
             
-            channel.send(new ActionResponseMessage(result.toString()));
+            agentChannel.send(new ActionResponseMessage("print", result.toString()));
         }
     }
     
@@ -120,7 +130,7 @@ public final class SimExecutor
                     else
                         result = message;
                     
-                    channel.send(new ActionResponseMessage(result.toString()));
+                    agentChannel.send(new ActionResponseMessage("log", result.toString()));
                 }
             }
             
@@ -186,11 +196,14 @@ public final class SimExecutor
             print((String)message.getParameters().get("expression"));
         else if (message.getActionName().equals("log"))
             log((String)message.getParameters().get("filter"), (String)message.getParameters().get("expression"),
-                (Boolean)message.getParameters().get("enabled"));
+                !Boolean.TRUE.equals(message.getParameters().get("off")));
         else if (message.getActionName().equals("time"))
             Times.setTest((long)message.getParameters().get("value"));
         else if (message.getActionName().equals("kill"))
-            System.exit(1);
+        {
+            groupChannel.stop();
+            agentChannel.stop();
+        }
     }
     
     public void onDisconnected()

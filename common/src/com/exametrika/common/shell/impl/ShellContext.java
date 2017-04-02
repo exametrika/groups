@@ -3,17 +3,9 @@
  */
 package com.exametrika.common.shell.impl;
 
-import java.io.PrintWriter;
-import java.util.Map;
-
-import com.exametrika.common.l10n.DefaultMessage;
-import com.exametrika.common.l10n.ILocalizedMessage;
-import com.exametrika.common.l10n.Messages;
 import com.exametrika.common.shell.IShell;
-import com.exametrika.common.shell.IShellCommand;
 import com.exametrika.common.shell.IShellContext;
 import com.exametrika.common.utils.Assert;
-import com.exametrika.common.utils.InvalidArgumentException;
 
 /**
  * The {@link ShellContext} is a shell context.
@@ -22,7 +14,6 @@ import com.exametrika.common.utils.InvalidArgumentException;
  */
 public class ShellContext implements IShellContext
 {
-    private static final IMessages messages = Messages.get(IMessages.class);
     private final Shell shell;
 
     public ShellContext(Shell shell)
@@ -38,18 +29,6 @@ public class ShellContext implements IShellContext
         return shell;
     }
     
-    @Override
-    public PrintWriter getWriter()
-    {
-        return shell.getLineReader().getTerminal().writer();
-    }
-    
-    @Override
-    public void flush()
-    {
-        shell.getLineReader().getTerminal().flush();
-    }
-
     @Override
     public String getPath()
     {
@@ -70,21 +49,5 @@ public class ShellContext implements IShellContext
         }
         
         return builder.toString();
-    }
-    
-    @Override
-    public Object execute(String commandName, Map<String, Object> parameters)
-    {
-        IShellCommand command = shell.findCommand(commandName);
-        if (command != null)
-            return command.getExecutor().execute(command, this, parameters);
-        else
-            throw new InvalidArgumentException(messages.commandNotFound(commandName));
-    }
-    
-    interface IMessages
-    {
-        @DefaultMessage("Command ''{0}'' is not found.")
-        ILocalizedMessage commandNotFound(String command);
     }
 }

@@ -60,6 +60,11 @@ public final class SimAgentChannel implements IReceiver, IChannelListener, ISeri
         marker = Loggers.getMarker(channelName);
     }
     
+    public SimExecutor getExecutor()
+    {
+        return executor;
+    }
+    
     public IAddress getAddress()
     {
         return address;
