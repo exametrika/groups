@@ -15,8 +15,8 @@ import com.exametrika.common.utils.ICondition;
 import com.exametrika.common.utils.Threads;
 import com.exametrika.common.utils.Times;
 import com.exametrika.common.utils.TrueCondition;
-import com.exametrika.impl.groups.simulator.messages.ActionMessage;
-import com.exametrika.impl.groups.simulator.messages.ActionResponseMessage;
+import com.exametrika.impl.groups.simulator.messages.SimActionMessage;
+import com.exametrika.impl.groups.simulator.messages.SimActionResponseMessage;
 
 /**
  * The {@link SimExecutor} represents a simulator executor.
@@ -96,14 +96,14 @@ public final class SimExecutor
             else
                 result = currentMessage;
             
-            agentChannel.send(new ActionResponseMessage("print", result.toString()));
+            agentChannel.send(new SimActionResponseMessage("print", result.toString()));
         }
     }
     
     public synchronized void log(String filter, String expression, boolean enabled)
     {
-        if (expression != null)
-            logExpression = Expressions.compile(expression, compileContext);
+        if (filter != null)
+            logFilter = new ExpressionCondition<IMessage>(Expressions.compile(filter, compileContext));
         else
             logFilter = null;
         
@@ -130,7 +130,7 @@ public final class SimExecutor
                     else
                         result = message;
                     
-                    agentChannel.send(new ActionResponseMessage("log", result.toString()));
+                    agentChannel.send(new SimActionResponseMessage("log", result.toString()));
                 }
             }
             
@@ -168,7 +168,7 @@ public final class SimExecutor
     {
     }
     
-    public synchronized void onActionReceived(ActionMessage message)
+    public synchronized void onActionReceived(SimActionMessage message)
     {
         if (message.getActionName().equals("start"))
         {

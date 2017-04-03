@@ -56,7 +56,7 @@ public class SimGroupChannelFactory
     private static final long SEND_COUNT = Long.MAX_VALUE;
     private SimExecutor executor;
     private int count;
-    private Set<String> wellKnownAddresses= new HashSet<String>();
+    private Set<String> wellKnownAddresses = new HashSet<String>();
     private GroupFactoryParameters factoryParameters;
     private List<GroupParameters> parameters = new ArrayList<GroupParameters>();
     private SimStateStore stateStore = new SimStateStore();
@@ -298,6 +298,7 @@ public class SimGroupChannelFactory
         public SimMessageSender(int index)
         {
             this.index = index;
+            this.send = index == 0;
         }
         
         @Override

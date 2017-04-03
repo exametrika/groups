@@ -10,24 +10,24 @@ import com.exametrika.common.io.ISerialization;
 import com.exametrika.common.io.impl.AbstractSerializer;
 
 /**
- * The {@link ActionResponseMessageSerializer} is a serializer for {@link ActionResponseMessage}.
+ * The {@link SimActionResponseMessageSerializer} is a serializer for {@link SimActionResponseMessage}.
  * 
  * @threadsafety This class and its methods are thread safe.
  * @author Medvedev-A
  */
-public final class ActionResponseMessageSerializer extends AbstractSerializer
+public final class SimActionResponseMessageSerializer extends AbstractSerializer
 {
     public static final UUID ID = UUID.fromString("ab28394c-7f6b-47c1-9b23-9f6f92d1498");
  
-    public ActionResponseMessageSerializer()
+    public SimActionResponseMessageSerializer()
     {
-        super(ID, ActionResponseMessage.class);
+        super(ID, SimActionResponseMessage.class);
     }
 
     @Override
     public void serialize(ISerialization serialization, Object object)
     {
-        ActionResponseMessage part = (ActionResponseMessage)object;
+        SimActionResponseMessage part = (SimActionResponseMessage)object;
 
         serialization.writeString(part.getActionName());
         serialization.writeObject(part.getResult());
@@ -39,6 +39,6 @@ public final class ActionResponseMessageSerializer extends AbstractSerializer
         String actionName = deserialization.readString();
         Object result = deserialization.readObject();
         
-        return new ActionResponseMessage(actionName, result);
+        return new SimActionResponseMessage(actionName, result);
     }
 }

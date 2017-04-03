@@ -228,7 +228,7 @@ public final class DefaultShellCommandProvider implements IShellCommandProvider
         ILocalizedMessage exitCommand();
         @DefaultMessage("prints command usage")
         ILocalizedMessage helpCommand();
-        @DefaultMessage("<command>")
+        @DefaultMessage("<command> [many]")
         ILocalizedMessage helpCommandParameterFormat();
         @DefaultMessage("command to print usage for")
         ILocalizedMessage helpCommandParameterDescription();
@@ -250,7 +250,7 @@ public final class DefaultShellCommandProvider implements IShellCommandProvider
         ILocalizedMessage grepFilterParameterFormat();
         @DefaultMessage("filter is glob or regexp pattern")
         ILocalizedMessage grepFilterParameterDescription();
-        @DefaultMessage("<expression>")
+        @DefaultMessage("<expression> [many]")
         ILocalizedMessage grepExpressionParameterFormat();
         @DefaultMessage("expression to filter")
         ILocalizedMessage grepExpressionParameterDescription();

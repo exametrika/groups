@@ -24,9 +24,9 @@ import com.exametrika.common.messaging.IMessagePart;
 import com.exametrika.common.messaging.IReceiver;
 import com.exametrika.common.utils.Assert;
 import com.exametrika.common.utils.ILifecycle;
-import com.exametrika.impl.groups.simulator.messages.ActionMessage;
-import com.exametrika.impl.groups.simulator.messages.ActionMessageSerializer;
-import com.exametrika.impl.groups.simulator.messages.ActionResponseMessageSerializer;
+import com.exametrika.impl.groups.simulator.messages.SimActionMessage;
+import com.exametrika.impl.groups.simulator.messages.SimActionMessageSerializer;
+import com.exametrika.impl.groups.simulator.messages.SimActionResponseMessageSerializer;
 
 
 
@@ -145,22 +145,22 @@ public final class SimAgentChannel implements IReceiver, IChannelListener, ISeri
     @Override
     public void receive(final IMessage message)
     {
-        if (message.getPart() instanceof ActionMessage)
-            executor.onActionReceived((ActionMessage)message.getPart());
+        if (message.getPart() instanceof SimActionMessage)
+            executor.onActionReceived((SimActionMessage)message.getPart());
     }
 
     @Override
     public void register(ISerializationRegistry registry)
     {
-        registry.register(new ActionMessageSerializer());
-        registry.register(new ActionResponseMessageSerializer());
+        registry.register(new SimActionMessageSerializer());
+        registry.register(new SimActionResponseMessageSerializer());
     }
 
     @Override
     public void unregister(ISerializationRegistry registry)
     {
-        registry.unregister(ActionMessageSerializer.ID);
-        registry.unregister(ActionResponseMessageSerializer.ID);
+        registry.unregister(SimActionMessageSerializer.ID);
+        registry.unregister(SimActionResponseMessageSerializer.ID);
      }
 
     public void send(IMessagePart part)

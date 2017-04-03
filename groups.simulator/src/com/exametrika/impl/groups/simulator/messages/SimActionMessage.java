@@ -13,18 +13,18 @@ import com.exametrika.common.utils.Assert;
 import com.exametrika.common.utils.Immutables;
 
 /**
- * The {@link ActionMessage} is an action message.
+ * The {@link SimActionMessage} is an action message.
  * 
  * @threadsafety This class and its methods are thread safe.
  * @author Medvedev-A
  */
-public final class ActionMessage implements IMessagePart
+public final class SimActionMessage implements IMessagePart
 {
     private static final IMessages messages = Messages.get(IMessages.class);
     private final String actionName;
     private final Map<String, Object> parameters;
 
-    public ActionMessage(String actionName, Map<String, Object> parameters)
+    public SimActionMessage(String actionName, Map<String, Object> parameters)
     {
         Assert.notNull(actionName);
         Assert.notNull(parameters);

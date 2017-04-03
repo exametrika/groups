@@ -9,8 +9,8 @@ import com.exametrika.common.messaging.IMessage;
 import com.exametrika.common.shell.IShell;
 import com.exametrika.common.utils.Assert;
 import com.exametrika.common.utils.MapBuilder;
-import com.exametrika.impl.groups.simulator.messages.ActionMessage;
-import com.exametrika.impl.groups.simulator.messages.ActionResponseMessage;
+import com.exametrika.impl.groups.simulator.messages.SimActionMessage;
+import com.exametrika.impl.groups.simulator.messages.SimActionResponseMessage;
 
 
 
@@ -30,6 +30,7 @@ public final class SimCoordinator
     private long simulationTime;
     private long timeIncrement = 100;
     private long lastUpdateTime;
+    private boolean simulationStarted;
 
     public SimCoordinator(SimCoordinatorChannel channel)
     {
@@ -55,20 +56,20 @@ public final class SimCoordinator
     
     public void onTimer(long currentTime)
     {
-        if (currentTime > lastUpdateTime + updateTimePeriod)
+        if (simulationStarted && currentTime > lastUpdateTime + updateTimePeriod)
         {
             lastUpdateTime = currentTime;
             simulationTime =+ timeIncrement;
             
-            channel.send(null, new ActionMessage("time", new MapBuilder().put("value", simulationTime).toMap()));
+            channel.send(null, new SimActionMessage("time", new MapBuilder().put("value", simulationTime).toMap()));
         }
     }
     
     public void receive(IMessage message)
     {
-        if (message.getPart() instanceof ActionResponseMessage)
+        if (message.getPart() instanceof SimActionResponseMessage)
         {
-            ActionResponseMessage actionResponse = message.getPart();
+            SimActionResponseMessage actionResponse = message.getPart();
             if ((actionResponse.getActionName().equals("print") || actionResponse.getActionName().equals("log")) &&
                 actionResponse.getResult() != null)
                 shell.getWriter().write(actionResponse.getResult().toString() + "\n\n");
@@ -96,7 +97,12 @@ public final class SimCoordinator
         if (actionName.equals("start"))
             timeIncrement = (long)parameters.get("timeIncrement");
         
-        channel.send((String)parameters.get("agentNamePattern"), new ActionMessage(actionName, parameters));
+        if (actionName.equals("start") || actionName.equals("resume"))
+            simulationStarted = true;
+        else if (actionName.equals("stop") || actionName.equals("suspend"))
+            simulationStarted = false;
+        
+        channel.send((String)parameters.get("agentNamePattern"), new SimActionMessage(actionName, parameters));
         return null;
     }
 }
