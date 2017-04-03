@@ -11,6 +11,7 @@ import java.util.Set;
 import java.util.UUID;
 
 import com.exametrika.api.groups.cluster.IGroupChannel;
+import com.exametrika.common.compartment.ICompartmentTimerProcessor;
 import com.exametrika.common.io.IDeserialization;
 import com.exametrika.common.io.ISerialization;
 import com.exametrika.common.io.ISerializationRegistry;
@@ -78,7 +79,7 @@ public class SimGroupChannelFactory
         executor.setGroupChannel(channel);
         channel.start();
         wellKnownAddresses.add(channel.getLiveNodeProvider().getLocalNode().getConnection(0));
-        channel.getCompartment().execute(messageSenders.get(index));
+        channel.getCompartment().addTimerProcessor(messageSenders.get(index));
         channels.add(channel);
         
         return channel;
@@ -285,7 +286,7 @@ public class SimGroupChannelFactory
         }
     }
     
-    private class SimMessageSender implements IReceiver, IDeliveryHandler, IFlowController<RemoteFlowId>, Runnable
+    private class SimMessageSender implements IReceiver, IDeliveryHandler, IFlowController<RemoteFlowId>, ICompartmentTimerProcessor
     {
         public boolean sendBeforeGroup;
         public boolean send;
@@ -302,7 +303,7 @@ public class SimGroupChannelFactory
         }
         
         @Override
-        public void run()
+        public void onTimer(long currentTime)
         {
             if (!send)
                 return;

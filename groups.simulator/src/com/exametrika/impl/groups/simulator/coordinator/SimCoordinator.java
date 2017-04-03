@@ -3,6 +3,7 @@
  */
 package com.exametrika.impl.groups.simulator.coordinator;
 
+import java.util.List;
 import java.util.Map;
 
 import com.exametrika.common.messaging.IMessage;
@@ -26,7 +27,6 @@ public final class SimCoordinator
     private IShell shell;
     private final SimCoordinatorChannel channel;
     private final long updateTimePeriod = 10000;
-    private long startTime;
     private long simulationTime;
     private long timeIncrement = 100;
     private long lastUpdateTime;
@@ -37,8 +37,7 @@ public final class SimCoordinator
         Assert.notNull(channel);
         
         this.channel = channel;
-        startTime = channel.getCurrentTime();
-        simulationTime = startTime;
+        simulationTime = 0;
     }
 
     public void setShell(IShell shell)
@@ -59,9 +58,9 @@ public final class SimCoordinator
         if (simulationStarted && currentTime > lastUpdateTime + updateTimePeriod)
         {
             lastUpdateTime = currentTime;
-            simulationTime =+ timeIncrement;
+            simulationTime += timeIncrement;
             
-            channel.send(null, new SimActionMessage("time", new MapBuilder().put("value", simulationTime).toMap()));
+            channel.send(null, new SimActionMessage("time", new MapBuilder().put("delta", timeIncrement).toMap()));
         }
     }
     
@@ -80,7 +79,7 @@ public final class SimCoordinator
     {
         if (actionName.equals("time"))
         {
-            long period = simulationTime - startTime;
+            long period = simulationTime;
             long hours = period / (60 * 60 * 1000);
             long minutes = (period - hours * (60 * 60 * 1000)) / (60 * 1000);
             long seconds = (period - hours * (60 * 60 * 1000) - minutes * (60 * 1000)) / 1000;
@@ -102,7 +101,7 @@ public final class SimCoordinator
         else if (actionName.equals("stop") || actionName.equals("suspend"))
             simulationStarted = false;
         
-        channel.send((String)parameters.get("agentNamePattern"), new SimActionMessage(actionName, parameters));
+        channel.send((List<String>)parameters.get("agentNamePattern"), new SimActionMessage(actionName, parameters));
         return null;
     }
 }

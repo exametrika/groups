@@ -3,7 +3,9 @@
  */
 package com.exametrika.impl.groups.simulator.coordinator;
 
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 import com.exametrika.common.compartment.ICompartmentTimerProcessor;
@@ -189,21 +191,37 @@ public final class SimCoordinatorChannel implements IReceiver, IChannelListener,
         return currentTime;
     }
     
-    public void send(String agentNamePattern, IMessagePart part)
+    public void send(List<String> agentNamePattern, IMessagePart part)
     {
-        ICondition<String> filter;
+        List<ICondition<String>> filters = null;
         if (agentNamePattern != null)
-            filter = Strings.createFilterCondition(agentNamePattern, true);
-        else
-            filter = null;
+        {
+            filters = new ArrayList<ICondition<String>>();
+            for (String filter : agentNamePattern)
+                filters.add(Strings.createFilterCondition(filter, true));
+        }
         
         Map<IAddress, SimCoordinatorAgentChannel> agents = this.agents;
         for (Map.Entry<IAddress, SimCoordinatorAgentChannel> entry : agents.entrySet())
         {
-            if (filter != null && !filter.evaluate(entry.getKey().getName()))
-                continue;
+            boolean allowed;
+            if (filters != null)
+            {
+                allowed = false;
+                for (ICondition<String> filter : filters)
+                {
+                    if (filter.evaluate(entry.getKey().getName()))
+                    {
+                        allowed = true;
+                        break;
+                    }
+                }
+            }
+            else
+                allowed = true;
             
-            entry.getValue().send(part);
+            if (allowed)
+                entry.getValue().send(part);
         }
     }
     

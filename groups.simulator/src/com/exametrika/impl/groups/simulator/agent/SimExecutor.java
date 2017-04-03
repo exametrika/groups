@@ -198,15 +198,23 @@ public final class SimExecutor
             log((String)message.getParameters().get("filter"), (String)message.getParameters().get("expression"),
                 !Boolean.TRUE.equals(message.getParameters().get("off")));
         else if (message.getActionName().equals("time"))
-            Times.setTest((long)message.getParameters().get("value"));
+            Times.setTest(Times.getSystemCurrentTime() + (long)message.getParameters().get("delta"));
         else if (message.getActionName().equals("kill"))
         {
             groupChannel.stop();
-            agentChannel.stop();
+            new Thread(new Runnable()
+            {
+                @Override
+                public void run()
+                {
+                    agentChannel.stop();
+                }
+            }).start();
         }
     }
     
     public void onDisconnected()
     {
+        Times.clearTest();
     }
 }

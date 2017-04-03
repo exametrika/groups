@@ -3,6 +3,7 @@
  */
 package com.exametrika.impl.groups.simulator.agent;
 
+import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -30,8 +31,8 @@ public final class SimAgentMain
     {
         IShell shell = new ShellBuilder().title("Simulation agent.")
             .defaultCommand(new ShellCommandBuilder()
-                .namedParameter().key("host").unique().names("-h", "--host").format("-h, --host <host-name> [default=localhost]")
-                    .description("Coordinator server host.").unique().hasArgument().defaultValue("localhost").end()
+                .namedParameter().key("host").unique().names("-h", "--host").format("-h, --host <host-name> [default=<localhost-ip-address>]")
+                    .description("Coordinator server host.").unique().hasArgument().defaultValue(InetAddress.getLocalHost().getHostAddress()).end()
                 .namedParameter().key("port").names("-p", "--port").format("-p, --port <port> [default=1717]")
                     .description("Coordinator server port.").unique().hasArgument().converter(new IntegerConverter()).defaultValue(1717).end()
                 .namedParameter().key("bindAddress").names("-b", "--bind-address").format("-b, --bind-address <address>")

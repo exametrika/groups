@@ -3,6 +3,7 @@
  */
 package com.exametrika.impl.groups.simulator.coordinator;
 
+import java.net.InetAddress;
 import java.util.List;
 import java.util.Map;
 
@@ -24,14 +25,14 @@ import com.exametrika.common.utils.Pair;
  */
 public final class SimCoordinatorMain
 {
-    public static void main(String[] args)
+    public static void main(String[] args) throws Exception
     {
         IShell shell = new ShellBuilder().title("Simulation coordinator.")
             .defaultCommand(new ShellCommandBuilder()
                 .namedParameter().key("port").names("-p", "--port").format("-p, --port <port> [default=1717]")
                     .description("Coordinator server port.").unique().hasArgument().converter(new IntegerConverter()).defaultValue(1717).end()
-                .namedParameter().key("bindAddress").names("-b", "--bind-address").format("-b, --bind-address <address>")
-                    .description("Coordinator server bind address.").unique().hasArgument().end()
+                .namedParameter().key("bindAddress").names("-b", "--bind-address").format("-b, --bind-address <address> [default=<local-ip-address>]")
+                    .description("Coordinator server bind address.").unique().hasArgument().defaultValue(InetAddress.getLocalHost().getHostAddress()).end()
                 .namedParameter().key("historyFilePath").unique().names("-h", "--history-file").format("-h, --history-file <path>")
                     .description("Coordinator history file path.").unique().hasArgument().end()
                 .build()).build();
