@@ -3,6 +3,7 @@
  */
 package com.exametrika.impl.groups.cluster.membership;
 
+import java.util.List;
 import java.util.Set;
 
 import com.exametrika.api.groups.cluster.INode;
@@ -22,11 +23,11 @@ import com.exametrika.common.utils.Immutables;
 public final class NodesMembershipChange implements INodesMembershipChange
 {
     private static final IMessages messages = Messages.get(IMessages.class);
-    private final Set<INode> joinedNodes;
+    private final List<INode> joinedNodes;
     private final Set<INode> leftNodes;
     private final Set<INode> failedNodes;
 
-    public NodesMembershipChange(Set<INode> joinedNodes, Set<INode> leftNodes, Set<INode> failedNodes)
+    public NodesMembershipChange(List<INode> joinedNodes, Set<INode> leftNodes, Set<INode> failedNodes)
     {
         Assert.notNull(joinedNodes);
         Assert.notNull(leftNodes);
@@ -38,7 +39,7 @@ public final class NodesMembershipChange implements INodesMembershipChange
     }
 
     @Override
-    public Set<INode> getJoinedNodes()
+    public List<INode> getJoinedNodes()
     {
         return joinedNodes;
     }
@@ -64,6 +65,6 @@ public final class NodesMembershipChange implements INodesMembershipChange
     private interface IMessages
     {
         @DefaultMessage("joined: {0}\nleft: {1}\nfailed: {2}")
-        ILocalizedMessage toString(Set<INode> joinedNodes, Set<INode> leftNodes, Set<INode> failedNodes);
+        ILocalizedMessage toString(List<INode> joinedNodes, Set<INode> leftNodes, Set<INode> failedNodes);
     }
 }

@@ -40,7 +40,8 @@ public interface IStateTransferServer
     /**
      * Saves snapshot of group state into the specified file.
      *
+     * @param full if true full (persistent and transient) state is saved, else only persistent state is saved
      * @param file file for storing snapshot
      */
-    void saveSnapshot(File file);
+    void saveSnapshot(boolean full, File file);
 }

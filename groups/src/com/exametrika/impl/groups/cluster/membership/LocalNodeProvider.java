@@ -24,8 +24,7 @@ public final class LocalNodeProvider
         Assert.notNull(propertyProvider);
         Assert.notNull(domainName);
 
-        localNode = new Node(liveNodeProvider.getLocalNode().getName(), 
-            liveNodeProvider.getLocalNode(), propertyProvider.getProperties(), domainName);
+        localNode = new Node(liveNodeProvider.getLocalNode(), propertyProvider.getProperties(), domainName);
     }
     
     public INode getLocalNode()

@@ -74,7 +74,7 @@ public final class NodesMembershipProvider implements IClusterMembershipProvider
             return new Pair<IClusterMembershipElement, IClusterMembershipElementDelta>(oldMembership, null);
         
         NodesMembership oldNodeMembership = (NodesMembership)oldMembership;
-        Set<INode> joinedNodes = new LinkedHashSet<INode>();
+        List<INode> joinedNodes = new ArrayList<INode>();
         for (INode node : discoveredNodes)
         {
             if (oldNodeMembership != null && oldNodeMembership.findNode(node.getId()) != null)
@@ -146,7 +146,7 @@ public final class NodesMembershipProvider implements IClusterMembershipProvider
         Assert.notNull(membership);
         
         NodesMembership nodeMembership = (NodesMembership)membership;
-        return new NodesMembershipDelta(new LinkedHashSet<INode>(nodeMembership.getNodes()), java.util.Collections.<UUID>emptySet(), 
+        return new NodesMembershipDelta(nodeMembership.getNodes(), java.util.Collections.<UUID>emptySet(), 
             java.util.Collections.<UUID>emptySet());
     }
     
@@ -169,7 +169,7 @@ public final class NodesMembershipProvider implements IClusterMembershipProvider
     @Override
     public IClusterMembershipElementDelta createEmptyDelta()
     {
-        return new NodesMembershipDelta(java.util.Collections.<INode>emptySet(), java.util.Collections.<UUID>emptySet(), 
+        return new NodesMembershipDelta(java.util.Collections.<INode>emptyList(), java.util.Collections.<UUID>emptySet(), 
             java.util.Collections.<UUID>emptySet());
     }
     
@@ -238,7 +238,7 @@ public final class NodesMembershipProvider implements IClusterMembershipProvider
                 failedNodes.add(node);
         }
         
-        Set<INode> joinedNodes = new HashSet<INode>();
+        List<INode> joinedNodes = new ArrayList<INode>();
         for (INode node : newNodeMembership.getNodes())
         {
             if (oldNodeMembership.findNode(node.getId()) == null)

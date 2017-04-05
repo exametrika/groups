@@ -63,13 +63,13 @@ public class MembershipManagerTests
     public void testNode()
     {
         IAddress local = new UnicastAddress(new UUID(1, 1), "test");
-        Node node = new Node(local.getName(), local, Collections.<String, Object>singletonMap("key", "value"), "core");
-        Node node2 = new Node(local.getName(), new UnicastAddress(new UUID(0, 0), "test"), 
+        Node node = new Node(local, Collections.<String, Object>singletonMap("key", "value"), "core");
+        Node node2 = new Node(new UnicastAddress(new UUID(0, 0), "test"), 
             Collections.<String, Object>singletonMap("key", "value"), "core");
         assertThat(node, is(node));
         assertThat(!node.equals(node2), is(true));
         assertThat(node.compareTo(node2) > 0, is(true));
-        assertThat((String)node.getProperty("key"), is("value"));
+        assertThat((String)node.findProperty("key"), is("value"));
     }
     
     @Test
@@ -77,8 +77,8 @@ public class MembershipManagerTests
     {
         IAddress address1 = new UnicastAddress(UUID.randomUUID(), "test1");
         IAddress address2 = new UnicastAddress(UUID.randomUUID(), "test2");
-        Node node1 = new Node(address1.getName(), address1, Collections.<String, Object>singletonMap("key", "value"), "core");
-        Node node2 = new Node(address2.getName(), address2, Collections.<String, Object>singletonMap("key", "value"), "core");
+        Node node1 = new Node(address1, Collections.<String, Object>singletonMap("key", "value"), "core");
+        Node node2 = new Node(address2, Collections.<String, Object>singletonMap("key", "value"), "core");
         
         Group group = new Group(new GroupAddress(new UUID(1, 1), "test"), true, Arrays.<INode>asList(node1, node2));
         Group group2 = new Group(new GroupAddress(new UUID(0, 0), "test"), true, Arrays.<INode>asList(node1, node2));
@@ -97,8 +97,8 @@ public class MembershipManagerTests
     {
         IAddress address1 = new UnicastAddress(UUID.randomUUID(), "test1");
         IAddress address2 = new UnicastAddress(UUID.randomUUID(), "test2");
-        Node node1 = new Node(address1.getName(), address1, Collections.<String, Object>singletonMap("key", "value"), "core");
-        Node node2 = new Node(address2.getName(), address2, Collections.<String, Object>singletonMap("key", "value"), "core");
+        Node node1 = new Node(address1, Collections.<String, Object>singletonMap("key", "value"), "core");
+        Node node2 = new Node(address2, Collections.<String, Object>singletonMap("key", "value"), "core");
         
         Group group = new Group(new GroupAddress(UUID.randomUUID(), "test"), true, Arrays.<INode>asList(node1, node2));
         
@@ -116,11 +116,11 @@ public class MembershipManagerTests
         IAddress address3 = new UnicastAddress(UUID.randomUUID(), "test3");
         IAddress address4 = new UnicastAddress(UUID.randomUUID(), "test4");
         IAddress address5 = new UnicastAddress(UUID.randomUUID(), "test5");
-        Node node1 = new Node(address1.getName(), address1, Collections.<String, Object>singletonMap("key", "value"), "core");
-        Node node2 = new Node(address2.getName(), address2, Collections.<String, Object>singletonMap("key", "value"), "core");
-        Node node3 = new Node(address3.getName(), address3, Collections.<String, Object>singletonMap("key", "value"), "core");
-        Node node4 = new Node(address4.getName(), address4, Collections.<String, Object>singletonMap("key", "value"), "core");
-        Node node5 = new Node(address5.getName(), address5, Collections.<String, Object>singletonMap("key", "value"), "core");
+        Node node1 = new Node(address1, Collections.<String, Object>singletonMap("key", "value"), "core");
+        Node node2 = new Node(address2, Collections.<String, Object>singletonMap("key", "value"), "core");
+        Node node3 = new Node(address3, Collections.<String, Object>singletonMap("key", "value"), "core");
+        Node node4 = new Node(address4, Collections.<String, Object>singletonMap("key", "value"), "core");
+        Node node5 = new Node(address5, Collections.<String, Object>singletonMap("key", "value"), "core");
         
         IGroupMembership membership = GroupMemberships.createMembership(GroupMemberships.CORE_GROUP_ADDRESS, node1, com.exametrika.common.utils.Collections.<INode>asSet(node2, node3));
         assertThat(membership.getId(), is(1l));
@@ -183,9 +183,9 @@ public class MembershipManagerTests
         FlushManagerMock flushManager = new FlushManagerMock();
         CoreGroupMembershipTracker tracker = new CoreGroupMembershipTracker(1000, membershipManager, nodeDiscoverer, failureDetector, flushManager, null);
         
-        INode discoveredNode1 = new Node("test", new UnicastAddress(UUID.randomUUID(), 
+        INode discoveredNode1 = new Node(new UnicastAddress(UUID.randomUUID(), 
             "test"), Collections.<String, Object>emptyMap(), "core");
-        INode discoveredNode2 = new Node("test", new UnicastAddress(UUID.randomUUID(), 
+        INode discoveredNode2 = new Node(new UnicastAddress(UUID.randomUUID(), 
             "test"), Collections.<String, Object>emptyMap(), "core");
         nodeDiscoverer.canFormGroup = true;
         nodeDiscoverer.discoveredNodes.add(discoveredNode1);
@@ -246,9 +246,9 @@ public class MembershipManagerTests
         assertThat(manager.getLocalNode().getProperties(), is(Collections.<String, Object>singletonMap("key", "value")));
         
         IAddress address1 = new UnicastAddress(UUID.randomUUID(), "test1");
-        Node node1 = new Node(address1.getName(), address1, Collections.<String, Object>singletonMap("key", "value"), "core");
+        Node node1 = new Node(address1, Collections.<String, Object>singletonMap("key", "value"), "core");
         IAddress address2 = new UnicastAddress(UUID.randomUUID(), "test2");
-        Node node2 = new Node(address2.getName(), address2, Collections.<String, Object>singletonMap("key", "value"), "core");
+        Node node2 = new Node(address2, Collections.<String, Object>singletonMap("key", "value"), "core");
         Group group = new Group(new GroupAddress(UUID.randomUUID(), "test"), true, Arrays.<INode>asList(manager.getLocalNode(), node1));
         GroupMembership membership = new GroupMembership(1, group);
         
@@ -392,7 +392,7 @@ public class MembershipManagerTests
     
     private static class MembershipManagerMock implements IGroupMembershipManager
     {
-        private INode localNode = new Node("test", new UnicastAddress(UUID.randomUUID(), 
+        private INode localNode = new Node(new UnicastAddress(UUID.randomUUID(), 
             "test"), Collections.<String, Object>emptyMap(), "core");
         private IGroupMembership membership;
         private IGroupMembership preparedMembership;

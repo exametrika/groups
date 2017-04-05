@@ -44,7 +44,7 @@ public interface INode extends Comparable<INode>
      * @param name property name
      * @return property value or null if property with specified name is not found
      */
-    <T> T getProperty(String name);
+    <T> T findProperty(String name);
     
     /**
      * Returns all node properties.

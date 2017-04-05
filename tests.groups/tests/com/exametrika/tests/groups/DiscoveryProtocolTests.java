@@ -470,11 +470,9 @@ public class DiscoveryProtocolTests
         private Node localNode;
         private GroupMembership membership;
         private ILiveNodeProvider provider;
-        private String name;
         
-        public MembershipServiceMock(String name, ILiveNodeProvider provider)
+        public MembershipServiceMock(ILiveNodeProvider provider)
         {
-            this.name = name;
             this.provider = provider;
         }
         
@@ -482,7 +480,7 @@ public class DiscoveryProtocolTests
         public synchronized INode getLocalNode()
         {
             if (localNode == null)
-                localNode = new Node(name, provider.getLocalNode(), Collections.<String, Object>emptyMap(), "core");
+                localNode = new Node(provider.getLocalNode(), Collections.<String, Object>emptyMap(), "core");
             
             return localNode;
         }
@@ -588,7 +586,7 @@ public class DiscoveryProtocolTests
         {
             GroupJoinStrategyMock joinStrategy = new GroupJoinStrategyMock();
             joinStrategies.add(joinStrategy);
-            MembershipServiceMock membershipService = new MembershipServiceMock(channelName, liveNodeProvider);
+            MembershipServiceMock membershipService = new MembershipServiceMock(liveNodeProvider);
             membershipServices.add(membershipService);
             FailureDetectorMock failureDetector = new FailureDetectorMock();
             failureDetectors.add(failureDetector);

@@ -28,18 +28,18 @@ public final class GroupAddressSerializer extends AbstractSerializer
     @Override
     public void serialize(ISerialization serialization, Object object)
     {
-        GroupAddress nodeAddress = (GroupAddress)object;
+        GroupAddress groupAddress = (GroupAddress)object;
 
-        Serializers.writeUUID(serialization, nodeAddress.getId());
-        serialization.writeString(nodeAddress.getName());
+        Serializers.writeUUID(serialization, groupAddress.getId());
+        serialization.writeString(groupAddress.getName());
     }
     
     @Override
     public Object deserialize(IDeserialization deserialization, UUID id)
     {
-        UUID nodeId = Serializers.readUUID(deserialization);
+        UUID groupId = Serializers.readUUID(deserialization);
         String name = deserialization.readString();
         
-        return new GroupAddress(nodeId, name);
+        return new GroupAddress(groupId, name);
     }
 }

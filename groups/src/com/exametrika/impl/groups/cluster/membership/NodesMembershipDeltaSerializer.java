@@ -3,7 +3,9 @@
  */
 package com.exametrika.impl.groups.cluster.membership;
 
+import java.util.ArrayList;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
@@ -14,17 +16,17 @@ import com.exametrika.common.io.impl.AbstractSerializer;
 import com.exametrika.common.utils.Serializers;
 
 /**
- * The {@link NodeMembershipDeltaSerializer} is a serializer of {@link NodesMembershipDelta}.
+ * The {@link NodesMembershipDeltaSerializer} is a serializer of {@link NodesMembershipDelta}.
  * 
  * @threadsafety This class and its methods are thread safe.
  * @author Medvedev-A
  */
 
-public final class NodeMembershipDeltaSerializer extends AbstractSerializer
+public final class NodesMembershipDeltaSerializer extends AbstractSerializer
 {
     public static final UUID ID = UUID.fromString("fcf475f2-20f6-47f9-a636-9ac82dd50095");
     
-    public NodeMembershipDeltaSerializer()
+    public NodesMembershipDeltaSerializer()
     {
         super(ID, NodesMembershipDelta.class);
     }
@@ -33,7 +35,7 @@ public final class NodeMembershipDeltaSerializer extends AbstractSerializer
     public Object deserialize(IDeserialization deserialization, UUID id)
     {
         int count = deserialization.readInt();
-        Set<INode> joinedNodes = new LinkedHashSet<INode>(count);
+        List<INode> joinedNodes = new ArrayList<INode>(count);
         for (int i = 0; i < count; i++)
             joinedNodes.add(deserialization.readTypedObject(Node.class));
         

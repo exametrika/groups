@@ -21,9 +21,9 @@ public interface IGroupMembership
     long getId();
 
     /**
-     * Returns core group.
+     * Returns group.
      *
-     * @return core group
+     * @return group
      */
     IGroup getGroup();
 

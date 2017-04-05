@@ -59,7 +59,7 @@ public final class StoreStateSaveTask implements ICompartmentTask
         {
             file = File.createTempFile("groups-state", null);
             
-            server.saveSnapshot(file);
+            server.saveSnapshot(false, file);
             
             stateStore.save(groupId, file);
         }

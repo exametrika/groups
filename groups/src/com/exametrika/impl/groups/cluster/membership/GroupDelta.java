@@ -76,12 +76,12 @@ public final class GroupDelta implements IGroupDelta
     @Override
     public String toString()
     {
-        return messages.toString(primary, joinedMembers, leftMembers, failedMembers).toString();
+        return messages.toString(id, primary, joinedMembers, leftMembers, failedMembers).toString();
     }
     
     private interface IMessages
     {
-        @DefaultMessage("primary: {0}, joined: {1}\nleft: {2}\nfailed: {3}")
-        ILocalizedMessage toString(boolean primary, List<INode> joinedMembers, Set<UUID> leftMembers, Set<UUID> failedMembers);
+        @DefaultMessage("id: {0}, primary: {1}, joined: {2}\nleft: {3}\nfailed: {4}")
+        ILocalizedMessage toString(UUID id, boolean primary, List<INode> joinedMembers, Set<UUID> leftMembers, Set<UUID> failedMembers);
     }
 }

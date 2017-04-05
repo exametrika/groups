@@ -20,6 +20,7 @@ import org.junit.Test;
 import com.exametrika.api.groups.cluster.IGroup;
 import com.exametrika.api.groups.cluster.IGroupChannel;
 import com.exametrika.api.groups.cluster.IGroupMembership;
+import com.exametrika.common.compartment.ICompartmentTimerProcessor;
 import com.exametrika.common.io.IDeserialization;
 import com.exametrika.common.io.ISerialization;
 import com.exametrika.common.io.impl.AbstractSerializer;
@@ -67,7 +68,7 @@ public class MulticastProtocolTests
 {
     private static final int COUNT = 2;// TODO:10;
     private static final long SEND_COUNT = Long.MAX_VALUE;
-    private Set<String> wellKnownAddresses= new HashSet<String>();
+    private Set<String> wellKnownAddresses = new HashSet<String>();
     private GroupFactoryParameters factoryParameters;
     private List<GroupParameters> parameters = new ArrayList<GroupParameters>();
     private IGroupChannel[] channels = new GroupChannel[COUNT];
@@ -257,7 +258,7 @@ public class MulticastProtocolTests
                 channel.start();
                 wellKnownAddresses.add(channel.getLiveNodeProvider().getLocalNode().getConnection(0));
             }
-            channel.getCompartment().execute(messageSenders.get(i));
+            channel.getCompartment().addTimerProcessor(messageSenders.get(i));
             channels[i] = channel;
         }
     }
@@ -400,7 +401,7 @@ public class MulticastProtocolTests
         }
 
         @Override
-        public void saveSnapshot(File file)
+        public void saveSnapshot(boolean full, File file)
         {
             if (factory.state != null)
                 Files.writeBytes(file, factory.state);
@@ -552,7 +553,7 @@ public class MulticastProtocolTests
         }
     }
     
-    private class TestMessageSender implements IReceiver, IDeliveryHandler, IFlowController<RemoteFlowId>, Runnable
+    private class TestMessageSender implements IReceiver, IDeliveryHandler, IFlowController<RemoteFlowId>, ICompartmentTimerProcessor
     {
         public boolean sendBeforeGroup;
         public boolean send;
@@ -568,7 +569,7 @@ public class MulticastProtocolTests
         }
         
         @Override
-        public void run()
+        public void onTimer(long currentTime)
         {
             if (!send)
                 return;

@@ -4,6 +4,7 @@
 package com.exametrika.impl.groups.cluster.membership;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -16,6 +17,7 @@ import com.exametrika.common.l10n.ILocalizedMessage;
 import com.exametrika.common.l10n.Messages;
 import com.exametrika.common.utils.Assert;
 import com.exametrika.common.utils.Immutables;
+import com.exametrika.common.utils.Strings;
 
 /**
  * The {@link GroupsMembershipChange} is implementation of {@link IGroupsMembershipChange}.
@@ -26,12 +28,12 @@ import com.exametrika.common.utils.Immutables;
 public final class GroupsMembershipChange implements IGroupsMembershipChange
 {
     private static final IMessages messages = Messages.get(IMessages.class);
-    private final Set<IGroup> newGroups;
+    private final List<IGroup> newGroups;
     private final Set<IGroupChange> changedGroups;
     private final Map<UUID, IGroupChange> changedGroupsMap;
     private final Set<IGroup> removedGroups;
 
-    public GroupsMembershipChange(Set<IGroup> newGroups, Set<IGroupChange> changedGroups, Set<IGroup> removedGroups)
+    public GroupsMembershipChange(List<IGroup> newGroups, Set<IGroupChange> changedGroups, Set<IGroup> removedGroups)
     {
         Assert.notNull(newGroups);
         Assert.notNull(changedGroups);
@@ -48,7 +50,7 @@ public final class GroupsMembershipChange implements IGroupsMembershipChange
     }
 
     @Override
-    public Set<IGroup> getNewGroups()
+    public List<IGroup> getNewGroups()
     {
         return newGroups;
     }
@@ -76,12 +78,13 @@ public final class GroupsMembershipChange implements IGroupsMembershipChange
     @Override
     public String toString()
     {
-        return messages.toString(newGroups, changedGroups, removedGroups).toString();
+        return messages.toString(Strings.toString(newGroups, true), Strings.toString(changedGroups, true), 
+            Strings.toString(removedGroups, true)).toString();
     }
     
     private interface IMessages
     {
         @DefaultMessage("new: {0}\nchanged: {1}\nremoved: {2}")
-        ILocalizedMessage toString(Set<IGroup> newGroups, Set<IGroupChange> changedGroups, Set<IGroup> removedGroups);
+        ILocalizedMessage toString(String newGroups, String changedGroups, String removedGroups);
     }
 }

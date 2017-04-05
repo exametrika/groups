@@ -44,7 +44,7 @@ public final class SnapshotSaveTask implements ICompartmentTask<File>
         try
         {
             file = File.createTempFile("groups-state", null);
-            stateTransferServer.saveSnapshot(file);
+            stateTransferServer.saveSnapshot(true, file);
             
             return file;
         }

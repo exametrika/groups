@@ -24,7 +24,7 @@ public interface IGroupMappingStrategy
      * @param domain domain
      * @param nodes available worker nodes
      * @param oldGroups old groups or null if old groups are not set
-     * @return new group mappings as pair of group:group delta. If group is not changed, group delta is null
+     * @return new group mappings as pair of group:<group delta>. If group is not changed, group delta is null
      */
     List<Pair<IGroup, IGroupDelta>> mapGroups(String domain, List<INode> nodes, List<IGroup> oldGroups);
 }

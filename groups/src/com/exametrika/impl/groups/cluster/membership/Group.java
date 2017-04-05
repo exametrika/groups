@@ -137,6 +137,6 @@ public final class Group implements IGroup
     @Override
     public String toString()
     {
-        return MessageFormat.format("{0}{1}[{2}->{3}]", primary ? "" : "-", name, coordinator != null ? coordinator.toString() : "x", members.toString());
+        return MessageFormat.format("{0}{1}[{2}->{3}]", primary ? "" : "-", name, coordinator.toString(), members.toString());
     }
 }

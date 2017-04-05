@@ -3,7 +3,9 @@
  */
 package com.exametrika.impl.groups.cluster.membership;
 
+import java.util.ArrayList;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
@@ -33,7 +35,7 @@ public final class GroupsMembershipDeltaSerializer extends AbstractSerializer
     public Object deserialize(IDeserialization deserialization, UUID id)
     {
         int count = deserialization.readInt();
-        Set<IGroup> newGroups = new LinkedHashSet<IGroup>(count);
+        List<IGroup> newGroups = new ArrayList<IGroup>(count);
         for (int i = 0; i < count; i++)
             newGroups.add(deserialization.readTypedObject(Group.class));
         

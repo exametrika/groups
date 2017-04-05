@@ -75,7 +75,7 @@ public final class ClusterMembershipStateTransferFactory implements IStateTransf
         }
 
         @Override
-        public void saveSnapshot(File file)
+        public void saveSnapshot(boolean full, File file)
         {
             SyncCompletionHandler handler = new SyncCompletionHandler(new Callable()
             {

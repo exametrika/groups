@@ -32,11 +32,11 @@ public final class GroupChange implements IGroupChange
 
     public GroupChange(IGroup newGroup, IGroup oldGroup, List<INode> joinedMembers, Set<INode> leftMembers, Set<INode> failedMembers)
     {
+        Assert.notNull(newGroup);
+        Assert.notNull(oldGroup);
         Assert.notNull(joinedMembers);
         Assert.notNull(leftMembers);
         Assert.notNull(failedMembers);
-        Assert.notNull(newGroup);
-        Assert.notNull(oldGroup);
         
         this.newGroup = newGroup;
         this.oldGroup = oldGroup;

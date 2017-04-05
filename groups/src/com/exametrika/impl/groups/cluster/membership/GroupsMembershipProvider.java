@@ -7,7 +7,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -67,7 +66,7 @@ public final class GroupsMembershipProvider implements IClusterMembershipProvide
             nodeMembership.getNodes(), oldGroups);
         
         List<IGroup> groups = new ArrayList<IGroup>();
-        Set<IGroup> newGroups = new HashSet<IGroup>();
+        List<IGroup> newGroups = new ArrayList<IGroup>();
         Set<UUID> removedGroups = new HashSet<UUID>();
         Set<IGroupDelta> changedGroups = new HashSet<IGroupDelta>();
         for (Pair<IGroup, IGroupDelta> pair : list)
@@ -77,6 +76,8 @@ public final class GroupsMembershipProvider implements IClusterMembershipProvide
             groups.add(group);
             if (delta != null)
                 changedGroups.add(delta);
+            else
+                newGroups.add(group);
         }
         
         GroupsMembership newGroupMembership = new GroupsMembership(groups);
@@ -104,7 +105,7 @@ public final class GroupsMembershipProvider implements IClusterMembershipProvide
     @Override
     public IClusterMembershipElementDelta createEmptyDelta()
     {
-        return new GroupsMembershipDelta(Collections.<IGroup>emptySet(), Collections.<IGroupDelta>emptySet(), 
+        return new GroupsMembershipDelta(Collections.<IGroup>emptyList(), Collections.<IGroupDelta>emptySet(), 
             Collections.<UUID>emptySet());
     }
 
@@ -119,7 +120,7 @@ public final class GroupsMembershipProvider implements IClusterMembershipProvide
     public IClusterMembershipElementDelta createCoreFullDelta(IClusterMembershipElement membership)
     {
         GroupsMembership groupMembership = (GroupsMembership)membership;
-        return new GroupsMembershipDelta(new LinkedHashSet<IGroup>(groupMembership.getGroups()), Collections.<IGroupDelta>emptySet(), 
+        return new GroupsMembershipDelta(groupMembership.getGroups(), Collections.<IGroupDelta>emptySet(), 
             Collections.<UUID>emptySet());
     }
 
@@ -272,7 +273,7 @@ public final class GroupsMembershipProvider implements IClusterMembershipProvide
             }
         }
         
-        Set<IGroup> newGroups = new HashSet<IGroup>();
+        List<IGroup> newGroups = new ArrayList<IGroup>();
         for (IGroup group : newGroupMembership.getGroups())
         {
             if (oldGroupMembership.findGroup(group.getId()) == null)

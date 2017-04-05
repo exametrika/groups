@@ -3,6 +3,7 @@
  */
 package com.exametrika.api.groups.cluster;
 
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
@@ -21,7 +22,7 @@ public interface IGroupsMembershipChange extends IClusterMembershipElementChange
      * 
      * @return set of new cluster groups
      */
-    Set<IGroup> getNewGroups();
+    List<IGroup> getNewGroups();
     
     /**
      * Returns set of changed cluster groups.
@@ -41,7 +42,7 @@ public interface IGroupsMembershipChange extends IClusterMembershipElementChange
     /**
      * Returns set of removed cluster groups.
      * 
-     * @return set of removed custer groups
+     * @return set of removed cluster groups
      */
     Set<IGroup> getRemovedGroups();
 }

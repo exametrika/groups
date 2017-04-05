@@ -3,6 +3,7 @@
  */
 package com.exametrika.impl.groups.cluster.membership;
 
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
@@ -22,11 +23,11 @@ import com.exametrika.common.utils.Immutables;
 public final class NodesMembershipDelta implements IClusterMembershipElementDelta
 {
     private static final IMessages messages = Messages.get(IMessages.class);
-    private final Set<INode> joinedNodes;
+    private final List<INode> joinedNodes;
     private final Set<UUID> leftNodes;
     private final Set<UUID> failedNodes;
 
-    public NodesMembershipDelta(Set<INode> joinedNodes, Set<UUID> leftNodes, Set<UUID> failedNodes)
+    public NodesMembershipDelta(List<INode> joinedNodes, Set<UUID> leftNodes, Set<UUID> failedNodes)
     {
         Assert.notNull(joinedNodes);
         Assert.notNull(leftNodes);
@@ -37,7 +38,7 @@ public final class NodesMembershipDelta implements IClusterMembershipElementDelt
         this.failedNodes = Immutables.wrap(failedNodes);
     }
 
-    public Set<INode> getJoinedNodes()
+    public List<INode> getJoinedNodes()
     {
         return joinedNodes;
     }
@@ -61,6 +62,6 @@ public final class NodesMembershipDelta implements IClusterMembershipElementDelt
     private interface IMessages
     {
         @DefaultMessage("joined: {0}\nleft: {1}\nfailed: {2}")
-        ILocalizedMessage toString(Set<INode> joinedNodes, Set<UUID> leftNodes, Set<UUID> failedNodes);
+        ILocalizedMessage toString(List<INode> joinedNodes, Set<UUID> leftNodes, Set<UUID> failedNodes);
     }
 }

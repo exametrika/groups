@@ -554,7 +554,7 @@ public class StateTransferProtocolTests
         }
 
         @Override
-        public void saveSnapshot(File file)
+        public void saveSnapshot(boolean full, File file)
         {
             if (factory.state != null)
                 Files.writeBytes(file, factory.state);

@@ -20,12 +20,13 @@ public final class ClusterMembershipSerializationRegistrar implements ISerializa
     {
         registry.register(new ClusterMembershipDeltaSerializer());
         registry.register(new DomainMembershipDeltaSerializer());
-        registry.register(new NodeMembershipDeltaSerializer());
+        registry.register(new NodesMembershipDeltaSerializer());
         registry.register(new WorkerToCoreMembershipDeltaSerializer());
         registry.register(new NodeSerializer());
         registry.register(new ClusterMembershipMessagePartSerializer());
         registry.register(new ClusterMembershipResponseMessagePartSerializer());
         registry.register(new GroupSerializer());
+        registry.register(new GroupAddressSerializer());
         registry.register(new GroupDeltaSerializer());
         registry.register(new GroupsMembershipDeltaSerializer());
     }
@@ -35,12 +36,13 @@ public final class ClusterMembershipSerializationRegistrar implements ISerializa
     {
         registry.unregister(ClusterMembershipDeltaSerializer.ID);
         registry.unregister(DomainMembershipDeltaSerializer.ID);
-        registry.unregister(NodeMembershipDeltaSerializer.ID);
+        registry.unregister(NodesMembershipDeltaSerializer.ID);
         registry.unregister(WorkerToCoreMembershipDeltaSerializer.ID);
         registry.unregister(NodeSerializer.ID);
         registry.unregister(ClusterMembershipMessagePartSerializer.ID);
         registry.unregister(ClusterMembershipResponseMessagePartSerializer.ID);
         registry.unregister(GroupSerializer.ID);
+        registry.unregister(GroupAddressSerializer.ID);
         registry.unregister(GroupDeltaSerializer.ID);
         registry.unregister(GroupsMembershipDeltaSerializer.ID);
     }

@@ -25,15 +25,14 @@ public final class Node implements INode
     private final Map<String, Object> properties;
     private final String domain;
 
-    public Node(String name, IAddress address, Map<String, Object> properties, String domain)
+    public Node(IAddress address, Map<String, Object> properties, String domain)
     {
-        Assert.notNull(name);
         Assert.notNull(address);
         Assert.notNull(properties);
         Assert.notNull(domain);
 
         this.id = address.getId();
-        this.name = name;
+        this.name = address.getName();
         this.address = address;
         this.properties = Immutables.wrap(properties);
         this.domain = domain;
@@ -58,7 +57,7 @@ public final class Node implements INode
     }
     
     @Override
-    public <T> T getProperty(String name)
+    public <T> T findProperty(String name)
     {
         Assert.notNull(name);
         

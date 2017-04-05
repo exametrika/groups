@@ -3,6 +3,7 @@
  */
 package com.exametrika.api.groups.cluster;
 
+import java.util.List;
 import java.util.Set;
 
 
@@ -16,11 +17,11 @@ import java.util.Set;
 public interface INodesMembershipChange extends IClusterMembershipElementChange
 {
     /**
-     * Returns set of new cluster
+     * Returns set of new cluster nodes
      * 
-     * @return set of new cluster
+     * @return set of new cluster nodes
      */
-    Set<INode> getJoinedNodes();
+    List<INode> getJoinedNodes();
     
     /**
      * Returns set of left cluster nodes.

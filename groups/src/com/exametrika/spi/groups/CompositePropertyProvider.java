@@ -3,7 +3,7 @@
  */
 package com.exametrika.spi.groups;
 
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -29,7 +29,7 @@ public final class CompositePropertyProvider implements IPropertyProvider
     @Override
     public Map<String, Object> getProperties()
     {
-        Map<String, Object> map = new HashMap<String, Object>();
+        Map<String, Object> map = new LinkedHashMap<String, Object>();
         for (IPropertyProvider provider : providers)
             map.putAll(provider.getProperties());
         

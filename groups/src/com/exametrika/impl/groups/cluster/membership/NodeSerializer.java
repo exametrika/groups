@@ -11,6 +11,7 @@ import com.exametrika.common.io.IDeserialization;
 import com.exametrika.common.io.ISerialization;
 import com.exametrika.common.io.impl.AbstractSerializer;
 import com.exametrika.common.messaging.IAddress;
+import com.exametrika.common.messaging.impl.transports.UnicastAddress;
 
 /**
  * The {@link NodeSerializer} is a serializer of {@link Node}.
@@ -31,8 +32,7 @@ public final class NodeSerializer extends AbstractSerializer
     @Override
     public Object deserialize(IDeserialization deserialization, UUID id)
     {
-        String name = deserialization.readString();
-        IAddress address = deserialization.readObject();
+        IAddress address = deserialization.readTypedObject(UnicastAddress.class);
         
         int count = deserialization.readInt();
         Map<String, Object> properties = new LinkedHashMap<String, Object>(count);
@@ -46,15 +46,14 @@ public final class NodeSerializer extends AbstractSerializer
         
         String domain = deserialization.readString();
         
-        return new Node(name, address, properties, domain);
+        return new Node(address, properties, domain);
     }
 
     @Override
     public void serialize(ISerialization serialization, Object object)
     {
         Node node = (Node)object;
-        serialization.writeString(node.getName());
-        serialization.writeObject(node.getAddress());
+        serialization.writeTypedObject(node.getAddress());
         
         Map<String, Object> properties = node.getProperties();
         serialization.writeInt(properties.size());

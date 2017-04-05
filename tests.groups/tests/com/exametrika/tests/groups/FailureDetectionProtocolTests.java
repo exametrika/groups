@@ -342,11 +342,9 @@ public class FailureDetectionProtocolTests
         private Node localNode;
         private GroupMembership membership;
         private ILiveNodeProvider provider;
-        private String name;
         
-        public MembershipServiceMock(String name, ILiveNodeProvider provider)
+        public MembershipServiceMock(ILiveNodeProvider provider)
         {
-            this.name = name;
             this.provider = provider;
         }
         
@@ -354,7 +352,7 @@ public class FailureDetectionProtocolTests
         public synchronized INode getLocalNode()
         {
             if (localNode == null)
-                localNode = new Node(name, provider.getLocalNode(), Collections.<String, Object>emptyMap(), "core");
+                localNode = new Node(provider.getLocalNode(), Collections.<String, Object>emptyMap(), "core");
             
             return localNode;
         }
@@ -464,7 +462,7 @@ public class FailureDetectionProtocolTests
             List<AbstractProtocol> protocols)
         {
             messageFactories.add(messageFactory);
-            MembershipServiceMock membershipService = new MembershipServiceMock(channelName, liveNodeProvider);
+            MembershipServiceMock membershipService = new MembershipServiceMock(liveNodeProvider);
             membershipServices.add(membershipService);
             FailureDetectionListenerMock failureListener = new FailureDetectionListenerMock();
             failureListeners.add(failureListener);
