@@ -15,7 +15,11 @@ import com.exametrika.api.groups.cluster.IGroupChange;
 import com.exametrika.api.groups.cluster.IGroupMembership;
 import com.exametrika.api.groups.cluster.IGroupMembershipChange;
 import com.exametrika.api.groups.cluster.INode;
+import com.exametrika.common.messaging.IFeed;
+import com.exametrika.common.messaging.IMessage;
 import com.exametrika.common.messaging.IMessageFactory;
+import com.exametrika.common.messaging.ISender;
+import com.exametrika.common.messaging.ISink;
 import com.exametrika.common.messaging.impl.protocols.AbstractProtocol;
 import com.exametrika.common.messaging.impl.protocols.composite.ProtocolSubStack;
 import com.exametrika.common.utils.Assert;
@@ -30,19 +34,22 @@ import com.exametrika.impl.groups.cluster.flush.IFlushManager;
  */
 public final class GroupProtocolSubStack extends ProtocolSubStack implements IPreparedGroupMembershipListener
 {
+    private final UUID groupId;
     private final GroupMembershipManager membershipManager;
     private final int maxGroupMembershipHistorySize;
     private long startRemoveTime;
     private final Deque<IGroupMembership> membershipHistory = new ArrayDeque<IGroupMembership>();
     private IFlushManager flushManager;
 
-    public GroupProtocolSubStack(String channelName, IMessageFactory messageFactory,
+    public GroupProtocolSubStack(String channelName, IMessageFactory messageFactory, UUID groupId,
         List<? extends AbstractProtocol> protocols, GroupMembershipManager membershipManager, int maxGroupMembershipHistorySize)
     {
         super(channelName, messageFactory, protocols);
         
+        Assert.notNull(groupId);
         Assert.notNull(membershipManager);
         
+        this.groupId = groupId;
         this.membershipManager = membershipManager;
         this.maxGroupMembershipHistorySize = maxGroupMembershipHistorySize;
     }
@@ -89,6 +96,7 @@ public final class GroupProtocolSubStack extends ProtocolSubStack implements IPr
     public void installGroupMembership(IGroup group)
     {
         Assert.notNull(group);
+        Assert.isTrue(group.getId().equals(groupId));
         
         if (!group.getCoordinator().equals(membershipManager.getLocalNode()))
             return;
@@ -103,6 +111,7 @@ public final class GroupProtocolSubStack extends ProtocolSubStack implements IPr
     public void installGroupMembership(IGroupChange changedGroup)
     {
         Assert.notNull(changedGroup);
+        Assert.isTrue(changedGroup.getNewGroup().getId().equals(groupId));
         
         if (!changedGroup.getNewGroup().getCoordinator().equals(membershipManager.getLocalNode()))
             return;
@@ -134,5 +143,17 @@ public final class GroupProtocolSubStack extends ProtocolSubStack implements IPr
         membershipHistory.addFirst(newMembership);
         if (membershipHistory.size() > maxGroupMembershipHistorySize)
             membershipHistory.removeLast();
+    }
+    
+    @Override
+    protected void doSend(ISender sender, IMessage message)
+    {
+        super.doSend(sender, message.addPart(new GroupMessagePart(groupId)));
+    }
+    
+    @Override
+    protected boolean doSend(IFeed feed, ISink sink, IMessage message)
+    {
+        return super.doSend(feed, sink, message.addPart(new GroupMessagePart(groupId)));
     }
 }

@@ -145,15 +145,6 @@ public class GroupFailureDetectionProtocol extends AbstractProtocol implements I
             onMemberFailed(member);
     }
 
-    protected void addHistory(long currentTime, INode member, boolean failed)
-    {
-    }
-
-    protected boolean isHistoryContains(INode member)
-    {
-        return false;
-    }
-
     @Override
     public void addLeftMembers(Set<UUID> memberIds)
     {
@@ -248,7 +239,15 @@ public class GroupFailureDetectionProtocol extends AbstractProtocol implements I
         Assert.checkState(failureObserver != null);
     }
     
-    
+    protected void addHistory(long currentTime, INode member, boolean failed)
+    {
+    }
+
+    protected boolean isHistoryContains(INode member)
+    {
+        return false;
+    }
+
     private void onMemberFailed(INode member)
     {
         if (logger.isLogEnabled(LogLevel.DEBUG))

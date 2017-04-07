@@ -94,7 +94,8 @@ public final class CoreCoordinatorClusterMembershipProtocol extends AbstractClus
         if (oldMembership == null || !coreNodesFailed)
         {
             delta = createCoreDelta(oldMembership, false);
-            roundId++;
+            if (delta != null)
+                roundId++;
         }
         else 
             delta = createCoreDelta(oldMembership, true);
@@ -235,13 +236,13 @@ public final class CoreCoordinatorClusterMembershipProtocol extends AbstractClus
         if (installing)
             return false;
         
+        if (flushManager.isFlushInProgress())
+            return false;
+
         if (lastTrackTime != 0 && currentTime < lastTrackTime + trackPeriod)
             return false;
 
         lastTrackTime = currentTime;
-
-        if (flushManager.isFlushInProgress())
-            return false;
 
         IGroupMembership membership = membershipManager.getMembership();
         if (membership == null || !membership.getGroup().getCoordinator().equals(membershipManager.getLocalNode()))

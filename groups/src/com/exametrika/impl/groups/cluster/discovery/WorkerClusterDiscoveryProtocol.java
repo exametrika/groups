@@ -7,9 +7,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
-import com.exametrika.api.groups.cluster.GroupMembershipEvent;
-import com.exametrika.api.groups.cluster.IGroupMembershipListener;
-import com.exametrika.api.groups.cluster.IGroupMembershipService;
+import com.exametrika.api.groups.cluster.ClusterMembershipEvent;
+import com.exametrika.api.groups.cluster.IClusterMembershipListener;
+import com.exametrika.api.groups.cluster.IClusterMembershipService;
 import com.exametrika.common.io.ISerializationRegistry;
 import com.exametrika.common.l10n.DefaultMessage;
 import com.exametrika.common.l10n.ILocalizedMessage;
@@ -24,18 +24,18 @@ import com.exametrika.common.utils.Assert;
 import com.exametrika.spi.groups.IDiscoveryStrategy;
 
 /**
- * The {@link WorkerClusterDiscoveryProtocol} represents a worketr node part of cluster discovery protocol.
+ * The {@link WorkerClusterDiscoveryProtocol} represents a worker node part of cluster discovery protocol.
  * process.
  * 
  * @threadsafety This class and its methods are not thread safe.
  * @author Medvedev-A
  */
-public final class WorkerClusterDiscoveryProtocol extends AbstractProtocol implements IGroupMembershipListener
+public final class WorkerClusterDiscoveryProtocol extends AbstractProtocol implements IClusterMembershipListener
 {
     private static final IMessages messages = Messages.get(IMessages.class);
     private final IDiscoveryStrategy discoveryStrategy;
     private final ILiveNodeProvider liveNodeProvider;
-    private final IGroupMembershipService membershipService;
+    private final IClusterMembershipService membershipService;
     private final long discoveryPeriod;
     private final long connectionTimeout;
     private final Random random = new Random();
@@ -47,7 +47,7 @@ public final class WorkerClusterDiscoveryProtocol extends AbstractProtocol imple
     private long startConnectionTime;
 
     public WorkerClusterDiscoveryProtocol(String channelName, IMessageFactory messageFactory, IDiscoveryStrategy discoveryStrategy, 
-        ILiveNodeProvider liveNodeProvider, IGroupMembershipService membershipService, long discoveryPeriod, long connectionTimeout)
+        ILiveNodeProvider liveNodeProvider, IClusterMembershipService membershipService, long discoveryPeriod, long connectionTimeout)
     {
         super(channelName, messageFactory);
 
@@ -77,7 +77,7 @@ public final class WorkerClusterDiscoveryProtocol extends AbstractProtocol imple
     }
 
     @Override
-    public void onMembershipChanged(GroupMembershipEvent event)
+    public void onMembershipChanged(ClusterMembershipEvent event)
     {
     }
     
@@ -87,17 +87,16 @@ public final class WorkerClusterDiscoveryProtocol extends AbstractProtocol imple
         if (joined)
             return;
         
-        IAddress entryPointAddress = selectEntryPoint(currentTime);
-        if (entryPointAddress == null)
-            return;
-        
         if (currentTime > lastDiscoveryTime + discoveryPeriod)
         {
-            DiscoveryMessagePart discoveryPart = new DiscoveryMessagePart(java.util.Collections.singleton(membershipService.getLocalNode()));
-            
-            send(messageFactory.create(entryPointAddress, discoveryPart, MessageFlags.HIGH_PRIORITY));
-            
             lastDiscoveryTime = currentTime;
+            
+            IAddress entryPointAddress = selectEntryPoint(currentTime);
+            if (entryPointAddress == null)
+                return;
+            
+            DiscoveryMessagePart discoveryPart = new DiscoveryMessagePart(java.util.Collections.singleton(membershipService.getLocalNode()));
+            send(messageFactory.create(entryPointAddress, discoveryPart, MessageFlags.HIGH_PRIORITY));
         }
     }
     

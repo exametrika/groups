@@ -11,6 +11,7 @@ import java.util.Map;
 import java.util.UUID;
 
 import com.exametrika.api.groups.cluster.ClusterMembershipEvent;
+import com.exametrika.api.groups.cluster.IClusterMembership;
 import com.exametrika.api.groups.cluster.IClusterMembershipListener;
 import com.exametrika.api.groups.cluster.IClusterMembershipService;
 import com.exametrika.api.groups.cluster.IDomainMembership;
@@ -87,6 +88,18 @@ public final class WorkerGroupMembershipProtocol extends MessageRouter implement
     @Override
     public void onJoined()
     {
+        IClusterMembership membership = membershipService.getMembership();
+        IDomainMembership domainMembership = membership.findDomain(membershipService.getLocalNode().getDomain());
+        GroupsMembership groupsMembership = domainMembership.findElement(GroupsMembership.class);
+        List<IGroup> nodeGroups = groupsMembership.findNodeGroups(membershipService.getLocalNode().getId());
+        for (IGroup group : nodeGroups)
+        {
+            GroupProtocolSubStack protocolSubStack = protocolSubStackFactory.createProtocolSubStack(group);
+            addProtocol(protocolSubStack);
+            groupsStacks.put(group.getId(), protocolSubStack);
+           
+            protocolSubStack.installGroupMembership(group);
+        }
     }
 
     @Override
@@ -97,7 +110,9 @@ public final class WorkerGroupMembershipProtocol extends MessageRouter implement
     @Override
     public void onMembershipChanged(ClusterMembershipEvent event)
     {
-        IDomainMembershipChange domainChange = event.getMembershipChange().findDomain(membershipService.getLocalNode().getDomain());
+        IDomainMembershipChange domainChange = event.getMembershipChange().findChangedDomain(membershipService.getLocalNode().getDomain());
+        if (domainChange == null)
+            return;
         IDomainMembership domainMembership = event.getNewMembership().findDomain(membershipService.getLocalNode().getDomain());
         GroupsMembership groupsMembership = domainMembership.findElement(GroupsMembership.class);
         List<IGroup> nodeGroups = groupsMembership.findNodeGroups(membershipService.getLocalNode().getId());

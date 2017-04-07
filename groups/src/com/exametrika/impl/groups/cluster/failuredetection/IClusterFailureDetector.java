@@ -18,16 +18,16 @@ import com.exametrika.api.groups.cluster.INode;
 public interface IClusterFailureDetector
 {
     /**
-     * Takes list of cluster nodes, whose failure has been detected.
+     * Takes set of cluster nodes, whose failure has been detected.
      *
-     * @return list of failed nodes
+     * @return set of failed nodes
      */
     Set<INode> takeFailedNodes();
     
     /**
-     * Returns list of cluster nodes, which intentionally left the group.
+     * Returns set of cluster nodes, which intentionally left the group.
      *
-     * @return list of left nodes
+     * @return set of left nodes
      */
     Set<INode> takeLeftNodes();
 }

@@ -49,11 +49,6 @@ public interface IClusterMembershipProvider
         IDomainMembershipDelta domainMembershipDelta, IDomainMembership oldDomainMembership, IClusterMembershipElement oldMembership);
 
     /**
-     * Clears provider state processed by {@link #getDelta}.
-     */
-    void clearState();
-    
-    /**
      * Creates empty membership delta.
      *
      * @return empty membership delta
@@ -76,7 +71,7 @@ public interface IClusterMembershipProvider
      */
     IClusterMembershipElementDelta createCoreFullDelta(IClusterMembershipElement membership);
     /**
-     * Creates full membership delta based on given membership. Only one of membership or delta must be specified.
+     * Creates worker membership delta based on given membership. Only one of membership or delta must be specified.
      *
      * @param membership membership
      * @param delta delta

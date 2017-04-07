@@ -4,6 +4,7 @@
 package com.exametrika.api.groups.cluster;
 
 import java.util.List;
+import java.util.Set;
 
 
 /**
@@ -16,17 +17,31 @@ import java.util.List;
 public interface IClusterMembershipChange
 {
     /**
-     * Finds domain by name.
+     * Returns new domains.
+     *
+     * @return new domains
+     */
+    List<IDomainMembership> getNewDomains();
+    
+    /**
+     * Finds changed domain by name.
      *
      * @param name domain name
      * @return domain or null if domain change is not found
      */
-    IDomainMembershipChange findDomain(String name);
+    IDomainMembershipChange findChangedDomain(String name);
     
     /**
-     * Returns list of all cluster domains.
+     * Returns list of all changed cluster domains.
      *
      * @return list of all cluster domains
      */
-    List<IDomainMembershipChange> getDomains();
+    List<IDomainMembershipChange> getChangedDomains();
+    
+    /**
+     * Returns removed domains.
+     *
+     * @return removed domains
+     */
+    Set<IDomainMembership> getRemovedDomains();
 }

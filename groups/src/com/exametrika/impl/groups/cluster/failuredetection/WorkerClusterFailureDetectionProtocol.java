@@ -103,7 +103,7 @@ public final class WorkerClusterFailureDetectionProtocol extends AbstractProtoco
     public void onMembershipChanged(ClusterMembershipEvent event)
     {
         INode localNode = membershipService.getLocalNode();
-        IDomainMembershipChange domain = event.getMembershipChange().findDomain(localNode.getDomain());
+        IDomainMembershipChange domain = event.getMembershipChange().findChangedDomain(localNode.getDomain());
         if (domain == null)
             return;
         

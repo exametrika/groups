@@ -5,6 +5,7 @@ package com.exametrika.impl.groups.cluster.membership;
 
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -71,6 +72,7 @@ public abstract class AbstractClusterMembershipProtocol extends AbstractProtocol
         List<IDomainMembership> domains = new ArrayList<IDomainMembership>();
         Set<String> domainNames = new HashSet<String>();
         List<IDomainMembershipChange> domainsChanges = new ArrayList<IDomainMembershipChange>();
+        List<IDomainMembership> newDomains = new ArrayList<IDomainMembership>();
         for (IDomainMembershipDelta domainDelta : part.getDelta().getDomains())
         {
             Assert.isTrue(domainDelta.getDeltas().size() == membershipProviders.size());
@@ -83,7 +85,7 @@ public abstract class AbstractClusterMembershipProtocol extends AbstractProtocol
             domains.add(domain);
             domainNames.add(domain.getName());
             
-            for (int i= 0; i < membershipProviders.size(); i++)
+            for (int i = 0; i < membershipProviders.size(); i++)
             {
                 IClusterMembershipElement element = membershipProviders.get(i).createMembership(domain, domainDelta.getDeltas().get(i),
                     (oldDomain != null && !part.getDelta().isFull()) ? oldDomain.getElements().get(i) : null);
@@ -102,13 +104,16 @@ public abstract class AbstractClusterMembershipProtocol extends AbstractProtocol
                 }
             }
             
-            if (oldMembership != null)
+            if (oldDomain != null)
             {
                 IDomainMembershipChange domainChange = new DomainMembershipChange(domainDelta.getName(), changes);
                 domainsChanges.add(domainChange);
             }
+            else
+                newDomains.add(domain);
         }
         
+        Set<IDomainMembership> removedDomains = new LinkedHashSet<IDomainMembership>();
         if (oldMembership != null)
         {
             for (IDomainMembership oldDomain : oldMembership.getDomains())
@@ -124,6 +129,8 @@ public abstract class AbstractClusterMembershipProtocol extends AbstractProtocol
                     
                     if (!empty)
                         domains.add(oldDomain);
+                    else
+                        removedDomains.add(oldDomain);
                 }
             }
         }
@@ -132,7 +139,7 @@ public abstract class AbstractClusterMembershipProtocol extends AbstractProtocol
         if (oldMembership == null)
             clusterMembershipManager.installMembership(newMembership);
         else
-            clusterMembershipManager.changeMembership(newMembership, new ClusterMembershipChange(domainsChanges));
+            clusterMembershipManager.changeMembership(newMembership, new ClusterMembershipChange(newDomains, domainsChanges, removedDomains));
         
         onInstalled(part.getRoundId(), newMembership, part.getDelta());
     }

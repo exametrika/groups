@@ -122,15 +122,11 @@ public final class NodesMembershipProvider implements IClusterMembershipProvider
             newNodeMembership = new NodesMembership(nodes);
         }
         
-        return new Pair<IClusterMembershipElement, IClusterMembershipElementDelta>(newNodeMembership, delta);
-    }
-    
-    @Override
-    public void clearState()
-    {
         discoveredNodes = null;
         failedNodes = null;
         leftNodes = null;
+        
+        return new Pair<IClusterMembershipElement, IClusterMembershipElementDelta>(newNodeMembership, delta);
     }
     
     @Override
@@ -182,7 +178,7 @@ public final class NodesMembershipProvider implements IClusterMembershipProvider
         NodesMembershipDelta nodeDelta = (NodesMembershipDelta)delta;
         NodesMembership oldNodeMembership = (NodesMembership)oldMembership;
         if (oldMembership == null)
-            return new NodesMembership(new ArrayList<>(nodeDelta.getJoinedNodes()));
+            return new NodesMembership(new ArrayList<INode>(nodeDelta.getJoinedNodes()));
         else
         {
             List<INode> nodes = new ArrayList<INode>();

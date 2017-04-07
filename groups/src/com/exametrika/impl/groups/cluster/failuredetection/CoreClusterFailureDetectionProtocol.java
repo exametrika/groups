@@ -9,9 +9,10 @@ import java.util.Set;
 import java.util.UUID;
 
 import com.exametrika.api.groups.cluster.ClusterMembershipEvent;
+import com.exametrika.api.groups.cluster.IClusterMembership;
 import com.exametrika.api.groups.cluster.IClusterMembershipListener;
+import com.exametrika.api.groups.cluster.IClusterMembershipService;
 import com.exametrika.api.groups.cluster.IDomainMembership;
-import com.exametrika.api.groups.cluster.IGroupMembershipService;
 import com.exametrika.api.groups.cluster.INode;
 import com.exametrika.common.l10n.DefaultMessage;
 import com.exametrika.common.l10n.ILocalizedMessage;
@@ -34,10 +35,11 @@ import com.exametrika.impl.groups.cluster.membership.WorkerToCoreMembership;
  * @threadsafety This class and its methods are not thread safe.
  * @author Medvedev-A
  */
-public final class CoreClusterFailureDetectionProtocol extends AbstractProtocol implements IClusterMembershipListener, IFailureObserver
+public final class CoreClusterFailureDetectionProtocol extends AbstractProtocol implements IClusterMembershipListener, 
+    IFailureObserver
 {
     private static final IMessages messages = Messages.get(IMessages.class);
-    private final IGroupMembershipService membershipService;
+    private final IClusterMembershipService membershipService;
     private final IGroupFailureDetector failureDetector;
     private final Set<IFailureDetectionListener> failureDetectionListeners;
     private final long failureUpdatePeriod;
@@ -49,7 +51,7 @@ public final class CoreClusterFailureDetectionProtocol extends AbstractProtocol 
     private long lastFailureUpdateTime;
     private boolean modified;
 
-    public CoreClusterFailureDetectionProtocol(String channelName, IMessageFactory messageFactory, IGroupMembershipService membershipService,
+    public CoreClusterFailureDetectionProtocol(String channelName, IMessageFactory messageFactory, IClusterMembershipService membershipService,
         IGroupFailureDetector failureDetector, Set<IFailureDetectionListener> failureDetectionListeners, long failureUpdatePeriod)
     {
         super(channelName, messageFactory);
@@ -133,6 +135,8 @@ public final class CoreClusterFailureDetectionProtocol extends AbstractProtocol 
     @Override
     public void onJoined()
     {
+        IClusterMembership membership = membershipService.getMembership();
+        updateWorkerNodes(membership);
     }
 
     @Override
@@ -143,15 +147,23 @@ public final class CoreClusterFailureDetectionProtocol extends AbstractProtocol 
     @Override
     public void onMembershipChanged(ClusterMembershipEvent event)
     {
-        IDomainMembership domainMembership = event.getNewMembership().findDomain(GroupMemberships.CORE_DOMAIN);
+        updateWorkerNodes(event.getNewMembership());
+    }
+    
+    private void updateWorkerNodes(IClusterMembership membership)
+    {
+        IDomainMembership domainMembership = membership.findDomain(GroupMemberships.CORE_DOMAIN);
         WorkerToCoreMembership mappingMembership = domainMembership.findElement(WorkerToCoreMembership.class);
         Set<INode> workerNodes = mappingMembership.findWorkerNodes(membershipService.getLocalNode());
         this.workerNodes.clear();
         this.workerNodesMap.clear();
-        for (INode node : workerNodes)
+        if (workerNodes != null)
         {
-            this.workerNodes.add(node.getAddress());
-            this.workerNodesMap.put(node.getId(), node);
+            for (INode node : workerNodes)
+            {
+                this.workerNodes.add(node.getAddress());
+                this.workerNodesMap.put(node.getId(), node);
+            }
         }
         
         if (failedNodes != null)

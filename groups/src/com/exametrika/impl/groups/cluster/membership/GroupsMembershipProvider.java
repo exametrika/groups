@@ -55,10 +55,11 @@ public final class GroupsMembershipProvider implements IClusterMembershipProvide
         IDomainMembership newDomainMembership, IDomainMembershipDelta domainMembershipDelta,
         IDomainMembership oldDomainMembership, IClusterMembershipElement oldMembership)
     {
+        GroupsMembership oldGroupMembership = null;
         List<IGroup> oldGroups = null;
         if (oldMembership != null)
         {
-            GroupsMembership oldGroupMembership = (GroupsMembership)oldMembership;
+            oldGroupMembership = (GroupsMembership)oldMembership;
             oldGroups = oldGroupMembership.getGroups();
         }
         NodesMembership nodeMembership = newDomainMembership.findElement(NodesMembership.class);
@@ -75,9 +76,12 @@ public final class GroupsMembershipProvider implements IClusterMembershipProvide
             IGroupDelta delta = pair.getValue();
             groups.add(group);
             if (delta != null)
-                changedGroups.add(delta);
-            else
-                newGroups.add(group);
+            {
+                if (oldGroupMembership != null && oldGroupMembership.findGroup(group.getId()) != null)
+                    changedGroups.add(delta);
+                else
+                    newGroups.add(group);
+            }
         }
         
         GroupsMembership newGroupMembership = new GroupsMembership(groups);
@@ -95,11 +99,6 @@ public final class GroupsMembershipProvider implements IClusterMembershipProvide
             
         GroupsMembershipDelta newGroupMembershipDelta = new GroupsMembershipDelta(newGroups, changedGroups, removedGroups);
         return new Pair<IClusterMembershipElement, IClusterMembershipElementDelta>(newGroupMembership, newGroupMembershipDelta);
-    }
-
-    @Override
-    public void clearState()
-    {
     }
 
     @Override
@@ -149,7 +148,7 @@ public final class GroupsMembershipProvider implements IClusterMembershipProvide
         GroupsMembershipDelta groupDelta = (GroupsMembershipDelta)delta;
         GroupsMembership oldGroupMembership = (GroupsMembership)oldMembership;
         if (oldMembership == null)
-            return new GroupsMembership(new ArrayList<>(groupDelta.getNewGroups()));
+            return new GroupsMembership(groupDelta.getNewGroups());
         else
         {
             List<IGroup> groups = new ArrayList<IGroup>();
