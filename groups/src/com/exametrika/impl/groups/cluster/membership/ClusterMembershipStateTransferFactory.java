@@ -3,15 +3,12 @@
  */
 package com.exametrika.impl.groups.cluster.membership;
 
-import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.Callable;
 
 import com.exametrika.api.groups.cluster.IClusterMembership;
 import com.exametrika.api.groups.cluster.IClusterMembershipElement;
 import com.exametrika.api.groups.cluster.IDomainMembership;
-import com.exametrika.common.compartment.ICompartment;
 import com.exametrika.common.io.ISerialization;
 import com.exametrika.common.io.impl.ByteInputStream;
 import com.exametrika.common.io.impl.ByteOutputStream;
@@ -21,11 +18,9 @@ import com.exametrika.common.io.impl.SerializationRegistry;
 import com.exametrika.common.messaging.IMessage;
 import com.exametrika.common.utils.Assert;
 import com.exametrika.common.utils.ByteArray;
-import com.exametrika.common.utils.Files;
-import com.exametrika.common.utils.SyncCompletionHandler;
-import com.exametrika.spi.groups.IStateTransferClient;
-import com.exametrika.spi.groups.IStateTransferFactory;
-import com.exametrika.spi.groups.IStateTransferServer;
+import com.exametrika.spi.groups.ISimpleStateTransferClient;
+import com.exametrika.spi.groups.ISimpleStateTransferFactory;
+import com.exametrika.spi.groups.ISimpleStateTransferServer;
 
 /**
  * The {@link ClusterMembershipStateTransferFactory} is a cluster membership state transfer factory.
@@ -33,37 +28,34 @@ import com.exametrika.spi.groups.IStateTransferServer;
  * @threadsafety This class and its methods are thread safe.
  * @author Medvedev-A
  */
-public final class ClusterMembershipStateTransferFactory implements IStateTransferFactory
+public final class ClusterMembershipStateTransferFactory implements ISimpleStateTransferFactory
 {
-    private final ICompartment compartment;
     private final IClusterMembershipManager membershipManager;
     private final List<IClusterMembershipProvider> membershipProviders;
 
-    public ClusterMembershipStateTransferFactory(ICompartment compartment, IClusterMembershipManager membershipManager,
+    public ClusterMembershipStateTransferFactory(IClusterMembershipManager membershipManager,
         List<IClusterMembershipProvider> membershipProviders)
     {
-        Assert.notNull(compartment);
         Assert.notNull(membershipManager);
         Assert.notNull(membershipProviders);
         
-        this.compartment = compartment;
         this.membershipManager = membershipManager;
         this.membershipProviders = membershipProviders;
     }
     
     @Override
-    public IStateTransferServer createServer()
+    public ISimpleStateTransferServer createServer()
     {
         return new ClusterMembershipStateTransferServer();
     }
 
     @Override
-    public IStateTransferClient createClient()
+    public ISimpleStateTransferClient createClient()
     {
         return new ClusterMembershipStateTransferClient();
     }
     
-    private class ClusterMembershipStateTransferServer implements IStateTransferServer
+    private class ClusterMembershipStateTransferServer implements ISimpleStateTransferServer
     {
         @Override
         public MessageType classifyMessage(IMessage message)
@@ -75,20 +67,9 @@ public final class ClusterMembershipStateTransferFactory implements IStateTransf
         }
 
         @Override
-        public void saveSnapshot(boolean full, File file)
+        public ByteArray saveSnapshot()
         {
-            SyncCompletionHandler handler = new SyncCompletionHandler(new Callable()
-            {
-                @Override
-                public Object call() throws Exception
-                {
-                    return membershipManager.getMembership();
-                }
-            });
-            
-            compartment.offer(handler);
-            
-            ClusterMembership membership = handler.await();
+            IClusterMembership membership = membershipManager.getMembership();
             ClusterMembershipDelta delta = null;
             if (membership != null)
             {
@@ -111,17 +92,15 @@ public final class ClusterMembershipStateTransferFactory implements IStateTransf
             ISerialization serialization = new Serialization(registry, true, stream);
             serialization.writeTypedObject(delta);
             
-            Files.writeBytes(file, new ByteArray(stream.getBuffer(), 0, stream.getLength()));
+            return new ByteArray(stream.getBuffer(), 0, stream.getLength());
         }
     }
     
-    private class ClusterMembershipStateTransferClient implements IStateTransferClient
+    private class ClusterMembershipStateTransferClient implements ISimpleStateTransferClient
     {
         @Override
-        public void loadSnapshot(File file)
+        public void loadSnapshot(ByteArray buffer)
         {
-            ByteArray buffer = Files.readBytes(file);
-            
             SerializationRegistry registry = new SerializationRegistry();
             registry.register(new ClusterMembershipSerializationRegistrar());
             
@@ -148,21 +127,8 @@ public final class ClusterMembershipStateTransferFactory implements IStateTransf
                     elements.add(element);
                 }
             }
-            final IClusterMembership membership = new ClusterMembership(delta.getId(), domains);
-            
-            SyncCompletionHandler handler = new SyncCompletionHandler(new Callable()
-            {
-                @Override
-                public Object call() throws Exception
-                {
-                    membershipManager.installMembership(membership);
-                    return null;
-                }
-            });
-            
-            compartment.offer(handler);
-            
-            handler.await();
+            IClusterMembership membership = new ClusterMembership(delta.getId(), domains);
+            membershipManager.installMembership(membership);
         }
     }
 }

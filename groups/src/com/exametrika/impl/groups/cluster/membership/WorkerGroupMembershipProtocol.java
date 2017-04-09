@@ -3,9 +3,11 @@
  */
 package com.exametrika.impl.groups.cluster.membership;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -19,6 +21,10 @@ import com.exametrika.api.groups.cluster.IDomainMembershipChange;
 import com.exametrika.api.groups.cluster.IGroup;
 import com.exametrika.api.groups.cluster.IGroupChange;
 import com.exametrika.common.io.ISerializationRegistry;
+import com.exametrika.common.l10n.DefaultMessage;
+import com.exametrika.common.l10n.ILocalizedMessage;
+import com.exametrika.common.l10n.Messages;
+import com.exametrika.common.log.LogLevel;
 import com.exametrika.common.messaging.IMessage;
 import com.exametrika.common.messaging.IMessageFactory;
 import com.exametrika.common.messaging.IReceiver;
@@ -35,14 +41,17 @@ import com.exametrika.common.utils.Assert;
  */
 public final class WorkerGroupMembershipProtocol extends MessageRouter implements IClusterMembershipListener
 {
+    private static final IMessages messages = Messages.get(IMessages.class);
     private final Map<UUID, GroupProtocolSubStack> groupsStacks = new HashMap<UUID, GroupProtocolSubStack>();
     private final IClusterMembershipService membershipService;
     private final IGroupProtocolSubStackFactory protocolSubStackFactory;
     private final long groupSubStackRemoveDelay;
+    private final int maxPendingMessageSize;
+    private final Map<UUID, List<IMessage>> pendingMessages = new LinkedHashMap<UUID, List<IMessage>>();
     
     public WorkerGroupMembershipProtocol(String channelName, IMessageFactory messageFactory, 
         IClusterMembershipService membershipService, IGroupProtocolSubStackFactory protocolSubStackFactory,
-        long groupSubStackRemoveDelay)
+        long groupSubStackRemoveDelay, int maxPendingMessageSize)
     {
         super(channelName, messageFactory, Collections.<AbstractProtocol>emptyList());
         
@@ -52,6 +61,7 @@ public final class WorkerGroupMembershipProtocol extends MessageRouter implement
         this.membershipService = membershipService;
         this.protocolSubStackFactory = protocolSubStackFactory;
         this.groupSubStackRemoveDelay = groupSubStackRemoveDelay;
+        this.maxPendingMessageSize = maxPendingMessageSize;
     }
 
     @Override
@@ -81,6 +91,9 @@ public final class WorkerGroupMembershipProtocol extends MessageRouter implement
             {
                 removeProtocol(subStack);
                 it.remove();
+                
+                if (logger.isLogEnabled(LogLevel.DEBUG))
+                    logger.log(LogLevel.DEBUG, subStack.getMarker(), messages.groupSubStackRemoved());
             }
         }
     }
@@ -98,7 +111,12 @@ public final class WorkerGroupMembershipProtocol extends MessageRouter implement
             addProtocol(protocolSubStack);
             groupsStacks.put(group.getId(), protocolSubStack);
            
+            if (logger.isLogEnabled(LogLevel.DEBUG))
+                logger.log(LogLevel.DEBUG, protocolSubStack.getMarker(), messages.groupSubStackCreated());
+            
             protocolSubStack.installGroupMembership(group);
+            
+            processPendingMessages(group.getId(), protocolSubStack);
         }
     }
 
@@ -127,6 +145,9 @@ public final class WorkerGroupMembershipProtocol extends MessageRouter implement
                 protocolSubStack = protocolSubStackFactory.createProtocolSubStack(group);
                 addProtocol(protocolSubStack);
                 groupsStacks.put(group.getId(), protocolSubStack);
+                
+                if (logger.isLogEnabled(LogLevel.DEBUG))
+                    logger.log(LogLevel.DEBUG, protocolSubStack.getMarker(), messages.groupSubStackRemoved());
             }
             else
             {
@@ -141,7 +162,11 @@ public final class WorkerGroupMembershipProtocol extends MessageRouter implement
             if (protocolSubStack != null)
             {
                 if (changedGroup == null)
+                {
                     protocolSubStack.installGroupMembership(group);
+                    
+                    processPendingMessages(group.getId(), protocolSubStack);
+                }
                 else
                     protocolSubStack.installGroupMembership(changedGroup);
             }
@@ -161,14 +186,45 @@ public final class WorkerGroupMembershipProtocol extends MessageRouter implement
         if (message.getPart() instanceof GroupMessagePart)
         {
             GroupMessagePart part = message.getPart();
+            message = message.removePart();
             IReceiver receiver = groupsStacks.get(part.getGroupId());
             if (receiver != null)
             {
-                receiver.receive(message.removePart());
+                receiver.receive(message);
                 return true;
+            }
+            else
+            {
+                List<IMessage> list = pendingMessages.get(part.getGroupId());
+                if (list == null)
+                {
+                    list = new ArrayList<IMessage>();
+                    pendingMessages.put(part.getGroupId(), list);
+                }
+                
+                if (list.size() < maxPendingMessageSize)
+                    list.add(message);
             }
         }
 
         return false;
+    }
+    
+    private void processPendingMessages(UUID groupId, GroupProtocolSubStack protocolSubStack)
+    {
+        List<IMessage> list = pendingMessages.remove(groupId);
+        if (list == null)
+            return;
+        
+        for (IMessage message : list)
+            protocolSubStack.receive(message);
+    }
+    
+    private interface IMessages
+    {
+        @DefaultMessage("Group sub-stack has been created.")
+        ILocalizedMessage groupSubStackCreated();
+        @DefaultMessage("Group sub-stack has been removed.")
+        ILocalizedMessage groupSubStackRemoved();
     }
 }

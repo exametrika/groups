@@ -170,6 +170,9 @@ public final class CoreClusterFailureDetectionProtocol extends AbstractProtocol 
             failedNodes.retainAll(this.workerNodesMap.keySet());
         if (leftNodes != null)
             leftNodes.retainAll(this.workerNodesMap.keySet());
+        
+        if (logger.isLogEnabled(LogLevel.DEBUG))
+            logger.log(LogLevel.DEBUG, marker, messages.workerNodesChanged(workerNodes));
     }
     
     private void onNodeFailed(INode node)
@@ -230,5 +233,7 @@ public final class CoreClusterFailureDetectionProtocol extends AbstractProtocol 
         ILocalizedMessage nodeFailed(INode node);
         @DefaultMessage("Node ''{0}'' has been left.")
         ILocalizedMessage nodeLeft(INode node);
+        @DefaultMessage("Worker nodes have been changed: {0}.")
+        ILocalizedMessage workerNodesChanged(Set<INode> workerNodes);
     }
 }

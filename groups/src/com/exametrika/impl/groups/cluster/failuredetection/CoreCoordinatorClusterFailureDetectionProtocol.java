@@ -12,6 +12,10 @@ import com.exametrika.api.groups.cluster.IClusterMembershipService;
 import com.exametrika.api.groups.cluster.IDomainMembership;
 import com.exametrika.api.groups.cluster.INode;
 import com.exametrika.common.io.ISerializationRegistry;
+import com.exametrika.common.l10n.DefaultMessage;
+import com.exametrika.common.l10n.ILocalizedMessage;
+import com.exametrika.common.l10n.Messages;
+import com.exametrika.common.log.LogLevel;
 import com.exametrika.common.messaging.IMessage;
 import com.exametrika.common.messaging.IMessageFactory;
 import com.exametrika.common.messaging.IReceiver;
@@ -27,6 +31,7 @@ import com.exametrika.impl.groups.cluster.membership.NodesMembership;
  */
 public final class CoreCoordinatorClusterFailureDetectionProtocol extends AbstractProtocol implements IClusterFailureDetector
 {
+    private static final IMessages messages = Messages.get(IMessages.class);
     private final IClusterMembershipService membershipService;
     private Set<INode> failedMembers = new LinkedHashSet<INode>();
     private Set<INode> leftMembers = new LinkedHashSet<INode>();
@@ -81,15 +86,25 @@ public final class CoreCoordinatorClusterFailureDetectionProtocol extends Abstra
             for (UUID nodeId : part.getFailedMembers())
             {
                 INode node = findNode(membership, nodeId);
-                if (node != null)
+                if (node != null && !failedMembers.contains(node))
+                {
                     failedMembers.add(node);
+                    
+                    if (logger.isLogEnabled(LogLevel.DEBUG))
+                        logger.log(LogLevel.DEBUG, marker, messages.nodeFailed(node));
+                }
             }
             
             for (UUID nodeId : part.getLeftMembers())
             {
                 INode node = findNode(membership, nodeId);
-                if (node != null)
+                if (node != null && ! leftMembers.contains(node))
+                {
                     leftMembers.add(node);
+                    
+                    if (logger.isLogEnabled(LogLevel.DEBUG))
+                        logger.log(LogLevel.DEBUG, marker, messages.nodeLeft(node));
+                }
             }
         }
         else
@@ -107,5 +122,13 @@ public final class CoreCoordinatorClusterFailureDetectionProtocol extends Abstra
         }
 
         return null;
+    }
+    
+    private interface IMessages
+    {
+        @DefaultMessage("Node ''{0}'' has been failed.")
+        ILocalizedMessage nodeFailed(INode node);
+        @DefaultMessage("Node ''{0}'' has been left.")
+        ILocalizedMessage nodeLeft(INode node);
     }
 }

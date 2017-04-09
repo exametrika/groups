@@ -16,6 +16,10 @@ import com.exametrika.api.groups.cluster.IDomainMembership;
 import com.exametrika.api.groups.cluster.IGroupMembership;
 import com.exametrika.api.groups.cluster.IGroupMembershipListener;
 import com.exametrika.api.groups.cluster.INode;
+import com.exametrika.common.l10n.DefaultMessage;
+import com.exametrika.common.l10n.ILocalizedMessage;
+import com.exametrika.common.l10n.Messages;
+import com.exametrika.common.log.LogLevel;
 import com.exametrika.common.messaging.IAddress;
 import com.exametrika.common.messaging.IMessage;
 import com.exametrika.common.messaging.IMessageFactory;
@@ -37,6 +41,7 @@ import com.exametrika.impl.groups.cluster.flush.IFlushManager;
 public final class CoreCoordinatorClusterMembershipProtocol extends AbstractClusterMembershipProtocol 
     implements IGracefulCloseStrategy, IGroupMembershipListener
 {
+    private static final IMessages messages = Messages.get(IMessages.class);
     private final IGroupMembershipManager membershipManager;
     private final long trackPeriod;
     private IGroupFailureDetector failureDetector;
@@ -109,6 +114,9 @@ public final class CoreCoordinatorClusterMembershipProtocol extends AbstractClus
         for (INode node : membershipManager.getMembership().getGroup().getMembers())
             respondingNodes.add(node.getAddress());
         
+        if (logger.isLogEnabled(LogLevel.DEBUG))
+            logger.log(LogLevel.DEBUG, marker, messages.startsInstallMembership(roundId, delta, respondingNodes));
+        
         send(messageFactory.create(GroupMemberships.CORE_GROUP_ADDRESS, new ClusterMembershipMessagePart(roundId, delta)));
     }
 
@@ -131,6 +139,9 @@ public final class CoreCoordinatorClusterMembershipProtocol extends AbstractClus
         {
             respondingNodes = null;
             coreNodesFailed = true;
+            
+            if (logger.isLogEnabled(LogLevel.DEBUG))
+                logger.log(LogLevel.DEBUG, marker, messages.membershipChanged());
         }
     }
     
@@ -148,7 +159,12 @@ public final class CoreCoordinatorClusterMembershipProtocol extends AbstractClus
         {
             ClusterMembershipResponseMessagePart part = message.getPart();
             if (respondingNodes != null && part.getRoundId() == roundId && respondingNodes.contains(message.getSource()))
+            {
                 respondingNodes.remove(message.getSource());
+                
+                if (logger.isLogEnabled(LogLevel.DEBUG))
+                    logger.log(LogLevel.DEBUG, marker, messages.nodeResponded(roundId, message.getSource()));
+            }
         }
         else
             receiver.receive(message);
@@ -158,6 +174,9 @@ public final class CoreCoordinatorClusterMembershipProtocol extends AbstractClus
     protected void onInstalled(long roundId, IClusterMembership newMembership, ClusterMembershipDelta coreDelta)
     {
         installing = false;
+        
+        if (logger.isLogEnabled(LogLevel.DEBUG))
+            logger.log(LogLevel.DEBUG, marker, messages.installCompleted(roundId));
     }
     
     private ClusterMembershipDelta createCoreDelta(IClusterMembership oldMembership, boolean coreGroupOnly)
@@ -255,5 +274,18 @@ public final class CoreCoordinatorClusterMembershipProtocol extends AbstractClus
             return false;
         
         return true;
+    }
+    
+    private interface IMessages
+    {
+        @DefaultMessage("Starting cluster membership install. Round-id: {0}\ndelta: {1}\nResponding nodes: {2}")
+        ILocalizedMessage startsInstallMembership(long roundId, ClusterMembershipDelta delta,
+            Set<IAddress> respondingNodes);
+        @DefaultMessage("Cluster membership has been changed, clear responding nodes.")
+        ILocalizedMessage membershipChanged();
+        @DefaultMessage("Node ''{1}'' has responded, round-id: {0}.")
+        ILocalizedMessage nodeResponded(long roundId, IAddress source);
+        @DefaultMessage("Cluster membership install has been completed, round-id: {0}.")
+        ILocalizedMessage installCompleted(long roundId);
     }
 }

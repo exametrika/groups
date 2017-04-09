@@ -5,6 +5,10 @@ package com.exametrika.impl.groups.cluster.membership;
 
 import java.util.List;
 
+import com.exametrika.common.l10n.DefaultMessage;
+import com.exametrika.common.l10n.ILocalizedMessage;
+import com.exametrika.common.l10n.Messages;
+import com.exametrika.common.log.LogLevel;
 import com.exametrika.common.messaging.IAddress;
 import com.exametrika.common.messaging.IMessage;
 import com.exametrika.common.messaging.IMessageFactory;
@@ -20,6 +24,7 @@ import com.exametrika.common.utils.Assert;
  */
 public final class WorkerClusterMembershipProtocol extends AbstractClusterMembershipProtocol
 {
+    private static final IMessages messages = Messages.get(IMessages.class);
     private final IWorkerControllerObserver controllerObserver;
     private IAddress controller;
     
@@ -46,10 +51,20 @@ public final class WorkerClusterMembershipProtocol extends AbstractClusterMember
             if (!message.getSource().equals(controller))
             {
                 controller = message.getSource();
+                
+                if (logger.isLogEnabled(LogLevel.DEBUG))
+                    logger.log(LogLevel.DEBUG, marker, messages.controllerChanged(controller));
+                
                 controllerObserver.onControllerChanged(controller);
             }
         }
         else
             receiver.receive(message);
+    }
+    
+    private interface IMessages
+    {
+        @DefaultMessage("Controller has been changed: {0}.")
+        ILocalizedMessage controllerChanged(IAddress controller);
     }
 }

@@ -13,6 +13,10 @@ import com.exametrika.api.groups.cluster.IClusterMembership;
 import com.exametrika.api.groups.cluster.IDomainMembership;
 import com.exametrika.api.groups.cluster.IGroupMembership;
 import com.exametrika.api.groups.cluster.INode;
+import com.exametrika.common.l10n.DefaultMessage;
+import com.exametrika.common.l10n.ILocalizedMessage;
+import com.exametrika.common.l10n.Messages;
+import com.exametrika.common.log.LogLevel;
 import com.exametrika.common.messaging.IAddress;
 import com.exametrika.common.messaging.IMessage;
 import com.exametrika.common.messaging.IMessageFactory;
@@ -33,6 +37,7 @@ import com.exametrika.impl.groups.cluster.flush.IFlushManager;
  */
 public final class CoreClusterMembershipProtocol extends AbstractClusterMembershipProtocol implements IFailureDetectionListener
 {
+    private static final IMessages messages = Messages.get(IMessages.class);
     private final IGroupMembershipManager membershipManager;
     private final ISender workerSender;
     private final CoreCoordinatorClusterMembershipProtocol coordinatorProtocol;
@@ -99,6 +104,9 @@ public final class CoreClusterMembershipProtocol extends AbstractClusterMembersh
         if (currentTime > startInstallTime + membershipTimeout && 
             !com.exametrika.common.utils.Collections.isEmpty(respondingNodes))
         {
+            if (logger.isLogEnabled(LogLevel.DEBUG))
+                logger.log(LogLevel.DEBUG, marker, messages.nodesFailed(respondingNodes));
+            
             failureObserver.onNodesFailed(respondingNodes);
             respondingNodes = null;
             sendResponseToCoordinator();
@@ -130,9 +138,13 @@ public final class CoreClusterMembershipProtocol extends AbstractClusterMembersh
         WorkerToCoreMembership mapping = newMembership.findDomain(GroupMemberships.CORE_DOMAIN).findElement(WorkerToCoreMembership.class);
         Assert.notNull(mapping);
         Set<INode> workerNodes = mapping.findWorkerNodes(membershipManager.getLocalNode());
+        
         if (workerNodes == null || workerNodes.isEmpty())
         {
             this.workerNodes = Collections.emptySet();
+            
+            if (logger.isLogEnabled(LogLevel.DEBUG))
+                logger.log(LogLevel.DEBUG, marker, messages.workerNodesCleared(roundId));
             return;
         }
         
@@ -153,6 +165,9 @@ public final class CoreClusterMembershipProtocol extends AbstractClusterMembersh
         }
         
         this.workerNodes = workerNodes;
+        
+        if (logger.isLogEnabled(LogLevel.DEBUG))
+            logger.log(LogLevel.DEBUG, marker, messages.startInstallMembershipOnWorkers(roundId, workerNodes));
     }
     
     private ClusterMembershipDelta createWorkerFullDelta(String domain, IClusterMembership newMembership)
@@ -200,7 +215,12 @@ public final class CoreClusterMembershipProtocol extends AbstractClusterMembersh
     private void removeFromRespondingNodes(IAddress node, long roundId)
     {
         if (respondingNodes != null && roundId == this.roundId && respondingNodes.contains(node))
+        {
             respondingNodes.remove(node);
+            
+            if (logger.isLogEnabled(LogLevel.DEBUG))
+                logger.log(LogLevel.DEBUG, marker, messages.nodeResponded(roundId, node));
+        }
         if (com.exametrika.common.utils.Collections.isEmpty(respondingNodes))
             sendResponseToCoordinator();
     }
@@ -211,6 +231,24 @@ public final class CoreClusterMembershipProtocol extends AbstractClusterMembersh
         if (membership == null)
             return;
         INode coordinator = membership.getGroup().getCoordinator();
+        
+        if (logger.isLogEnabled(LogLevel.DEBUG))
+            logger.log(LogLevel.DEBUG, marker, messages.respondToCoordinator(roundId, coordinator));
+        
         send(messageFactory.create(coordinator.getAddress(), new ClusterMembershipResponseMessagePart(roundId)));
+    }
+    
+    private interface IMessages
+    {
+        @DefaultMessage("Worker nodes ''{0}'' have been failed.")
+        ILocalizedMessage nodesFailed(Set<IAddress> respondingNodes);
+        @DefaultMessage("Worker nodes are cleared, round-id: {0}.")
+        ILocalizedMessage workerNodesCleared(long roundId);
+        @DefaultMessage("Starting installation of cluster membership on worker nodes ''{1}'', round-id: {0}.")
+        ILocalizedMessage startInstallMembershipOnWorkers(long roundId, Set<INode> workerNodes);
+        @DefaultMessage("Node ''{1}'' has responded, round-id: {0}.")
+        ILocalizedMessage nodeResponded(long roundId, IAddress node);
+        @DefaultMessage("Completion of cluster membership installation on worker nodes has been sent to coordinator ''{1}', round-id: {0}.")
+        ILocalizedMessage respondToCoordinator(long roundId, INode coordinator);
     }
 }
