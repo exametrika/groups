@@ -20,4 +20,7 @@ public interface MessageFlags extends com.exametrika.common.messaging.impl.Messa
     
     /** Message does not preserve total order. */
     int UNORDERED = 1 << 22;
+    
+    /** Message is a worker group discovery request. */
+    int GROUP_DISCOVERY_REQUEST = 1 << 23;
 }
