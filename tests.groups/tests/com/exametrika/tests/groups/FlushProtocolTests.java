@@ -48,7 +48,7 @@ import com.exametrika.common.utils.Threads;
 import com.exametrika.common.utils.Times;
 import com.exametrika.impl.groups.cluster.channel.GroupChannel;
 import com.exametrika.impl.groups.cluster.channel.IChannelReconnector;
-import com.exametrika.impl.groups.cluster.channel.IGracefulCloseStrategy;
+import com.exametrika.impl.groups.cluster.channel.IGracefulExitStrategy;
 import com.exametrika.impl.groups.cluster.discovery.CoreGroupDiscoveryProtocol;
 import com.exametrika.impl.groups.cluster.discovery.WellKnownAddressesDiscoveryStrategy;
 import com.exametrika.impl.groups.cluster.failuredetection.CoreGroupFailureDetectionProtocol;
@@ -405,11 +405,11 @@ public class FlushProtocolTests
         private long failureHistoryPeriod = 10000;
         private int maxShunCount = 3;
         private long flushTimeout = 10000;
-        private long gracefulCloseTimeout = 10000;
+        private long gracefulExitTimeout = 10000;
         private List<FlushParticipantMock> flushParticipants = new ArrayList<FlushParticipantMock>();
         private CoreGroupMembershipTracker membershipTracker;
         private CoreGroupMembershipManager membershipManager;
-        private List<IGracefulCloseStrategy> gracefulCloseStrategies = new ArrayList<IGracefulCloseStrategy>();
+        private List<IGracefulExitStrategy> gracefulExitStrategies = new ArrayList<IGracefulExitStrategy>();
         private boolean failOnFlush;
         
         public TestChannelFactory(IDiscoveryStrategy discoveryStrategy)
@@ -420,7 +420,7 @@ public class FlushProtocolTests
             boolean debug = Debug.isDebug();
             int timeMultiplier = !debug ? 1 : 1000;
             flushTimeout *= timeMultiplier;
-            gracefulCloseTimeout *= timeMultiplier;
+            gracefulExitTimeout *= timeMultiplier;
         }
 
         @Override
@@ -477,9 +477,9 @@ public class FlushProtocolTests
             membershipTracker = new CoreGroupMembershipTracker(1000, membershipManager, discoveryProtocol, 
                 failureDetectionProtocol, flushCoordinatorProtocol, null);
             
-            gracefulCloseStrategies.add(flushCoordinatorProtocol);
-            gracefulCloseStrategies.add(flushParticipantProtocol);
-            gracefulCloseStrategies.add(membershipTracker);
+            gracefulExitStrategies.add(flushCoordinatorProtocol);
+            gracefulExitStrategies.add(flushParticipantProtocol);
+            gracefulExitStrategies.add(membershipTracker);
         }
         
         @Override
@@ -503,7 +503,7 @@ public class FlushProtocolTests
             ConnectionManager connectionManager, ICompartment compartment)
         {
             return new GroupChannel(channelName, liveNodeManager, channelObserver, protocolStack, transport, messageFactory, 
-                connectionManager, compartment, membershipManager, gracefulCloseStrategies, gracefulCloseTimeout);
+                connectionManager, compartment, membershipManager, gracefulExitStrategies, gracefulExitTimeout);
         }
     }
 }

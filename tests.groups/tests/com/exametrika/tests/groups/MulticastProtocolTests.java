@@ -322,7 +322,7 @@ public class MulticastProtocolTests
         factoryParameters.failureHistoryPeriod = 10000;
         factoryParameters.maxShunCount = 3;
         factoryParameters.flushTimeout = 10000;
-        factoryParameters.gracefulCloseTimeout = 10000;
+        factoryParameters.gracefulExitTimeout = 10000;
         factoryParameters.maxStateTransferPeriod = Integer.MAX_VALUE;
         factoryParameters.stateSizeThreshold = 100000;
         factoryParameters.saveSnapshotPeriod = 10000;

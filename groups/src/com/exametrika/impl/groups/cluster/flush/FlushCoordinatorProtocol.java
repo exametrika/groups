@@ -27,7 +27,7 @@ import com.exametrika.common.messaging.impl.protocols.AbstractProtocol;
 import com.exametrika.common.utils.Assert;
 import com.exametrika.common.utils.Enums;
 import com.exametrika.common.utils.Strings;
-import com.exametrika.impl.groups.cluster.channel.IGracefulCloseStrategy;
+import com.exametrika.impl.groups.cluster.channel.IGracefulExitStrategy;
 import com.exametrika.impl.groups.cluster.exchange.IExchangeData;
 import com.exametrika.impl.groups.cluster.failuredetection.IFailureDetectionListener;
 import com.exametrika.impl.groups.cluster.failuredetection.IGroupFailureDetector;
@@ -42,7 +42,7 @@ import com.exametrika.impl.groups.cluster.membership.IGroupMembershipManager;
  * @threadsafety This class and its methods are not thread safe.
  * @author Medvedev-A
  */
-public final class FlushCoordinatorProtocol extends AbstractProtocol implements IFlushManager, IGracefulCloseStrategy, 
+public final class FlushCoordinatorProtocol extends AbstractProtocol implements IFlushManager, IGracefulExitStrategy, 
     IFailureDetectionListener
 {
     private static final IMessages messages = Messages.get(IMessages.class);
@@ -170,7 +170,7 @@ public final class FlushCoordinatorProtocol extends AbstractProtocol implements 
     }
 
     @Override
-    public boolean requestClose()
+    public boolean requestExit()
     {
         if (!isFlushInProgress())
         {

@@ -18,7 +18,7 @@ public interface IMembershipListener
     enum LeaveReason
     {
         /** Local node has left the group gracefully. */
-        GRACEFUL_CLOSE,
+        GRACEFUL_EXIT,
         /** Local node has left the group forcefully. */
         FORCEFUL_CLOSE,
         /** Local node has left the group, because other nodes excluded it from the group for some reason. */

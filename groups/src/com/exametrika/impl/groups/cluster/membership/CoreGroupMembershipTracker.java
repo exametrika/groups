@@ -7,7 +7,7 @@ import com.exametrika.api.groups.cluster.IGroupMembership;
 import com.exametrika.api.groups.cluster.INode;
 import com.exametrika.common.compartment.ICompartmentTimerProcessor;
 import com.exametrika.common.utils.Assert;
-import com.exametrika.impl.groups.cluster.channel.IGracefulCloseStrategy;
+import com.exametrika.impl.groups.cluster.channel.IGracefulExitStrategy;
 import com.exametrika.impl.groups.cluster.discovery.ICoreNodeDiscoverer;
 import com.exametrika.impl.groups.cluster.failuredetection.IGroupFailureDetector;
 import com.exametrika.impl.groups.cluster.flush.IFlushCondition;
@@ -20,7 +20,7 @@ import com.exametrika.impl.groups.cluster.membership.GroupMemberships.Membership
  * @threadsafety This class and its methods are not thread safe.
  * @author Medvedev-A
  */
-public final class CoreGroupMembershipTracker implements ICompartmentTimerProcessor, IGracefulCloseStrategy
+public final class CoreGroupMembershipTracker implements ICompartmentTimerProcessor, IGracefulExitStrategy
 {
     private final long trackPeriod;
     private final IGroupMembershipManager membershipManager;
@@ -48,7 +48,7 @@ public final class CoreGroupMembershipTracker implements ICompartmentTimerProces
     }
 
     @Override
-    public boolean requestClose()
+    public boolean requestExit()
     {
         stopped = true;
         return true;

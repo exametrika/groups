@@ -62,7 +62,7 @@ import com.exametrika.common.utils.IOs;
 import com.exametrika.common.utils.Threads;
 import com.exametrika.impl.groups.cluster.channel.GroupChannel;
 import com.exametrika.impl.groups.cluster.channel.IChannelReconnector;
-import com.exametrika.impl.groups.cluster.channel.IGracefulCloseStrategy;
+import com.exametrika.impl.groups.cluster.channel.IGracefulExitStrategy;
 import com.exametrika.impl.groups.cluster.discovery.CoreGroupDiscoveryProtocol;
 import com.exametrika.impl.groups.cluster.discovery.WellKnownAddressesDiscoveryStrategy;
 import com.exametrika.impl.groups.cluster.failuredetection.CoreGroupFailureDetectionProtocol;
@@ -794,7 +794,7 @@ public class StateTransferProtocolTests
         private long failureHistoryPeriod = 10000;
         private int maxShunCount = 3;
         private long flushTimeout = 10000;
-        private long gracefulCloseTimeout = 10000;
+        private long gracefulExitTimeout = 10000;
         private long maxStateTransferPeriod = Integer.MAX_VALUE;
         private long stateSizeThreshold = 100000;
         private long saveSnapshotPeriod = 10000;
@@ -804,7 +804,7 @@ public class StateTransferProtocolTests
         private List<TestStateTransferFactory> stateTransferFactories = new ArrayList<TestStateTransferFactory>();
         private CoreGroupMembershipTracker membershipTracker;
         private CoreGroupMembershipManager membershipManager;
-        private List<IGracefulCloseStrategy> gracefulCloseStrategies = new ArrayList<IGracefulCloseStrategy>();
+        private List<IGracefulExitStrategy> gracefulExitStrategies = new ArrayList<IGracefulExitStrategy>();
         private TestStateStore stateStore = new TestStateStore();
         private List<TestMessageSender> messageSenders = new ArrayList<TestMessageSender>();
         private List<StateTransferClientProtocol> clientProtocols = new ArrayList<StateTransferClientProtocol>();
@@ -817,7 +817,7 @@ public class StateTransferProtocolTests
             boolean debug = Debug.isDebug();
             int timeMultiplier = !debug ? 1 : 1000;
             flushTimeout *= timeMultiplier;
-            gracefulCloseTimeout *= timeMultiplier;
+            gracefulExitTimeout *= timeMultiplier;
         }
 
         @Override
@@ -893,9 +893,9 @@ public class StateTransferProtocolTests
             membershipTracker = new CoreGroupMembershipTracker(1000, membershipManager, discoveryProtocol, 
                 failureDetectionProtocol, flushCoordinatorProtocol, null);
             
-            gracefulCloseStrategies.add(flushCoordinatorProtocol);
-            gracefulCloseStrategies.add(flushParticipantProtocol);
-            gracefulCloseStrategies.add(membershipTracker);
+            gracefulExitStrategies.add(flushCoordinatorProtocol);
+            gracefulExitStrategies.add(flushParticipantProtocol);
+            gracefulExitStrategies.add(membershipTracker);
         }
         
         @Override
@@ -924,7 +924,7 @@ public class StateTransferProtocolTests
             ConnectionManager connectionManager, ICompartment compartment)
         {
             return new GroupChannel(channelName, liveNodeManager, channelObserver, protocolStack, transport, messageFactory, 
-                connectionManager, compartment, membershipManager, gracefulCloseStrategies, gracefulCloseTimeout);
+                connectionManager, compartment, membershipManager, gracefulExitStrategies, gracefulExitTimeout);
         }
     }
 }

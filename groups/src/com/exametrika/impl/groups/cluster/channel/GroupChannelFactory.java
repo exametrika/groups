@@ -69,7 +69,7 @@ public class GroupChannelFactory extends ChannelFactory
 {
     private CoreGroupMembershipTracker membershipTracker;
     private CoreGroupMembershipManager membershipManager;
-    private List<IGracefulCloseStrategy> gracefulCloseStrategies = new ArrayList<IGracefulCloseStrategy>();
+    private List<IGracefulExitStrategy> gracefulExitStrategies = new ArrayList<IGracefulExitStrategy>();
     
     public static class GroupFactoryParameters extends FactoryParameters
     {
@@ -80,7 +80,7 @@ public class GroupChannelFactory extends ChannelFactory
         public int maxShunCount = 3;
         public long flushTimeout = 300000;
         public long membershipTrackPeriod = 1000;
-        public long gracefulCloseTimeout = 10000;
+        public long gracefulExitTimeout = 10000;
         public long maxStateTransferPeriod = Integer.MAX_VALUE;
         public long stateSizeThreshold = 100000;// TODO: прописать остальные значения по умолчанию
         public long saveSnapshotPeriod = 1000;
@@ -109,7 +109,7 @@ public class GroupChannelFactory extends ChannelFactory
             
             int timeMultiplier = !debug ? 1 : 1000;
             flushTimeout *= timeMultiplier;
-            gracefulCloseTimeout *= timeMultiplier;
+            gracefulExitTimeout *= timeMultiplier;
         }
     }
     
@@ -239,9 +239,9 @@ public class GroupChannelFactory extends ChannelFactory
         membershipTracker = new CoreGroupMembershipTracker(groupFactoryParameters.membershipTrackPeriod, membershipManager, discoveryProtocol, 
             failureDetectionProtocol, flushCoordinatorProtocol, groupFactoryParameters.flushCondition);
         
-        gracefulCloseStrategies.add(flushCoordinatorProtocol);
-        gracefulCloseStrategies.add(flushParticipantProtocol);
-        gracefulCloseStrategies.add(membershipTracker);
+        gracefulExitStrategies.add(flushCoordinatorProtocol);
+        gracefulExitStrategies.add(flushParticipantProtocol);
+        gracefulExitStrategies.add(membershipTracker);
     }
     
     @Override
@@ -275,6 +275,6 @@ public class GroupChannelFactory extends ChannelFactory
     {
         GroupFactoryParameters groupFactoryParameters = (GroupFactoryParameters)factoryParameters;
         return new GroupChannel(channelName, liveNodeManager, channelObserver, protocolStack, transport, messageFactory, 
-            connectionManager, compartment, membershipManager, gracefulCloseStrategies, groupFactoryParameters.gracefulCloseTimeout);
+            connectionManager, compartment, membershipManager, gracefulExitStrategies, groupFactoryParameters.gracefulExitTimeout);
     }
 }

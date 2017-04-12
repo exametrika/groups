@@ -25,17 +25,17 @@ import com.exametrika.common.utils.Assert;
 public final class WorkerClusterMembershipProtocol extends AbstractClusterMembershipProtocol
 {
     private static final IMessages messages = Messages.get(IMessages.class);
-    private final IWorkerControllerObserver controllerObserver;
+    private final List<IWorkerControllerObserver> controllerObservers;
     private IAddress controller;
     
     public WorkerClusterMembershipProtocol(String channelName, IMessageFactory messageFactory, IClusterMembershipManager membershipManager,
-        List<IClusterMembershipProvider> membershipProviders, IWorkerControllerObserver controllerObserver)
+        List<IClusterMembershipProvider> membershipProviders, List<IWorkerControllerObserver> controllerObservers)
     {
         super(channelName, messageFactory, membershipManager, membershipProviders);
         
-        Assert.notNull(controllerObserver);
+        Assert.notNull(controllerObservers);
         
-        this.controllerObserver = controllerObserver;
+        this.controllerObservers = controllerObservers;
     }
     
     @Override
@@ -55,7 +55,8 @@ public final class WorkerClusterMembershipProtocol extends AbstractClusterMember
                 if (logger.isLogEnabled(LogLevel.DEBUG))
                     logger.log(LogLevel.DEBUG, marker, messages.controllerChanged(controller));
                 
-                controllerObserver.onControllerChanged(controller);
+                for (IWorkerControllerObserver controllerObserver : controllerObservers)
+                    controllerObserver.onControllerChanged(controller);
             }
         }
         else

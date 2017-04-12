@@ -283,10 +283,10 @@ public class MembershipManagerTests
         assertThat(listener.onMembershipChangedEvent.getMembershipChange().getGroup().getFailedMembers(), is(membershipChange.getGroup().getFailedMembers()));
         assertThat(listener.onMembershipChangedEvent.getMembershipChange().getGroup().getLeftMembers(), is(membershipChange.getGroup().getLeftMembers()));
         
-        manager.uninstallMembership(IGroupMembershipListener.LeaveReason.GRACEFUL_CLOSE);
+        manager.uninstallMembership(IGroupMembershipListener.LeaveReason.GRACEFUL_EXIT);
         assertThat(manager.getPreparedMembership() == null, is(true));
         assertThat(manager.getMembership() == null, is(true));
-        assertThat(listener.leaveReason, is(LeaveReason.GRACEFUL_CLOSE));
+        assertThat(listener.leaveReason, is(LeaveReason.GRACEFUL_EXIT));
         
         manager.stop();
     }

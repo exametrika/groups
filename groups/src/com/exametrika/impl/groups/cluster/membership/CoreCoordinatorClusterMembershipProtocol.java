@@ -27,7 +27,7 @@ import com.exametrika.common.messaging.IReceiver;
 import com.exametrika.common.utils.Assert;
 import com.exametrika.common.utils.Collections;
 import com.exametrika.common.utils.Pair;
-import com.exametrika.impl.groups.cluster.channel.IGracefulCloseStrategy;
+import com.exametrika.impl.groups.cluster.channel.IGracefulExitStrategy;
 import com.exametrika.impl.groups.cluster.failuredetection.IGroupFailureDetector;
 import com.exametrika.impl.groups.cluster.flush.IFlushManager;
 
@@ -39,7 +39,7 @@ import com.exametrika.impl.groups.cluster.flush.IFlushManager;
  * @author Medvedev-A
  */
 public final class CoreCoordinatorClusterMembershipProtocol extends AbstractClusterMembershipProtocol 
-    implements IGracefulCloseStrategy, IGroupMembershipListener
+    implements IGracefulExitStrategy, IGroupMembershipListener
 {
     private static final IMessages messages = Messages.get(IMessages.class);
     private final IGroupMembershipManager membershipManager;
@@ -82,7 +82,7 @@ public final class CoreCoordinatorClusterMembershipProtocol extends AbstractClus
     }
     
     @Override
-    public boolean requestClose()
+    public boolean requestExit()
     {
         stopped = true;
         return true;

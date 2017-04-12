@@ -31,25 +31,25 @@ import com.exametrika.impl.groups.cluster.membership.CoreGroupMembershipManager;
 public class GroupChannel extends Channel implements IGroupChannel, IChannelReconnector
 {
     private final CoreGroupMembershipManager membershipManager;
-    private final List<IGracefulCloseStrategy> gracefulCloseStrategies;
-    private final long gracefulCloseTimeout;
+    private final List<IGracefulExitStrategy> gracefulExitStrategies;
+    private final long gracefulExitTimeout;
     private final Object condition = new Object();
     private boolean canClose;
     
     public GroupChannel(String channelName, LiveNodeManager liveNodeManager, ChannelObserver channelObserver,
         ProtocolStack protocolStack, ITransport transport, IMessageFactory messageFactory,
         IConnectionProvider connectionProvider, ICompartment compartment, CoreGroupMembershipManager membershipManager, 
-        List<IGracefulCloseStrategy> gracefulCloseStrategies, long gracefulCloseTimeout)
+        List<IGracefulExitStrategy> gracefulExitStrategies, long gracefulExitTimeout)
     {
         super(channelName, liveNodeManager, channelObserver, protocolStack, transport, messageFactory, connectionProvider,
             compartment);
         
         Assert.notNull(membershipManager);
-        Assert.notNull(gracefulCloseStrategies);
+        Assert.notNull(gracefulExitStrategies);
         
         this.membershipManager = membershipManager;
-        this.gracefulCloseStrategies = gracefulCloseStrategies;
-        this.gracefulCloseTimeout = gracefulCloseTimeout > 0 ? gracefulCloseTimeout : Integer.MAX_VALUE;
+        this.gracefulExitStrategies = gracefulExitStrategies;
+        this.gracefulExitTimeout = gracefulExitTimeout > 0 ? gracefulExitTimeout : Integer.MAX_VALUE;
     }
 
     @Override
@@ -65,7 +65,7 @@ public class GroupChannel extends Channel implements IGroupChannel, IChannelReco
             return;
         
         if (gracefully)
-            waitGracefulClose();
+            waitGracefulExit();
         
         stop();
     }
@@ -97,7 +97,7 @@ public class GroupChannel extends Channel implements IGroupChannel, IChannelReco
         membershipManager.stop();
     }
     
-    private void waitGracefulClose()
+    private void waitGracefulExit()
     {
         compartment.addTimerProcessor(new ICompartmentTimerProcessor()
         {
@@ -111,13 +111,13 @@ public class GroupChannel extends Channel implements IGroupChannel, IChannelReco
                 
                 lastCheckTime = currentTime;
                 
-                for (IGracefulCloseStrategy strategy : gracefulCloseStrategies)
+                for (IGracefulExitStrategy strategy : gracefulExitStrategies)
                 {
-                    if (!strategy.requestClose())
+                    if (!strategy.requestExit())
                         return;
                 }
          
-                membershipManager.uninstallMembership(LeaveReason.GRACEFUL_CLOSE);
+                membershipManager.uninstallMembership(LeaveReason.GRACEFUL_EXIT);
                 
                 synchronized (condition)
                 {
@@ -132,8 +132,8 @@ public class GroupChannel extends Channel implements IGroupChannel, IChannelReco
             try
             {
                 long startTime = Times.getCurrentTime();
-                while (!canClose && Times.getCurrentTime() < startTime + gracefulCloseTimeout)
-                    condition.wait(gracefulCloseTimeout);
+                while (!canClose && Times.getCurrentTime() < startTime + gracefulExitTimeout)
+                    condition.wait(gracefulExitTimeout);
             }
             catch (InterruptedException e)
             {
