@@ -104,6 +104,11 @@ public final class SimShellCommandProvider implements IShellCommandProvider
                 .defaultParameter().key("agentNamePattern").format("<agent> [many]").description("Agent name glob/regexp pattern.")
                     .completer(new SimAgentNameCompleter()).highlighter(new SimAgentNameHighlighter()).end()
                 .executor(new SimShellCommandExecutor()).end()
+            .command().key("sleep").names("sim:sleep").description("Sleeps current thread on specified number of milliseconds.")
+                .defaultParameter()
+                    .key("period").format("<period>").converter(new LongConverter()) 
+                    .description("sleep period in milliseconds").unique().required().hasArgument().end() 
+                .executor(new SimShellCommandExecutor()).end()
             .build();
     }
     

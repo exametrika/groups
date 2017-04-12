@@ -10,6 +10,7 @@ import com.exametrika.common.messaging.IMessage;
 import com.exametrika.common.shell.IShell;
 import com.exametrika.common.utils.Assert;
 import com.exametrika.common.utils.MapBuilder;
+import com.exametrika.common.utils.Threads;
 import com.exametrika.impl.groups.simulator.messages.SimActionMessage;
 import com.exametrika.impl.groups.simulator.messages.SimActionResponseMessage;
 
@@ -86,13 +87,18 @@ public final class SimCoordinator
             long millis = period - hours * (60 * 60 * 1000) - minutes * (60 * 1000) - seconds * 1000;
             return hours + ":" + minutes + ":" + seconds + "." + millis;
         }
-        
-        if (actionName.equals("timeSpeed"))
+        else if (actionName.equals("sleep"))
+        {
+            Threads.sleep((Long)parameters.get("period"));
+            return null;
+        }
+        else if (actionName.equals("timeSpeed"))
         {
             timeIncrement = (long)parameters.get("timeIncrement");
             return null;
             
         }
+        
         if (actionName.equals("start"))
             timeIncrement = (long)parameters.get("timeIncrement");
         

@@ -3,9 +3,12 @@
  */
 package com.exametrika.common.shell.impl;
 
+import java.io.File;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.jline.reader.UserInterruptException;
 import org.jline.terminal.Terminal;
@@ -13,6 +16,7 @@ import org.jline.utils.AttributedStringBuilder;
 import org.jline.utils.InfoCmp.Capability;
 
 import com.exametrika.common.expression.Expressions;
+import com.exametrika.common.expression.Templates;
 import com.exametrika.common.l10n.DefaultMessage;
 import com.exametrika.common.l10n.ILocalizedMessage;
 import com.exametrika.common.l10n.Messages;
@@ -22,7 +26,9 @@ import com.exametrika.common.shell.IShellCommandProvider;
 import com.exametrika.common.shell.IShellContext;
 import com.exametrika.common.shell.IShellParameterCompleter;
 import com.exametrika.common.shell.IShellParameterHighlighter;
+import com.exametrika.common.shell.impl.completers.ShellFileCompleter;
 import com.exametrika.common.utils.Collections;
+import com.exametrika.common.utils.Files;
 import com.exametrika.common.utils.ICondition;
 import com.exametrika.common.utils.Strings;
 
@@ -56,6 +62,11 @@ public final class DefaultShellCommandProvider implements IShellCommandProvider
                     .key("expression").format(messages.evalExpressionParameterFormat().toString()) 
                     .description(messages.evalExpressionParameterDescription().toString()).unique().required().hasArgument().end() 
                 .executor(new EvalShellCommand()).end()
+            .command().key("echo").names("echo").description(messages.echoCommand().toString())
+                .defaultParameter()
+                    .key("template").format(messages.echoTemplateParameterFormat().toString()) 
+                    .description(messages.echoTemplateParameterDescription().toString()).unique().required().hasArgument().end() 
+                .executor(new EchoShellCommand()).end()
             .command().key("grep").names("grep").description(messages.grepCommand().toString())
                 .namedParameter()
                     .key("caseInsensitive").names("-c", "--case-insensitive").format(messages.grepCaseParameterFormat().toString()) 
@@ -67,6 +78,13 @@ public final class DefaultShellCommandProvider implements IShellCommandProvider
                     .key("expression").format(messages.grepExpressionParameterFormat().toString()) 
                     .description(messages.grepExpressionParameterDescription().toString()).hasArgument().end()
                 .executor(new GrepShellCommand()).end()
+            .command().key("load").names("load").description(messages.loadCommand().toString())
+                .defaultParameter()
+                    .key("scriptPath").format(messages.loadExpressionParameterFormat().toString()) 
+                    .description(messages.loadExpressionParameterDescription().toString())
+                    .unique().required().hasArgument()
+                    .completer(new ShellFileCompleter()).end()
+                .executor(new LoadShellCommand()).end()
             .build();
     }
     
@@ -104,8 +122,12 @@ public final class DefaultShellCommandProvider implements IShellCommandProvider
             if (Collections.isEmpty(commands))
             {
                 boolean first = true;
+                Set<IShellCommand> processed = new HashSet<IShellCommand>();
                 for (ShellNode child : contextNode.getChildren().values())
                 {
+                    if (processed.contains(child.getCommand()))
+                        continue;
+                    
                     if (first)
                         first = false;
                     else
@@ -113,12 +135,14 @@ public final class DefaultShellCommandProvider implements IShellCommandProvider
                     
                     if (!context.getShell().isNoColors())
                         builder.style(ShellStyles.COMMAND_STYLE);
-                    builder.append(child.getName());
+                    builder.append(buildCommandNames(child.getName(), child.getCommand(), context.getShell().getNameSeparator()));
                     if (!context.getShell().isNoColors())
                         builder.style(ShellStyles.DEFAULT_STYLE);
                     
                     builder.append(" - ")
                         .append(child.getCommand().getDescription());
+                    
+                    processed.add(child.getCommand());
                 }
             }
             else
@@ -146,6 +170,26 @@ public final class DefaultShellCommandProvider implements IShellCommandProvider
             }
             
             return builder.toAnsi();
+        }
+
+        private String buildCommandNames(String firstName, IShellCommand command, char nameSeparator)
+        {
+            StringBuilder builder = new StringBuilder();
+            builder.append(firstName);
+            for (String name : command.getNames())
+            {
+                int pos = name.lastIndexOf(nameSeparator);
+                if (pos != -1)
+                    name = name.substring(pos + 1);
+
+                if (name.equals(firstName))
+                    continue;
+                
+                builder.append(", ");
+                builder.append(name);
+            }
+            
+            return builder.toString();
         }
     }
     
@@ -195,6 +239,16 @@ public final class DefaultShellCommandProvider implements IShellCommandProvider
         }
     }
     
+    private static class EchoShellCommand implements IShellCommandExecutor
+    {
+        @Override
+        public Object execute(IShellCommand command, IShellContext context, Map<String, Object> parameters)
+        {
+            String template = (String)parameters.get("template");
+            return Templates.evaluate(template, context, null);
+        }
+    }
+    
     private static class GrepShellCommand implements IShellCommandExecutor
     {
         @Override
@@ -220,6 +274,18 @@ public final class DefaultShellCommandProvider implements IShellCommandProvider
         }
     }
     
+    private static class LoadShellCommand implements IShellCommandExecutor
+    {
+        @Override
+        public Object execute(IShellCommand command, IShellContext context, Map<String, Object> parameters)
+        {
+            String scriptPath = (String)parameters.get("scriptPath");
+            String scriptText = Files.read(new File(scriptPath));
+            context.getShell().executeScript(scriptText);
+            return null;
+        }
+    }
+    
     interface IMessages
     {
         @DefaultMessage("clears the terminal screen")
@@ -240,6 +306,12 @@ public final class DefaultShellCommandProvider implements IShellCommandProvider
         ILocalizedMessage evalExpressionParameterFormat();
         @DefaultMessage("expression to evaluate")
         ILocalizedMessage evalExpressionParameterDescription();
+        @DefaultMessage("prints value")
+        ILocalizedMessage echoCommand();
+        @DefaultMessage("<template>")
+        ILocalizedMessage echoTemplateParameterFormat();
+        @DefaultMessage("template to print")
+        ILocalizedMessage echoTemplateParameterDescription();
         @DefaultMessage("filters expression")
         ILocalizedMessage grepCommand();
         @DefaultMessage("-c --case-insensitive")
@@ -254,5 +326,11 @@ public final class DefaultShellCommandProvider implements IShellCommandProvider
         ILocalizedMessage grepExpressionParameterFormat();
         @DefaultMessage("expression to filter")
         ILocalizedMessage grepExpressionParameterDescription();
+        @DefaultMessage("loads script")
+        ILocalizedMessage loadCommand();
+        @DefaultMessage("<script-file-path>")
+        ILocalizedMessage loadExpressionParameterFormat();
+        @DefaultMessage("path to script being loaded")
+        ILocalizedMessage loadExpressionParameterDescription();
     }
 }

@@ -264,13 +264,42 @@ public final class Shell implements IShell
     }
     
     @Override
-    public Object execute(String commandName, Map<String, Object> parameters)
+    public Object executeCommand(String commandName, Map<String, Object> parameters)
     {
         IShellCommand command = findCommand(commandName);
         if (command != null)
             return command.getExecutor().execute(command, context, parameters);
         else
             throw new InvalidArgumentException(messages.commandNotFound(commandName));
+    }
+    
+    @Override
+    public void executeScript(String scriptText)
+    {
+        Assert.notNull(scriptText);
+        
+        String[] parts = scriptText.split("[\r\n]");
+        List<String> commands = new ArrayList<String>();
+        String lastCommand = "";
+        for (String part : parts)
+        {
+            if (part.startsWith("#"))
+                continue;
+            else if (part.endsWith("\\"))
+                lastCommand += part.substring(0, part.length() - 1);
+            else
+            {
+                lastCommand += part;
+                commands.add(lastCommand);
+                
+                lastCommand = "";
+            }
+        }
+        
+        commands.add(lastCommand);
+        
+        for (String line : commands)
+            executeLine(line);
     }
     
     @Override
@@ -314,17 +343,8 @@ public final class Shell implements IShell
                 
                 try
                 {
-                    String line = lineReader.readLine(prompt[0], prompt[1], null, null).trim();
-                    if (line.isEmpty())
-                        continue;
-                    if (line.equals("/"))
-                    {
-                        contextNode = rootNode;
-                        continue;
-                    }
-                    
-                    List<Pair<IShellCommand, Map<String, Object>>> parsedCommands = parser.parseCommands(context.getPath(), line);
-                    execute(context, parsedCommands);
+                    String line = lineReader.readLine(prompt[0], prompt[1], null, null);
+                    executeLine(line);
                 }
                 catch (UserInterruptException e)
                 {
@@ -333,19 +353,6 @@ public final class Shell implements IShell
                 catch (EndOfFileException e)
                 {
                     break;
-                }
-                catch (InvalidArgumentException e)
-                {
-                    AttributedStringBuilder builder = new AttributedStringBuilder();
-                    if (!noColors)
-                        builder.style(ShellStyles.ERROR_STYLE);
-                    builder.append(e.getMessage());
-                    if (!noColors)
-                        builder.style(ShellStyles.DEFAULT_STYLE);
-                   
-                    builder.append("\n\n");
-                    
-                    terminal.writer().print(builder.toAnsi());
                 }
             }
         }
@@ -386,6 +393,40 @@ public final class Shell implements IShell
         return new ShellCompleter(rootNode, defaultCommand, nameSeparator, context, namedParameterPrefix);
     }
 
+    private void executeLine(String line)
+    {
+        Assert.checkState(lineReader != null);
+        
+        line = line.trim();
+        
+        try
+        {
+            if (line.isEmpty())
+                return;
+            if (line.equals("/"))
+            {
+                contextNode = rootNode;
+                return;
+            }
+            
+            List<Pair<IShellCommand, Map<String, Object>>> parsedCommands = parser.parseCommands(context.getPath(), line);
+            execute(context, parsedCommands);
+        }
+        catch (InvalidArgumentException e)
+        {
+            AttributedStringBuilder builder = new AttributedStringBuilder();
+            if (!noColors)
+                builder.style(ShellStyles.ERROR_STYLE);
+            builder.append(e.getMessage());
+            if (!noColors)
+                builder.style(ShellStyles.DEFAULT_STYLE);
+           
+            builder.append("\n\n");
+            
+            lineReader.getTerminal().writer().print(builder.toAnsi());
+        }
+    }
+    
     private void execute(ShellContext context, List<Pair<IShellCommand, Map<String, Object>>> parsedCommands)
     {
         Object result = null;

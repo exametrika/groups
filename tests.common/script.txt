@@ -1,0 +1,6 @@
+echo "Test:<%1 + 2%>\
+	Test2:<%3 + 4%>"
+
+# Comment
+
+echo "Test3:<%1 + 2%>"

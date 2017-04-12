@@ -108,5 +108,14 @@ public interface IShell extends Runnable
      * @param parameters parameters
      * @return result of command execution or null
      */
-    Object execute(String commandName, Map<String, Object> parameters);
+    Object executeCommand(String commandName, Map<String, Object> parameters);
+    
+    /**
+     * Executes script. Script text contains string respresentations of commands, each command must be on separate line.
+     * If command is multiline, interim lines of multiline command must end with '\'. 
+     * Strings started with '#' are comments and ignored in command processing
+     *
+     * @param scriptText script text
+     */
+    void executeScript(String scriptText);
 }

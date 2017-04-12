@@ -12,11 +12,13 @@ import org.jline.reader.Candidate;
 import org.jline.reader.Completer;
 import org.jline.reader.LineReader;
 import org.jline.reader.ParsedLine;
+import org.jline.reader.impl.completer.ArgumentCompleter.ArgumentLine;
 
 import com.exametrika.common.shell.IShellCommand;
 import com.exametrika.common.shell.IShellContext;
 import com.exametrika.common.shell.IShellParameter;
 import com.exametrika.common.shell.IShellParameterCompleter;
+import com.exametrika.common.shell.impl.completers.ShellNativeCompleter;
 import com.exametrika.common.utils.Assert;
 
 /**
@@ -86,11 +88,7 @@ public class ShellCompleter implements Completer
                 if (!parameters.contains(parameter))
                 {
                     if (parameter.getCompleter() != null)
-                    {
-                        List<IShellParameterCompleter.Candidate> list = parameter.getCompleter().complete(context, completionInfo.prefix);
-                        for (IShellParameterCompleter.Candidate value : list)
-                            candidates.add(new Candidate(value.value, value.displayName, null, value.description, null, null, true));
-                    }
+                        complete(reader, parameter, completionInfo, candidates);
                     else
                         candidates.add(new Candidate("", parameter.getFormat(), null, parameter.getShortDescription(), null, null, true));
                     
@@ -103,11 +101,7 @@ public class ShellCompleter implements Completer
             if (!positionalsNotSet && defaultParameter != null && (!defaultParameter.isUnique() || !parameters.contains(defaultParameter)))
             {
                 if (defaultParameter.getCompleter() != null)
-                {
-                    List<IShellParameterCompleter.Candidate> list = defaultParameter.getCompleter().complete(context, completionInfo.prefix);
-                    for (IShellParameterCompleter.Candidate value : list)
-                        candidates.add(new Candidate(value.value, value.displayName, null, value.description, null, null, true));
-                }
+                    complete(reader, defaultParameter, completionInfo, candidates);
                 else
                     candidates.add(new Candidate("", defaultParameter.getFormat(), null, defaultParameter.getShortDescription(), null, null, true));
             }
@@ -116,16 +110,25 @@ public class ShellCompleter implements Completer
         {
             IShellParameter parameter = completionInfo.parameter;
             if (parameter.getCompleter() != null)
-            {
-                List<IShellParameterCompleter.Candidate> list = parameter.getCompleter().complete(context, completionInfo.prefix);
-                for (IShellParameterCompleter.Candidate value : list)
-                    candidates.add(new Candidate(value.value, value.displayName, null, value.description, null, null, true));
-            }
+                complete(reader, parameter, completionInfo, candidates);
             else
                 candidates.add(new Candidate("", parameter.getFormat(), null, parameter.getShortDescription(), null, null, true));
         }
         else
             Assert.error();
+    }
+
+    private void complete(LineReader reader, IShellParameter parameter, CompletionInfo completionInfo, List<Candidate> candidates)
+    {
+        if (parameter.getCompleter() instanceof ShellNativeCompleter)
+            ((ShellNativeCompleter)parameter.getCompleter()).getCompleter().complete(reader, 
+                new ArgumentLine(completionInfo.prefix, completionInfo.prefix.length()), candidates);
+        else
+        {
+            List<IShellParameterCompleter.Candidate> list = parameter.getCompleter().complete(context, completionInfo.prefix);
+            for (IShellParameterCompleter.Candidate value : list)
+                candidates.add(new Candidate(value.value, value.displayName, null, value.description, null, null, true));
+        }
     }
     
     private CompletionInfo parseCommands(String context, String line, List<TokenInfo> args,
