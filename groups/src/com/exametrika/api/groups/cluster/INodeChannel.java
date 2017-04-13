@@ -6,12 +6,12 @@ package com.exametrika.api.groups.cluster;
 import com.exametrika.common.messaging.IChannel;
 
 /**
- * The {@link IGroupChannel} is a group channel.
+ * The {@link INodeChannel} is a node channel.
  * 
  * @threadsafety Implementations of this interface and its methods are thread safe.
  * @author Medvedev-A
  */
-public interface IGroupChannel extends IChannel
+public interface INodeChannel extends IChannel
 {
     /**
      * Returns membership service.

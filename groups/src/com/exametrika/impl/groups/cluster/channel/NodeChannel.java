@@ -5,9 +5,9 @@ package com.exametrika.impl.groups.cluster.channel;
 
 import java.util.List;
 
-import com.exametrika.api.groups.cluster.IGroupChannel;
 import com.exametrika.api.groups.cluster.IGroupMembershipService;
 import com.exametrika.api.groups.cluster.IMembershipListener.LeaveReason;
+import com.exametrika.api.groups.cluster.INodeChannel;
 import com.exametrika.common.compartment.ICompartment;
 import com.exametrika.common.compartment.ICompartmentTimerProcessor;
 import com.exametrika.common.messaging.IConnectionProvider;
@@ -20,25 +20,26 @@ import com.exametrika.common.messaging.impl.transports.ITransport;
 import com.exametrika.common.tasks.ThreadInterruptedException;
 import com.exametrika.common.utils.Assert;
 import com.exametrika.common.utils.Times;
-import com.exametrika.impl.groups.cluster.membership.CoreGroupMembershipManager;
+import com.exametrika.impl.groups.cluster.membership.GroupMembershipManager;
 
 /**
- * The {@link GroupChannel} is a group channel.
+ * The {@link NodeChannel} is a node node channel.
  * 
  * @threadsafety This class and its methods are thread safe.
  * @author medvedev
  */
-public class GroupChannel extends Channel implements IGroupChannel, IChannelReconnector
+public class NodeChannel extends Channel implements INodeChannel, IChannelReconnector
 {
-    private final CoreGroupMembershipManager membershipManager;
+    protected final GroupMembershipManager membershipManager;
     private final List<IGracefulExitStrategy> gracefulExitStrategies;
     private final long gracefulExitTimeout;
     private final Object condition = new Object();
     private boolean canClose;
+    private boolean startWait;
     
-    public GroupChannel(String channelName, LiveNodeManager liveNodeManager, ChannelObserver channelObserver,
+    public NodeChannel(String channelName, LiveNodeManager liveNodeManager, ChannelObserver channelObserver,
         ProtocolStack protocolStack, ITransport transport, IMessageFactory messageFactory,
-        IConnectionProvider connectionProvider, ICompartment compartment, CoreGroupMembershipManager membershipManager, 
+        IConnectionProvider connectionProvider, ICompartment compartment, GroupMembershipManager membershipManager, 
         List<IGracefulExitStrategy> gracefulExitStrategies, long gracefulExitTimeout)
     {
         super(channelName, liveNodeManager, channelObserver, protocolStack, transport, messageFactory, connectionProvider,
@@ -57,7 +58,7 @@ public class GroupChannel extends Channel implements IGroupChannel, IChannelReco
     {
         return membershipManager;
     }
-
+    
     @Override
     public void close(boolean gracefully)
     {
@@ -97,35 +98,51 @@ public class GroupChannel extends Channel implements IGroupChannel, IChannelReco
         membershipManager.stop();
     }
     
+    protected void doStartWaitGracefulExit()
+    {
+    }
+    
     private void waitGracefulExit()
     {
-        compartment.addTimerProcessor(new ICompartmentTimerProcessor()
+        boolean waitStarted;
+        synchronized (this)
         {
-            private long lastCheckTime;
+            waitStarted = this.startWait;
+            this.startWait = true;
+        }
+        
+        if (!waitStarted)
+        {
+            doStartWaitGracefulExit();
             
-            @Override
-            public void onTimer(long currentTime)
+            compartment.addTimerProcessor(new ICompartmentTimerProcessor()
             {
-                if (lastCheckTime != 0 && currentTime < lastCheckTime + 500)
-                    return;
+                private long lastCheckTime;
                 
-                lastCheckTime = currentTime;
-                
-                for (IGracefulExitStrategy strategy : gracefulExitStrategies)
+                @Override
+                public void onTimer(long currentTime)
                 {
-                    if (!strategy.requestExit())
+                    if (lastCheckTime != 0 && currentTime < lastCheckTime + 500)
                         return;
+                    
+                    lastCheckTime = currentTime;
+                    
+                    for (IGracefulExitStrategy strategy : gracefulExitStrategies)
+                    {
+                        if (!strategy.requestExit())
+                            return;
+                    }
+             
+                    membershipManager.uninstallMembership(LeaveReason.GRACEFUL_EXIT);
+                    
+                    synchronized (condition)
+                    {
+                        canClose = true;
+                        condition.notify();
+                    }
                 }
-         
-                membershipManager.uninstallMembership(LeaveReason.GRACEFUL_EXIT);
-                
-                synchronized (condition)
-                {
-                    canClose = true;
-                    condition.notify();
-                }
-            }
-        });
+            });
+        }
         
         synchronized (condition)
         {

@@ -10,7 +10,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
-import com.exametrika.api.groups.cluster.IGroupChannel;
+import com.exametrika.api.groups.cluster.ICoreNodeChannel;
 import com.exametrika.common.compartment.ICompartmentTimerProcessor;
 import com.exametrika.common.io.IDeserialization;
 import com.exametrika.common.io.ISerialization;
@@ -35,9 +35,9 @@ import com.exametrika.common.utils.Assert;
 import com.exametrika.common.utils.ByteArray;
 import com.exametrika.common.utils.Bytes;
 import com.exametrika.common.utils.Files;
-import com.exametrika.impl.groups.cluster.channel.GroupChannelFactory;
-import com.exametrika.impl.groups.cluster.channel.GroupChannelFactory.GroupFactoryParameters;
-import com.exametrika.impl.groups.cluster.channel.GroupChannelFactory.GroupParameters;
+import com.exametrika.impl.groups.cluster.channel.CoreChannelFactory;
+import com.exametrika.impl.groups.cluster.channel.CoreChannelFactory.GroupFactoryParameters;
+import com.exametrika.impl.groups.cluster.channel.CoreChannelFactory.GroupParameters;
 import com.exametrika.impl.groups.cluster.discovery.WellKnownAddressesDiscoveryStrategy;
 import com.exametrika.impl.groups.cluster.membership.GroupMemberships;
 import com.exametrika.impl.groups.cluster.multicast.RemoteFlowId;
@@ -61,7 +61,7 @@ public class SimGroupChannelFactory
     private GroupFactoryParameters factoryParameters;
     private List<GroupParameters> parameters = new ArrayList<GroupParameters>();
     private SimStateStore stateStore = new SimStateStore();
-    private List<IGroupChannel> channels = new ArrayList<IGroupChannel>();
+    private List<ICoreNodeChannel> channels = new ArrayList<ICoreNodeChannel>();
     private List<SimStateTransferFactory> stateTransferFactories = new ArrayList<SimStateTransferFactory>();
     private List<SimMessageSender> messageSenders = new ArrayList<SimMessageSender>();
    
@@ -71,11 +71,11 @@ public class SimGroupChannelFactory
         createParameters();
     }
     
-    public IGroupChannel createChannel(SimExecutor executor, int index)
+    public ICoreNodeChannel createChannel(SimExecutor executor, int index)
     {
         this.executor = executor;
         SimChannelFactory channelFactory = new SimChannelFactory(factoryParameters);
-        IGroupChannel channel = channelFactory.createChannel(parameters.get(index));
+        ICoreNodeChannel channel = channelFactory.createChannel(parameters.get(index));
         executor.setGroupChannel(channel);
         channel.start();
         wellKnownAddresses.add(channel.getLiveNodeProvider().getLocalNode().getConnection(0));
@@ -308,7 +308,7 @@ public class SimGroupChannelFactory
             if (!send)
                 return;
             
-            IGroupChannel channel = channels.get(index);
+            ICoreNodeChannel channel = channels.get(index);
             if (sendBeforeGroup)
             {
                 if (!flowLocked && count < SEND_COUNT)
@@ -368,7 +368,7 @@ public class SimGroupChannelFactory
         }
     }
     
-    private class SimChannelFactory extends GroupChannelFactory
+    private class SimChannelFactory extends CoreChannelFactory
     {
         public SimChannelFactory(GroupFactoryParameters factoryParameters)
         {

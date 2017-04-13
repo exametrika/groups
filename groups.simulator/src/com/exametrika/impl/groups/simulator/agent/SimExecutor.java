@@ -3,7 +3,7 @@
  */
 package com.exametrika.impl.groups.simulator.agent;
 
-import com.exametrika.api.groups.cluster.IGroupChannel;
+import com.exametrika.api.groups.cluster.ICoreNodeChannel;
 import com.exametrika.common.expression.CompileContext;
 import com.exametrika.common.expression.Expressions;
 import com.exametrika.common.expression.IExpression;
@@ -28,7 +28,7 @@ public final class SimExecutor
 {
     private final SimAgentChannel agentChannel;
     private final CompileContext compileContext;
-    private IGroupChannel groupChannel;
+    private ICoreNodeChannel groupChannel;
     private long delayPeriod;
     private boolean oneTimeDelay;
     private ICondition<IMessage> suspendCondition = new TrueCondition<IMessage>();
@@ -47,7 +47,7 @@ public final class SimExecutor
         Times.setTest(Times.getCurrentTime());
     }
     
-    public void setGroupChannel(IGroupChannel groupChannel)
+    public void setGroupChannel(ICoreNodeChannel groupChannel)
     {
         Assert.notNull(groupChannel);
         Assert.isNull(this.groupChannel);

@@ -18,7 +18,7 @@ import org.junit.After;
 import org.junit.Test;
 
 import com.exametrika.api.groups.cluster.IGroup;
-import com.exametrika.api.groups.cluster.IGroupChannel;
+import com.exametrika.api.groups.cluster.ICoreNodeChannel;
 import com.exametrika.api.groups.cluster.IGroupMembership;
 import com.exametrika.common.compartment.ICompartmentTimerProcessor;
 import com.exametrika.common.io.IDeserialization;
@@ -44,10 +44,10 @@ import com.exametrika.common.utils.Debug;
 import com.exametrika.common.utils.Files;
 import com.exametrika.common.utils.IOs;
 import com.exametrika.common.utils.Threads;
-import com.exametrika.impl.groups.cluster.channel.GroupChannel;
-import com.exametrika.impl.groups.cluster.channel.GroupChannelFactory;
-import com.exametrika.impl.groups.cluster.channel.GroupChannelFactory.GroupFactoryParameters;
-import com.exametrika.impl.groups.cluster.channel.GroupChannelFactory.GroupParameters;
+import com.exametrika.impl.groups.cluster.channel.CoreNodeChannel;
+import com.exametrika.impl.groups.cluster.channel.CoreChannelFactory;
+import com.exametrika.impl.groups.cluster.channel.CoreChannelFactory.GroupFactoryParameters;
+import com.exametrika.impl.groups.cluster.channel.CoreChannelFactory.GroupParameters;
 import com.exametrika.impl.groups.cluster.discovery.WellKnownAddressesDiscoveryStrategy;
 import com.exametrika.impl.groups.cluster.flush.FlushParticipantProtocol;
 import com.exametrika.impl.groups.cluster.flush.IFlush;
@@ -71,7 +71,7 @@ public class MulticastProtocolTests
     private Set<String> wellKnownAddresses = new HashSet<String>();
     private GroupFactoryParameters factoryParameters;
     private List<GroupParameters> parameters = new ArrayList<GroupParameters>();
-    private IGroupChannel[] channels = new GroupChannel[COUNT];
+    private ICoreNodeChannel[] channels = new CoreNodeChannel[COUNT];
     private TestStateStore stateStore = new TestStateStore();
     private List<TestStateTransferFactory> stateTransferFactories = new ArrayList<TestStateTransferFactory>();
     private List<TestMessageSender> messageSenders = new ArrayList<TestMessageSender>();
@@ -252,7 +252,7 @@ public class MulticastProtocolTests
         for (int i = 0; i < COUNT; i++)
         {
             TestGroupChannelFactory channelFactory = new TestGroupChannelFactory(factoryParameters);
-            IGroupChannel channel = channelFactory.createChannel(parameters.get(i));
+            ICoreNodeChannel channel = channelFactory.createChannel(parameters.get(i));
             if (!skipIndexes.contains(i))
             {
                 channel.start();
@@ -574,7 +574,7 @@ public class MulticastProtocolTests
             if (!send)
                 return;
             
-            IGroupChannel channel = channels[index];
+            ICoreNodeChannel channel = channels[index];
             if (sendBeforeGroup)
             {
                 if (!flowLocked && count < SEND_COUNT)
@@ -634,7 +634,7 @@ public class MulticastProtocolTests
         }
     }
     
-    private class TestGroupChannelFactory extends GroupChannelFactory
+    private class TestGroupChannelFactory extends CoreChannelFactory
     {
         public TestGroupChannelFactory(GroupFactoryParameters factoryParameters)
         {

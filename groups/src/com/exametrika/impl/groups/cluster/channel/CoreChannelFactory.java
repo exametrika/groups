@@ -9,7 +9,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import com.exametrika.api.groups.cluster.IGroupChannel;
+import com.exametrika.api.groups.cluster.ICoreNodeChannel;
 import com.exametrika.api.groups.cluster.IGroupMembershipListener;
 import com.exametrika.common.compartment.ICompartment;
 import com.exametrika.common.io.ISerializationRegistry;
@@ -60,12 +60,12 @@ import com.exametrika.spi.groups.IStateTransferFactory;
 import com.exametrika.spi.groups.SystemPropertyProvider;
 
 /**
- * The {@link GroupChannelFactory} is a group channel factory.
+ * The {@link CoreChannelFactory} is a core node channel factory.
  * 
  * @threadsafety This class and its methods are thread safe.
  * @author medvedev
  */
-public class GroupChannelFactory extends ChannelFactory
+public class CoreChannelFactory extends ChannelFactory
 {
     private CoreGroupMembershipTracker membershipTracker;
     private CoreGroupMembershipManager membershipManager;
@@ -123,19 +123,19 @@ public class GroupChannelFactory extends ChannelFactory
         public IFlowController<RemoteFlowId> localFlowController = new NoFlowController<RemoteFlowId>();
     }
 
-    public GroupChannelFactory()
+    public CoreChannelFactory()
     {
         this(new GroupFactoryParameters());
     }
     
-    public GroupChannelFactory(GroupFactoryParameters factoryParameters)
+    public CoreChannelFactory(GroupFactoryParameters factoryParameters)
     {
         super(factoryParameters);
     }
     
-    public IGroupChannel createChannel(GroupParameters parameters)
+    public ICoreNodeChannel createChannel(GroupParameters parameters)
     {
-        return (IGroupChannel)super.createChannel(parameters);
+        return (ICoreNodeChannel)super.createChannel(parameters);
     }
     
     @Override
@@ -274,7 +274,7 @@ public class GroupChannelFactory extends ChannelFactory
         ConnectionManager connectionManager, ICompartment compartment)
     {
         GroupFactoryParameters groupFactoryParameters = (GroupFactoryParameters)factoryParameters;
-        return new GroupChannel(channelName, liveNodeManager, channelObserver, protocolStack, transport, messageFactory, 
+        return new CoreNodeChannel(channelName, liveNodeManager, channelObserver, protocolStack, transport, messageFactory, 
             connectionManager, compartment, membershipManager, gracefulExitStrategies, groupFactoryParameters.gracefulExitTimeout);
     }
 }

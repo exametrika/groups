@@ -60,7 +60,7 @@ import com.exametrika.common.utils.Debug;
 import com.exametrika.common.utils.Files;
 import com.exametrika.common.utils.IOs;
 import com.exametrika.common.utils.Threads;
-import com.exametrika.impl.groups.cluster.channel.GroupChannel;
+import com.exametrika.impl.groups.cluster.channel.CoreNodeChannel;
 import com.exametrika.impl.groups.cluster.channel.IChannelReconnector;
 import com.exametrika.impl.groups.cluster.channel.IGracefulExitStrategy;
 import com.exametrika.impl.groups.cluster.discovery.CoreGroupDiscoveryProtocol;
@@ -98,7 +98,7 @@ import com.exametrika.tests.groups.MembershipManagerTests.PropertyProviderMock;
 public class StateTransferProtocolTests
 {
     private static final int COUNT = 10;
-    private GroupChannel[] channels = new GroupChannel[COUNT];
+    private CoreNodeChannel[] channels = new CoreNodeChannel[COUNT];
     private Sequencer flushSequencer = new Sequencer();
     private Sequencer snapshotSequencer = new Sequencer();
     
@@ -422,7 +422,7 @@ public class StateTransferProtocolTests
                 channel.start();
                 wellKnownAddresses.add(channel.getLiveNodeProvider().getLocalNode().getConnection(0));
             }
-            channels[i] = (GroupChannel)channel;
+            channels[i] = (CoreNodeChannel)channel;
         }
     }
 
@@ -923,7 +923,7 @@ public class StateTransferProtocolTests
             MessageFactory messageFactory, ProtocolStack protocolStack, TcpTransport transport,
             ConnectionManager connectionManager, ICompartment compartment)
         {
-            return new GroupChannel(channelName, liveNodeManager, channelObserver, protocolStack, transport, messageFactory, 
+            return new CoreNodeChannel(channelName, liveNodeManager, channelObserver, protocolStack, transport, messageFactory, 
                 connectionManager, compartment, membershipManager, gracefulExitStrategies, gracefulExitTimeout);
         }
     }

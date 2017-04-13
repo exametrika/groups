@@ -30,7 +30,7 @@ public interface IFlushParticipant
      * participant must call {@link IFlush#grantFlush(IFlushParticipant)}. 
      * <p>
      * Implementation of this method must be idempotent, because if some node is failed during this phase, phase is restarted
-     * by calling this method againg.
+     * by calling this method again.
      *
      * @param flush current flush
      */
