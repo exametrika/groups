@@ -50,7 +50,7 @@ public final class DefaultShellCommandProvider implements IShellCommandProvider
         return new ShellCommandsBuilder()
             .command().key("clear").names("clear", "cls").description(messages.clearCommand().toString()).executor(new ClearShellCommand()).end()
             .command().key("quit").names("quit", "exit", "q").description(messages.exitCommand().toString()).executor(new ExitShellCommand()).end()
-            .command().key("help").names("help", "?").description(messages.helpCommand().toString())
+            .command().key("help").names("help", "man", "?").description(messages.helpCommand().toString())
                 .defaultParameter()
                     .key("command").format(messages.helpCommandParameterFormat().toString()) 
                     .description(messages.helpCommandParameterDescription().toString()).hasArgument()
