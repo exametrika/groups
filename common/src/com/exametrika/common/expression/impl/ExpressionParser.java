@@ -19,6 +19,8 @@ import com.exametrika.common.expression.impl.nodes.ContinueExpressionNode;
 import com.exametrika.common.expression.impl.nodes.DebugExpressionNode;
 import com.exametrika.common.expression.impl.nodes.ElvisExpressionNode;
 import com.exametrika.common.expression.impl.nodes.ForExpressionNode;
+import com.exametrika.common.expression.impl.nodes.FunctionCallExpressionNode;
+import com.exametrika.common.expression.impl.nodes.FunctionExpressionNode;
 import com.exametrika.common.expression.impl.nodes.GroupExpressionNode;
 import com.exametrika.common.expression.impl.nodes.IfExpressionNode;
 import com.exametrika.common.expression.impl.nodes.IsExpressionNode;
@@ -32,6 +34,7 @@ import com.exametrika.common.expression.impl.nodes.PropertyExpressionNode;
 import com.exametrika.common.expression.impl.nodes.ReturnExpressionNode;
 import com.exametrika.common.expression.impl.nodes.RootExpressionNode;
 import com.exametrika.common.expression.impl.nodes.SelectionExpressionNode;
+import com.exametrika.common.expression.impl.nodes.SelectionExpressionNode.Operation;
 import com.exametrika.common.expression.impl.nodes.SelfExpressionNode;
 import com.exametrika.common.expression.impl.nodes.StatementExpressionNode;
 import com.exametrika.common.expression.impl.nodes.TernaryExpressionNode;
@@ -40,7 +43,6 @@ import com.exametrika.common.expression.impl.nodes.UnaryExpressionNode;
 import com.exametrika.common.expression.impl.nodes.VariableAssignmentExpressionNode;
 import com.exametrika.common.expression.impl.nodes.VariableExpressionNode;
 import com.exametrika.common.expression.impl.nodes.WhileExpressionNode;
-import com.exametrika.common.expression.impl.nodes.SelectionExpressionNode.Operation;
 import com.exametrika.common.l10n.DefaultMessage;
 import com.exametrika.common.l10n.ILocalizedMessage;
 import com.exametrika.common.l10n.Messages;
@@ -126,6 +128,9 @@ import com.exametrika.common.utils.Pair;
  * <li> for: for($var : iterableExpr) {bodyExpr}
  * <li> return: return or return  expr
  * <li> break, continue: break, continue
+ * <li> function definition: $var = function(){...}, $args variable contains function arguments,
+ *      if function is called with map as single argument, function variables are mapped to map entries by key
+ * <li> function call: $var(args)
  * </ul>
  *
  * @threadsafety This class and its methods are not thread safe.
@@ -135,7 +140,7 @@ public class ExpressionParser
 {
     private static final IMessages messages = Messages.get(IMessages.class);
     private final ExpressionTokenizer tokenizer;
-    private final ParseContext parseContext;
+    private ParseContext parseContext;
     private DebugContext debugContext;
 
     public ExpressionParser(String value)
@@ -504,6 +509,9 @@ public class ExpressionParser
                 case "new":
                     tokenizer.readNextToken();
                     return parseConstructorExpression();
+                case "function":
+                    tokenizer.readNextToken();
+                    return parseFunctionExpression();
                 default:
                     int pos = tokenizer.getStartPos();
                     IExpressionNode nextExpression = parseMemberExpression();
@@ -563,6 +571,25 @@ public class ExpressionParser
             classStartPos, classEndPos)), startPos, endPos);
     }
 
+    private IExpressionNode parseFunctionExpression()
+    {
+        int startPos = tokenizer.getStartPos();
+        if (tokenizer.readNextToken() != Token.ROUND_OPEN_BRACKET)
+            throwError(messages.expected("(", tokenizer.getValueText()));
+        if (tokenizer.readNextToken() != Token.ROUND_CLOSE_BRACKET)
+            throwError(messages.expected(")", tokenizer.getValueText()));
+        
+        ParseContext newParseContext = new ParseContext();
+        newParseContext.allocateVariable("args");
+        ParseContext oldParseContext = parseContext;
+        parseContext = newParseContext;
+        
+        IExpressionNode bodyExpression = parseCurlyBracketGroupExpression();
+        int endPos = tokenizer.getEndPos();
+        parseContext = oldParseContext;
+        return intercept(new FunctionExpressionNode(newParseContext, bodyExpression), startPos, endPos);
+    }
+    
     private IExpressionNode parseTemplateExpression()
     {
         String template = (String)tokenizer.getValue();
@@ -595,6 +622,7 @@ public class ExpressionParser
     {
         if (tokenizer.readNextToken() != Token.DOLLAR)
             throwError(messages.expected("$", tokenizer.getValueText()));
+        int startPos = tokenizer.getStartPos();
         if (tokenizer.peekNextToken() != Token.ID)
             return new ContextExpressionNode();
         
@@ -609,7 +637,15 @@ public class ExpressionParser
         case "context":
             return new ContextExpressionNode();
         default:
-            return new VariableExpressionNode(variableName, parseContext.allocateVariable(variableName));
+            IExpressionNode variable = new VariableExpressionNode(variableName, parseContext.allocateVariable(variableName));
+            if (tokenizer.peekNextToken() != Token.ROUND_OPEN_BRACKET)
+                return variable;
+            else
+            {
+                IExpressionNode arguments = parseRoundBracketGroupExpression(false);
+                int endPos = tokenizer.getEndPos();
+                return intercept(new FunctionCallExpressionNode((VariableExpressionNode)variable, arguments), startPos, endPos);
+            }
         }
     }
 
