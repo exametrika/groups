@@ -51,13 +51,13 @@ public final class FunctionCallExpressionNode implements IExpressionNode
         {
             for (Map.Entry<Object, Object> entry : ((Map<Object, Object>)arguments).entrySet())
             {
-                int slotIndex = parseContext.findVariable(entry.getKey().toString());
-                if (slotIndex != -1)
+                Integer slotIndex = parseContext.findVariable(entry.getKey().toString());
+                if (slotIndex != null)
                     functionContext.setVariableValue(slotIndex, entry.getValue());
             }
         }
         
-        return function.evaluate(functionContext, null);
+        return function.getBodyExpression().evaluate(functionContext, null);
     }
     
     @Override

@@ -5,7 +5,9 @@ package com.exametrika.common.shell.impl;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -24,12 +26,14 @@ import com.exametrika.common.shell.IShellCommand;
 import com.exametrika.common.shell.IShellCommandExecutor;
 import com.exametrika.common.shell.IShellCommandProvider;
 import com.exametrika.common.shell.IShellContext;
+import com.exametrika.common.shell.IShellParameter;
 import com.exametrika.common.shell.IShellParameterCompleter;
 import com.exametrika.common.shell.IShellParameterHighlighter;
 import com.exametrika.common.shell.impl.completers.ShellFileCompleter;
 import com.exametrika.common.utils.Collections;
 import com.exametrika.common.utils.Files;
 import com.exametrika.common.utils.ICondition;
+import com.exametrika.common.utils.Pair;
 import com.exametrika.common.utils.Strings;
 
 
@@ -79,12 +83,26 @@ public final class DefaultShellCommandProvider implements IShellCommandProvider
                     .description(messages.grepExpressionParameterDescription().toString()).hasArgument().end()
                 .executor(new GrepShellCommand()).end()
             .command().key("load").names("load").description(messages.loadCommand().toString())
+                .namedParameter()
+                    .key("commandMode").names("-c", "--command-mode").format(messages.loadCommandModeParameterFormat().toString()) 
+                    .description(messages.loadCommandModeParameterDescription().toString()).unique().end()
                 .defaultParameter()
                     .key("scriptPath").format(messages.loadExpressionParameterFormat().toString()) 
                     .description(messages.loadExpressionParameterDescription().toString())
                     .unique().required().hasArgument()
                     .completer(new ShellFileCompleter()).end()
                 .executor(new LoadShellCommand()).end()
+            .command().key("alias").names("alias").description(messages.aliasCommand().toString())
+                .namedParameter()
+                    .key("description").names("-d", "--description").format(messages.aliasDescriptionParameterFormat().toString()) 
+                    .description(messages.aliasDescriptionParameterDescription().toString()).unique().hasArgument().end()
+                .positionalParameter()
+                    .key("name").format(messages.aliasNameParameterFormat().toString()) 
+                    .description(messages.aliasNameParameterDescription().toString()).unique().hasArgument().end()
+                .defaultParameter()
+                    .key("command").format(messages.aliasCommandParameterFormat().toString()) 
+                    .description(messages.aliasCommandParameterDescription().toString()).unique().required().hasArgument().end()
+                .executor(new AliasShellCommand()).end()
             .build();
     }
     
@@ -279,10 +297,79 @@ public final class DefaultShellCommandProvider implements IShellCommandProvider
         @Override
         public Object execute(IShellCommand command, IShellContext context, Map<String, Object> parameters)
         {
+            Boolean commandMode = (Boolean)parameters.get("commandMode");
             String scriptPath = (String)parameters.get("scriptPath");
             String scriptText = Files.read(new File(scriptPath));
-            context.getShell().executeScript(scriptText);
+            if (Boolean.TRUE.equals(commandMode))
+                context.getShell().executeScript(scriptText);
+            else
+                Expressions.evaluate(scriptText, context, null);
+            
             return null;
+        }
+    }
+    
+    private static class AliasShellCommand implements IShellCommandExecutor
+    {
+        @Override
+        public Object execute(IShellCommand command, IShellContext context, Map<String, Object> parameters)
+        {
+            Pair<IShellCommand, Map<String, Object>> pair = ((ShellCommandParser)context.getShell().getParser())
+                .parsePartialCommand((String)parameters.get("command"));
+            
+            command = pair.getKey();
+            Map<String, Object> args = pair.getValue();
+            String description = (String)parameters.get("description");
+            if (description == null)
+                description = command.getDescription();
+
+            List<IShellParameter> namedParameters = new ArrayList<IShellParameter>();
+            for (IShellParameter parameter : command.getNamedParameters())
+            {
+                if (!args.containsKey(parameter.getKey()))
+                    namedParameters.add(parameter);
+            }
+            
+            List<IShellParameter> positionalParameters = new ArrayList<IShellParameter>();
+            for (IShellParameter parameter : command.getPositionalParameters())
+            {
+                if (!args.containsKey(parameter.getKey()))
+                    positionalParameters.add(parameter);
+            }
+            
+            IShellParameter defaultParameter;
+            if (!args.containsKey(command.getDefaultParameter().getKey()))
+                defaultParameter = command.getDefaultParameter();
+            else
+                defaultParameter = null;
+            
+            IShellCommand alias = new ShellCommand(command.getKey(), Arrays.asList((String)parameters.get("name")), 
+                description, command.getShortDescription(), command.getValidator(), namedParameters, positionalParameters, 
+                defaultParameter, new AliasCommandExecutor(command, args));
+            ((Shell)context.getShell()).addCommand(alias);
+            
+            return null;
+        }
+    }
+    
+    private static class AliasCommandExecutor implements IShellCommandExecutor
+    {
+        private final IShellCommand command;
+        private final Map<String, Object> args;
+
+        public AliasCommandExecutor(IShellCommand command, Map<String, Object> args)
+        {
+            this.command = command;
+            this.args = args;
+        }
+        
+        @Override
+        public Object execute(IShellCommand command, IShellContext context, Map<String, Object> parameters)
+        {
+            parameters = new LinkedHashMap<String, Object>(parameters);
+            parameters.putAll(args);
+            
+            return this.command.getExecutor().execute(this.command, context, parameters);
         }
     }
     
@@ -328,9 +415,27 @@ public final class DefaultShellCommandProvider implements IShellCommandProvider
         ILocalizedMessage grepExpressionParameterDescription();
         @DefaultMessage("loads script")
         ILocalizedMessage loadCommand();
+        @DefaultMessage("-c --command-mode")
+        ILocalizedMessage loadCommandModeParameterFormat();
+        @DefaultMessage("if set script is loaded in command mode \nelse in expression evaluation mode")
+        ILocalizedMessage loadCommandModeParameterDescription();
         @DefaultMessage("<script-file-path>")
         ILocalizedMessage loadExpressionParameterFormat();
         @DefaultMessage("path to script being loaded")
         ILocalizedMessage loadExpressionParameterDescription();
+        @DefaultMessage("makes command alias")
+        ILocalizedMessage aliasCommand();
+        @DefaultMessage("-d --description")
+        ILocalizedMessage aliasDescriptionParameterFormat();
+        @DefaultMessage("command alias description")
+        ILocalizedMessage aliasDescriptionParameterDescription();
+        @DefaultMessage("<name>")
+        ILocalizedMessage aliasNameParameterFormat();
+        @DefaultMessage("command alias name")
+        ILocalizedMessage aliasNameParameterDescription();
+        @DefaultMessage("<command>")
+        ILocalizedMessage aliasCommandParameterFormat();
+        @DefaultMessage("command with parameters")
+        ILocalizedMessage aliasCommandParameterDescription();
     }
 }

@@ -177,6 +177,9 @@ public class ExpressionParserTests
             "$var=[1, 2, 3, 4];$res=[];for ($i : $var) {if ($i == 2){break};$res.add($i)};return $res", Arrays.asList(1l),
             "$var=[1, 2, 3, 4];$res=[];for ($i : $var) {if ($i > 2){continue};$res.add($i)};return $res", Arrays.asList(1l, 2l),};
         check(statementExpressions, "root", "self");
+        
+        Object[] functionExpressions = {"$b=function(){if ($args.a){ return $b + $c} else {return $b - $c}};$b({'a':true, 'b':10, 'c':20})", 30l};
+        check(functionExpressions, null, null);
     }
 
     @Test

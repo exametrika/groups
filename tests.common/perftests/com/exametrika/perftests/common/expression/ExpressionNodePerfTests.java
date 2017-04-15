@@ -3,6 +3,9 @@
  */
 package com.exametrika.perftests.common.expression;
 
+import static org.hamcrest.core.Is.is;
+import static org.junit.Assert.assertThat;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -20,6 +23,7 @@ import com.exametrika.common.expression.IConversionProvider;
 import com.exametrika.common.expression.IExpression;
 import com.exametrika.common.expression.impl.ExpressionContext;
 import com.exametrika.common.expression.impl.IExpressionNode;
+import com.exametrika.common.expression.impl.ParseContext;
 import com.exametrika.common.expression.impl.StandardClassResolver;
 import com.exametrika.common.expression.impl.StandardCollectionProvider;
 import com.exametrika.common.expression.impl.StandardConversionProvider;
@@ -31,6 +35,8 @@ import com.exametrika.common.expression.impl.nodes.ConstantExpressionNode;
 import com.exametrika.common.expression.impl.nodes.ConstructorExpressionNode;
 import com.exametrika.common.expression.impl.nodes.ElvisExpressionNode;
 import com.exametrika.common.expression.impl.nodes.ForExpressionNode;
+import com.exametrika.common.expression.impl.nodes.FunctionCallExpressionNode;
+import com.exametrika.common.expression.impl.nodes.FunctionExpressionNode;
 import com.exametrika.common.expression.impl.nodes.IfExpressionNode;
 import com.exametrika.common.expression.impl.nodes.IsExpressionNode;
 import com.exametrika.common.expression.impl.nodes.LikeExpressionNode;
@@ -39,6 +45,7 @@ import com.exametrika.common.expression.impl.nodes.MethodExpressionNode;
 import com.exametrika.common.expression.impl.nodes.NullSafeExpressionNode;
 import com.exametrika.common.expression.impl.nodes.PropertyAssignmentExpressionNode;
 import com.exametrika.common.expression.impl.nodes.PropertyExpressionNode;
+import com.exametrika.common.expression.impl.nodes.ReturnExpressionNode;
 import com.exametrika.common.expression.impl.nodes.StatementExpressionNode;
 import com.exametrika.common.expression.impl.nodes.TernaryExpressionNode;
 import com.exametrika.common.expression.impl.nodes.UnaryExpressionNode;
@@ -53,6 +60,7 @@ import com.exametrika.common.log.LogLevel;
 import com.exametrika.common.log.Loggers;
 import com.exametrika.common.perf.Benchmark;
 import com.exametrika.common.perf.Probe;
+import com.exametrika.common.utils.MapBuilder;
 import com.exametrika.common.utils.Pair;
 import com.exametrika.tests.common.expression.ExpressionNodeTests.TestA;
 
@@ -644,6 +652,37 @@ public class ExpressionNodePerfTests
         }, COUNT)));
     }
     
+    @Test
+    public void testFunction() throws Throwable
+    {
+        MapExpressionNode argsNode = new MapExpressionNode(Arrays.<Pair<IExpressionNode, IExpressionNode>>asList(
+            new Pair(new ConstantExpressionNode(123),new ConstantExpressionNode(123)),
+            new Pair(new ConstantExpressionNode("a"),new ConstantExpressionNode("b"))));
+        
+        ParseContext parseContext = new ParseContext();
+        parseContext.allocateVariable("args");
+        FunctionExpressionNode node = new FunctionExpressionNode(parseContext, new ReturnExpressionNode(new VariableExpressionNode("args", 0)));
+        VariableExpressionNode varNode = new VariableExpressionNode("test", 1);
+        
+        final ExpressionContext context = new ExpressionContext();
+        varNode.setValue(context, node);
+        final FunctionCallExpressionNode callNode = new FunctionCallExpressionNode(varNode, argsNode);
+        assertThat((Map)callNode.evaluate(context, null), is(new MapBuilder().put(123, 123).put("a", "b").toMap()));
+        
+        int slotIndex = parseContext.allocateVariable("123");
+        FunctionExpressionNode node2 = new FunctionExpressionNode(parseContext, new ReturnExpressionNode(new VariableExpressionNode("123", slotIndex)));
+        varNode.setValue(context, node2);
+        
+        logger.log(LogLevel.INFO, messages.evaluateFunction(new Benchmark(new Probe()
+        {
+            @Override
+            public void runOnce()
+            {
+                callNode.evaluate(context, null);
+            }
+        }, COUNT)));
+    }
+    
     private interface IMessages
     {
         @DefaultMessage("Evaluate context creation ''{0}''.")
@@ -765,5 +804,8 @@ public class ExpressionNodePerfTests
         
         @DefaultMessage("Evaluate complex ''{0}''.")
         ILocalizedMessage evaluateComplex(Object benchmark);
+        
+        @DefaultMessage("Evaluate function ''{0}''.")
+        ILocalizedMessage evaluateFunction(Object benchmark);
     }
 }

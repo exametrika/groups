@@ -19,6 +19,7 @@ import org.junit.Test;
 import com.exametrika.common.expression.Expressions;
 import com.exametrika.common.expression.impl.ExpressionContext;
 import com.exametrika.common.expression.impl.IExpressionNode;
+import com.exametrika.common.expression.impl.ParseContext;
 import com.exametrika.common.expression.impl.StandardConversionProvider;
 import com.exametrika.common.expression.impl.nodes.ArrayExpressionNode;
 import com.exametrika.common.expression.impl.nodes.BinaryExpressionNode;
@@ -29,6 +30,8 @@ import com.exametrika.common.expression.impl.nodes.ConstructorExpressionNode;
 import com.exametrika.common.expression.impl.nodes.ContinueExpressionNode;
 import com.exametrika.common.expression.impl.nodes.ElvisExpressionNode;
 import com.exametrika.common.expression.impl.nodes.ForExpressionNode;
+import com.exametrika.common.expression.impl.nodes.FunctionCallExpressionNode;
+import com.exametrika.common.expression.impl.nodes.FunctionExpressionNode;
 import com.exametrika.common.expression.impl.nodes.IfExpressionNode;
 import com.exametrika.common.expression.impl.nodes.IsExpressionNode;
 import com.exametrika.common.expression.impl.nodes.LikeExpressionNode;
@@ -48,6 +51,7 @@ import com.exametrika.common.expression.impl.nodes.UnaryExpressionNode;
 import com.exametrika.common.expression.impl.nodes.VariableAssignmentExpressionNode;
 import com.exametrika.common.expression.impl.nodes.VariableExpressionNode;
 import com.exametrika.common.expression.impl.nodes.WhileExpressionNode;
+import com.exametrika.common.utils.MapBuilder;
 import com.exametrika.common.utils.Pair;
 
 
@@ -775,6 +779,29 @@ public class ExpressionNodeTests
         assertThat(node.evaluate(context, null), nullValue());
         node.setValue(context, "test");
         assertThat((String)node.evaluate(context, null), is("test"));
+    }
+    
+    @Test
+    public void testFunction() throws Throwable
+    {
+        MapExpressionNode argsNode = new MapExpressionNode(Arrays.<Pair<IExpressionNode, IExpressionNode>>asList(
+            new Pair(new ConstantExpressionNode(123),new ConstantExpressionNode(123)),
+            new Pair(new ConstantExpressionNode("a"),new ConstantExpressionNode("b"))));
+        
+        ParseContext parseContext = new ParseContext();
+        parseContext.allocateVariable("args");
+        FunctionExpressionNode node = new FunctionExpressionNode(parseContext, new ReturnExpressionNode(new VariableExpressionNode("args", 0)));
+        VariableExpressionNode varNode = new VariableExpressionNode("test", 1);
+        
+        ExpressionContext context = new ExpressionContext();
+        varNode.setValue(context, node);
+        FunctionCallExpressionNode callNode = new FunctionCallExpressionNode(varNode, argsNode);
+        assertThat((Map)callNode.evaluate(context, null), is(new MapBuilder().put(123, 123).put("a", "b").toMap()));
+        
+        int slotIndex = parseContext.allocateVariable("123");
+        FunctionExpressionNode node2 = new FunctionExpressionNode(parseContext, new ReturnExpressionNode(new VariableExpressionNode("123", slotIndex)));
+        varNode.setValue(context, node2);
+        assertThat((Integer)callNode.evaluate(context, null), is(123));
     }
     
     @Test

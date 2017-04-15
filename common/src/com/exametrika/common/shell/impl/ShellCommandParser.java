@@ -99,7 +99,7 @@ public final class ShellCommandParser implements IShellCommandParser
             else if (arg.length() == 1 && arg.charAt(0) == PIPE)
             {
                 Assert.notNull(command);
-                parameters = parseCommandParameters(command, commandArgs);
+                parameters = parseCommandParameters(command, commandArgs, true);
                 commands.add(new Pair<IShellCommand, Map<String,Object>>(command, parameters));
                 command = null;
                 parameters = null;
@@ -115,11 +115,22 @@ public final class ShellCommandParser implements IShellCommandParser
         
         if (command != null)
         {
-            parameters = parseCommandParameters(command, commandArgs);
+            parameters = parseCommandParameters(command, commandArgs, true);
             commands.add(new Pair<IShellCommand, Map<String,Object>>(command, parameters));
         }
         
         return commands;
+    }
+    
+    public Pair<IShellCommand, Map<String, Object>> parsePartialCommand(String commandLine)
+    {
+        List<String> args = parseArgs(commandLine);
+        Assert.isTrue(!args.isEmpty());
+        IShellCommand command = rootNode.getShell().findCommand(args.get(0));
+        if (command == null)
+            throw new InvalidArgumentException(messages.unknownCommand(args.get(0)));
+        Map<String, Object> parameters = parseCommandParameters(command, args.subList(1, args.size()), false);
+        return new Pair<IShellCommand, Map<String, Object>>(command, parameters);
     }
     
     public static List<String> parseArgs(String argsStr)
@@ -127,30 +138,39 @@ public final class ShellCommandParser implements IShellCommandParser
         List<String> args = new ArrayList<String>();
         StringBuilder builder = new StringBuilder();
         boolean quote = false;
+        boolean escape = false;
         for (int i = 0; i < argsStr.length(); i++)
         {
             char ch = argsStr.charAt(i);
-            if (ch == '\"')
+            if (!escape)
             {
-                quote = !quote;
-                continue;
-            }
-            
-            if (!quote && (ch == ' ' || ch == '\t' || ch == '\r' || ch == '\n' || ch == PIPE))
-            {
-                if (builder.length() > 0)
+                if (ch == '\\')
                 {
-                    args.add(builder.toString());
-                    builder = new StringBuilder();
+                    escape = true;
+                    continue;
                 }
-                
-                if (ch == PIPE)
-                    args.add(Character.toString(ch));
-                
-                continue;
+                else if (ch == '\"')
+                {
+                    quote = !quote;
+                    continue;
+                }
+                else if (!quote && (ch == ' ' || ch == '\t' || ch == '\r' || ch == '\n' || ch == PIPE))
+                {
+                    if (builder.length() > 0)
+                    {
+                        args.add(builder.toString());
+                        builder = new StringBuilder();
+                    }
+                    
+                    if (ch == PIPE)
+                        args.add(Character.toString(ch));
+                    
+                    continue;
+                }
             }
-            else
-                builder.append(ch);
+
+            builder.append(ch);
+            escape = false;
         }
         
         if (builder.length() > 0)
@@ -159,18 +179,23 @@ public final class ShellCommandParser implements IShellCommandParser
         return args;
     }
 
-    private Map<String, Object> parseCommandParameters(IShellCommand command, List<String> args)
+    private Map<String, Object> parseCommandParameters(IShellCommand command, List<String> args, boolean checkRequired)
     {
         Map<String, Object> parsedParameters = new LinkedHashMap<String, Object>();
         
         for (IShellParameter parameter : command.getNamedParameters())
-            parseParameter(parameter, args, parsedParameters, false);
+            parseParameter(parameter, args, parsedParameters, false, checkRequired);
         
+        boolean found = true;
         for (IShellParameter parameter : command.getPositionalParameters())
-            parseParameter(parameter, args, parsedParameters, true);
+        {
+            found = parseParameter(parameter, args, parsedParameters, true, checkRequired);
+            if (!found)
+                break;
+        }
         
-        if (command.getDefaultParameter() != null)
-            parseParameter(command.getDefaultParameter(), args, parsedParameters, false);
+        if (found && command.getDefaultParameter() != null)
+            parseParameter(command.getDefaultParameter(), args, parsedParameters, false, checkRequired);
         
         if (args.size() == 1)
             throw new InvalidArgumentException(messages.unrecognizedParameter(args.get(0)));
@@ -197,8 +222,8 @@ public final class ShellCommandParser implements IShellCommandParser
         return parsedParameters;
     }
     
-    private void parseParameter(IShellParameter parameter, List<String> args, Map<String, Object> parameterMap,
-        boolean positional)
+    private boolean parseParameter(IShellParameter parameter, List<String> args, Map<String, Object> parameterMap,
+        boolean positional, boolean checkRequired)
     {
         List<Object> values = null;
         if (!parameter.isUnique())
@@ -243,6 +268,9 @@ public final class ShellCommandParser implements IShellCommandParser
                 {
                     if (object != null)
                         break;
+                    if (!checkRequired)
+                        return false;
+                    
                     if (!parameter.isRequired())
                     {
                         if (parameter.hasArgument() && parameter.getDefaultValue() != null)
@@ -254,10 +282,16 @@ public final class ShellCommandParser implements IShellCommandParser
                 }
                 else
                 {
-                    if (values.isEmpty() && parameter.isRequired())
-                        throw new InvalidArgumentException(messages.requiredParameterNotFound(parameter.getFormat()));
-                    else if (values.isEmpty() && !parameter.isRequired() && parameter.getDefaultValue() != null)
-                        values.add(parameter.getDefaultValue());
+                    if (values.isEmpty())
+                    {
+                        if (!checkRequired)
+                            return false;
+                        
+                        if (parameter.isRequired())
+                            throw new InvalidArgumentException(messages.requiredParameterNotFound(parameter.getFormat()));
+                        else if (parameter.getDefaultValue() != null)
+                            values.add(parameter.getDefaultValue());
+                    }
                     
                     parameterMap.put(parameter.getKey(), values);
                     break;
@@ -267,6 +301,8 @@ public final class ShellCommandParser implements IShellCommandParser
             if (positional)
                 break;
         }
+        
+        return true;
     }
     
     private int findParameter(List<String> names, List<String> args)

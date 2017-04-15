@@ -37,10 +37,15 @@ public final class FunctionExpressionNode implements IExpressionNode
         return parseContext;
     }
     
+    public IExpressionNode getBodyExpression()
+    {
+        return bodyExpression;
+    }
+    
     @Override
     public Object evaluate(ExpressionContext context, Object self)
     {
-        return bodyExpression.evaluate(context, self);
+        return this;
     }
     
     @Override

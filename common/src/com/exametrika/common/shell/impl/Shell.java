@@ -367,6 +367,27 @@ public final class Shell implements IShell
         }
     }
 
+    public void addCommand(IShellCommand command)
+    {
+        Assert.notNull(command);
+        
+        List<String> names = command.getNames();
+        for (String name : names)
+        {
+            if (command instanceof ShellCommand)
+            {
+                if (commandsMap.containsKey(name))
+                    throw new SystemException(messages.commandExists(name));
+                
+                commandsMap.put(name, command);
+            }
+            String[] path = name.split("[" + nameSeparator + "]");
+            rootNode.ensure(Arrays.asList(path), command);
+        }
+        
+        Immutables.unwrap(commands).add(command);
+    }
+    
     public void changeLevel(String name)
     {
         if (name.equals(PREVIOUS_LEVEL_COMMAND))
@@ -383,51 +404,7 @@ public final class Shell implements IShell
         }
     }
     
-    private Highlighter createHighlighter()
-    {
-        return new ShellHighlighter(rootNode, defaultCommand, nameSeparator, context, namedParameterPrefix);
-    }
-
-    private Completer createCompleter()
-    {
-        return new ShellCompleter(rootNode, defaultCommand, nameSeparator, context, namedParameterPrefix);
-    }
-
-    private void executeLine(String line)
-    {
-        Assert.checkState(lineReader != null);
-        
-        line = line.trim();
-        
-        try
-        {
-            if (line.isEmpty())
-                return;
-            if (line.equals("/"))
-            {
-                contextNode = rootNode;
-                return;
-            }
-            
-            List<Pair<IShellCommand, Map<String, Object>>> parsedCommands = parser.parseCommands(context.getPath(), line);
-            execute(context, parsedCommands);
-        }
-        catch (InvalidArgumentException e)
-        {
-            AttributedStringBuilder builder = new AttributedStringBuilder();
-            if (!noColors)
-                builder.style(ShellStyles.ERROR_STYLE);
-            builder.append(e.getMessage());
-            if (!noColors)
-                builder.style(ShellStyles.DEFAULT_STYLE);
-           
-            builder.append("\n\n");
-            
-            lineReader.getTerminal().writer().print(builder.toAnsi());
-        }
-    }
-    
-    private void execute(ShellContext context, List<Pair<IShellCommand, Map<String, Object>>> parsedCommands)
+    public Object execute(ShellContext context, List<Pair<IShellCommand, Map<String, Object>>> parsedCommands)
     {
         Object result = null;
         boolean first = true;
@@ -462,8 +439,53 @@ public final class Shell implements IShell
             result = command.getExecutor().execute(command, context, parameters);
         }
         
-        if (result != null)
-            lineReader.getTerminal().writer().print(result.toString() + "\n\n");
+        return result;
+    }
+    
+    private Highlighter createHighlighter()
+    {
+        return new ShellHighlighter(rootNode, defaultCommand, nameSeparator, context, namedParameterPrefix);
+    }
+
+    private Completer createCompleter()
+    {
+        return new ShellCompleter(rootNode, defaultCommand, nameSeparator, context, namedParameterPrefix);
+    }
+
+    private void executeLine(String line)
+    {
+        Assert.checkState(lineReader != null);
+        
+        line = line.trim();
+        
+        try
+        {
+            if (line.isEmpty())
+                return;
+            if (line.equals("/"))
+            {
+                contextNode = rootNode;
+                return;
+            }
+            
+            List<Pair<IShellCommand, Map<String, Object>>> parsedCommands = parser.parseCommands(context.getPath(), line);
+            Object result = execute(context, parsedCommands);
+            if (result != null)
+                lineReader.getTerminal().writer().print(result.toString() + "\n\n");
+        }
+        catch (InvalidArgumentException e)
+        {
+            AttributedStringBuilder builder = new AttributedStringBuilder();
+            if (!noColors)
+                builder.style(ShellStyles.ERROR_STYLE);
+            builder.append(e.getMessage());
+            if (!noColors)
+                builder.style(ShellStyles.DEFAULT_STYLE);
+           
+            builder.append("\n\n");
+            
+            lineReader.getTerminal().writer().print(builder.toAnsi());
+        }
     }
     
     interface IMessages
@@ -474,5 +496,7 @@ public final class Shell implements IShell
         ILocalizedMessage previousLevelCommandShortDescription();
         @DefaultMessage("Command ''{0}'' is not found.")
         ILocalizedMessage commandNotFound(String command);
+        @DefaultMessage("Command ''{0}'' already exists.")
+        ILocalizedMessage commandExists(String command);
     }
 }
