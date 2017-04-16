@@ -5,8 +5,10 @@ package com.exametrika.impl.groups.simulator.coordinator;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import com.exametrika.common.compartment.ICompartmentTimerProcessor;
 import com.exametrika.common.io.ISerializationRegistrar;
@@ -191,7 +193,7 @@ public final class SimCoordinatorChannel implements IReceiver, IChannelListener,
         return currentTime;
     }
     
-    public void send(List<String> agentNamePattern, IMessagePart part)
+    public Set<IAddress> getAgents(List<String> agentNamePattern)
     {
         List<ICondition<String>> filters = null;
         if (agentNamePattern != null)
@@ -201,6 +203,7 @@ public final class SimCoordinatorChannel implements IReceiver, IChannelListener,
                 filters.add(Strings.createFilterCondition(filter, true));
         }
         
+        Set<IAddress> agentAddresses = new LinkedHashSet<IAddress>();
         Map<IAddress, SimCoordinatorAgentChannel> agents = this.agents;
         for (Map.Entry<IAddress, SimCoordinatorAgentChannel> entry : agents.entrySet())
         {
@@ -221,6 +224,18 @@ public final class SimCoordinatorChannel implements IReceiver, IChannelListener,
                 allowed = true;
             
             if (allowed)
+                agentAddresses.add(entry.getKey());
+        }
+        
+        return agentAddresses;
+    }
+    
+    public void send(Set<IAddress> agentAddresses, IMessagePart part)
+    {
+        Map<IAddress, SimCoordinatorAgentChannel> agents = this.agents;
+        for (Map.Entry<IAddress, SimCoordinatorAgentChannel> entry : agents.entrySet())
+        {
+            if (agentAddresses.contains(entry.getKey()))
                 entry.getValue().send(part);
         }
     }

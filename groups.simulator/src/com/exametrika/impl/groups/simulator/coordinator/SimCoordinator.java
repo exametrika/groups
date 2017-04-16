@@ -3,12 +3,21 @@
  */
 package com.exametrika.impl.groups.simulator.coordinator;
 
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.TreeMap;
 
+import com.exametrika.common.expression.CompileContext;
+import com.exametrika.common.expression.Expressions;
+import com.exametrika.common.expression.impl.ExpressionCondition;
+import com.exametrika.common.messaging.IAddress;
 import com.exametrika.common.messaging.IMessage;
 import com.exametrika.common.shell.IShell;
+import com.exametrika.common.tasks.ThreadInterruptedException;
 import com.exametrika.common.utils.Assert;
+import com.exametrika.common.utils.ICondition;
 import com.exametrika.common.utils.MapBuilder;
 import com.exametrika.common.utils.Threads;
 import com.exametrika.impl.groups.simulator.messages.SimActionMessage;
@@ -28,10 +37,16 @@ public final class SimCoordinator
     private IShell shell;
     private final SimCoordinatorChannel channel;
     private final long updateTimePeriod = 10000;
+    private final CompileContext compileContext;
     private long simulationTime;
     private long timeIncrement = 100;
     private long lastUpdateTime;
     private boolean simulationStarted;
+    private Map<String, Boolean> suspendConditions = new TreeMap<String, Boolean>();
+    private Map<String, Boolean> logFilters = new TreeMap<String, Boolean>();
+    private Map<String, ICondition<String>> waitConditions = new TreeMap<String, ICondition<String>>();
+    private boolean waited;
+    private Set<IAddress> respondingNodes = new LinkedHashSet<IAddress>(); 
 
     public SimCoordinator(SimCoordinatorChannel channel)
     {
@@ -39,6 +54,7 @@ public final class SimCoordinator
         
         this.channel = channel;
         simulationTime = 0;
+        this.compileContext = Expressions.createCompileContext(null);
     }
 
     public void setShell(IShell shell)
@@ -73,6 +89,26 @@ public final class SimCoordinator
             if ((actionResponse.getActionName().equals("print") || actionResponse.getActionName().equals("log")) &&
                 actionResponse.getResult() != null)
                 shell.getWriter().write(actionResponse.getResult().toString() + "\n\n");
+            
+            if ((actionResponse.getActionName().equals("stop") || actionResponse.getActionName().equals("log")) &&
+                actionResponse.getResult() != null)
+            {
+                synchronized (this)
+                {
+                    for (ICondition<String> waitCondition : waitConditions.values())
+                    {
+                        if (waitCondition.evaluate((String)actionResponse.getResult()))
+                        {
+                            respondingNodes.remove(message.getSource());
+                            if (respondingNodes.isEmpty())
+                            {
+                                waited = false;
+                                notify();
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
     
@@ -92,11 +128,43 @@ public final class SimCoordinator
             Threads.sleep((Long)parameters.get("period"));
             return null;
         }
+        else if (actionName.equals("wait"))
+        {
+            synchronized (this)
+            {
+                String name = (String)parameters.get("name");
+                if (parameters.containsKey("add"))
+                {
+                    String expression = (String)parameters.get("expression");
+                    ICondition<String> condition = new ExpressionCondition<String>(Expressions.compile(expression, compileContext));
+                    
+                    waitConditions.put(name, condition);
+                }
+                else if (parameters.containsKey("remove"))
+                    waitConditions.remove(name);
+                else if (parameters.containsKey("list"))
+                    shell.getWriter().write(waitConditions.keySet().toString() + "\n\n");
+                else
+                {
+                    respondingNodes = channel.getAgents((List<String>)parameters.get("agentNamePattern"));
+                    waited = true;
+                    try
+                    {
+                        while (waited)
+                            wait();
+                    }
+                    catch (InterruptedException e)
+                    {
+                        throw new ThreadInterruptedException(e);
+                    }
+                }
+            }
+            return null;
+        }
         else if (actionName.equals("timeSpeed"))
         {
             timeIncrement = (long)parameters.get("timeIncrement");
             return null;
-            
         }
         
         if (actionName.equals("start"))
@@ -104,10 +172,15 @@ public final class SimCoordinator
         
         if (actionName.equals("start") || actionName.equals("resume"))
             simulationStarted = true;
-        else if (actionName.equals("stop") || actionName.equals("suspend"))
+        else if (actionName.equals("stop"))
+        {
+            simulationStarted = false;
+        }
+        else if (actionName.equals("suspend"))
             simulationStarted = false;
         
-        channel.send((List<String>)parameters.get("agentNamePattern"), new SimActionMessage(actionName, parameters));
+        Set<IAddress> agentAddresses = channel.getAgents((List<String>)parameters.get("agentNamePattern"));
+        channel.send(agentAddresses, new SimActionMessage(actionName, parameters));
         return null;
     }
 }

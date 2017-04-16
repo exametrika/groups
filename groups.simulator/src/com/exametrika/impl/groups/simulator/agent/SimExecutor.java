@@ -3,6 +3,9 @@
  */
 package com.exametrika.impl.groups.simulator.agent;
 
+import java.util.LinkedHashMap;
+import java.util.Map;
+
 import com.exametrika.api.groups.cluster.ICoreNodeChannel;
 import com.exametrika.common.expression.CompileContext;
 import com.exametrika.common.expression.Expressions;
@@ -31,12 +34,9 @@ public final class SimExecutor
     private ICoreNodeChannel groupChannel;
     private long delayPeriod;
     private boolean oneTimeDelay;
-    private ICondition<IMessage> suspendCondition = new TrueCondition<IMessage>();
-    private ICondition<IMessage> logFilter;
-    private IExpression logExpression;
-    private boolean logEnabled;
+    private Map<String, ICondition<IMessage>> suspendConditions = new LinkedHashMap<String, ICondition<IMessage>>();
+    private Map<String, LogInfo> logFilters = new LinkedHashMap<String, LogInfo>();
     private volatile IMessage message;
-    private boolean suspended;
    
     public SimExecutor(SimAgentChannel agentChannel)
     {
@@ -55,101 +55,45 @@ public final class SimExecutor
         this.groupChannel = groupChannel;
     }
     
-    public synchronized boolean isSuspended()
-    {
-        return suspended;
-    }
-    
-    public synchronized IMessage getMessage()
-    {
-        return message;
-    }
-    
-    public synchronized void suspend(ICondition<IMessage> suspendCondition)
-    {
-        Assert.notNull(suspendCondition);
-        
-        this.suspendCondition = suspendCondition;
-        notify();
-    }
-    
-    public synchronized void resume()
-    {
-        suspendCondition = null;
-        notify();
-    }
-    
-    public synchronized void delay(long delayPeriod, boolean oneTimeDelay)
-    {
-        this.delayPeriod = delayPeriod;
-        this.oneTimeDelay = oneTimeDelay;
-    }
-    
-    public void print(String expressionStr)
-    {
-        IMessage currentMessage = this.message;
-        if (currentMessage != null)
-        {
-            Object result;
-            if (expressionStr != null)
-                result = Expressions.evaluate(expressionStr, currentMessage, null);
-            else
-                result = currentMessage;
-            
-            agentChannel.send(new SimActionResponseMessage("print", result.toString()));
-        }
-    }
-    
-    public synchronized void log(String filter, String expression, boolean enabled)
-    {
-        if (filter != null)
-            logFilter = new ExpressionCondition<IMessage>(Expressions.compile(filter, compileContext));
-        else
-            logFilter = null;
-        
-        if (expression != null)
-            logExpression = Expressions.compile(expression, compileContext);
-        else
-            logExpression = null;
-        
-        logEnabled = enabled;
-    }
-    
     public void intercept(IMessage message)
     {
         long delayPeriod;
         synchronized (this)
         {
-            if (logEnabled)
+            for (Map.Entry<String, LogInfo> entry : logFilters.entrySet())
             {
-                if (logFilter == null || logFilter.evaluate(message))
+                LogInfo info = entry.getValue();
+                if (!info.enabled)
+                    continue;
+                
+                if (info.filter.evaluate(message))
                 {
                     Object result;
-                    if (logExpression != null)
-                        result = logExpression.execute(message, null);
+                    if (info.expression != null)
+                        result = info.expression.execute(message, null);
                     else
                         result = message;
                     
-                    agentChannel.send(new SimActionResponseMessage("log", result.toString()));
+                    agentChannel.send(new SimActionResponseMessage("log", "Log: " + entry.getKey() + ", result: " + result.toString()));
                 }
             }
             
             this.message = message;
             try
             {
-                while (suspendCondition != null && suspendCondition.evaluate(message))
+                for (Map.Entry<String, ICondition<IMessage>> entry : suspendConditions.entrySet())
                 {
-                    suspended = true;
-                    wait();
+                    ICondition<IMessage> suspendCondition = entry.getValue();
+                    while (suspendCondition.evaluate(message))
+                    {
+                        agentChannel.send(new SimActionResponseMessage("stop", "Stop: " + entry.getKey()));
+                        wait();
+                    }
                 }
             }
             catch (InterruptedException e)
             {
                 throw new ThreadInterruptedException(e);
-            }
-            finally
-            {
-                suspended = false;
             }
             
             delayPeriod = this.delayPeriod;
@@ -172,31 +116,90 @@ public final class SimExecutor
     {
         if (message.getActionName().equals("start"))
         {
-            delay((long)message.getParameters().get("delay"), false);
-            resume();
+            this.delayPeriod = (long)message.getParameters().get("delay");
+            this.oneTimeDelay = false;
+            
+            suspendConditions.remove("");
+            notify();
         }
         else if (message.getActionName().equals("stop"))
         {
-            String expression = (String)message.getParameters().get("condition");
-            ICondition<IMessage> condition;
-            if (expression != null)
-                condition = new ExpressionCondition<IMessage>(Expressions.compile(expression, compileContext));
+            String name = (String)message.getParameters().get("name");
+            if (message.getParameters().containsKey("remove"))
+            {
+                suspendConditions.remove(name);
+                notify();
+            }
             else
-                condition = new TrueCondition<IMessage>();
-            
-            suspend(condition);
+            {
+                String expression = (String)message.getParameters().get("condition");
+                ICondition<IMessage> condition;
+                if (expression != null)
+                    condition = new ExpressionCondition<IMessage>(Expressions.compile(expression, compileContext));
+                else
+                    condition = new TrueCondition<IMessage>();
+                
+                suspendConditions.put(name, condition);
+                notify();
+            }
         }
         else if (message.getActionName().equals("suspend"))
-            suspend(new TrueCondition<IMessage>());
+        {
+            suspendConditions.put("", new TrueCondition<IMessage>());
+            notify();
+        }
         else if (message.getActionName().equals("resume"))
-            resume();
+        {
+            suspendConditions.remove("");
+            notify();
+        }
         else if (message.getActionName().equals("delay"))
-            delay((long)message.getParameters().get("period"), Boolean.TRUE.equals(message.getParameters().get("oneTime")));
+        {
+            this.delayPeriod = (long)message.getParameters().get("period");
+            this.oneTimeDelay = Boolean.TRUE.equals(message.getParameters().get("oneTime"));
+        }
         else if (message.getActionName().equals("print"))
-            print((String)message.getParameters().get("expression"));
+        {
+            IMessage currentMessage = this.message;
+            if (currentMessage != null)
+            {
+                String expressionStr = (String)message.getParameters().get("expression");
+                Object result;
+                if (expressionStr != null)
+                    result = Expressions.evaluate(expressionStr, currentMessage, null);
+                else
+                    result = currentMessage;
+                
+                agentChannel.send(new SimActionResponseMessage("print", result.toString()));
+            }
+        }
         else if (message.getActionName().equals("log"))
-            log((String)message.getParameters().get("filter"), (String)message.getParameters().get("expression"),
-                !Boolean.TRUE.equals(message.getParameters().get("off")));
+        {
+            String name = (String)message.getParameters().get("name");
+            if (message.getParameters().containsKey("remove"))
+                logFilters.remove(name);
+            else
+            {
+                String filter = (String)message.getParameters().get("filter");
+                String expression = (String)message.getParameters().get("expression");
+                boolean enabled = !Boolean.TRUE.equals(message.getParameters().get("off"));
+                
+                LogInfo info = new LogInfo();
+                
+                if (filter != null)
+                    info.filter = new ExpressionCondition<IMessage>(Expressions.compile(filter, compileContext));
+                else
+                    info.filter = null;
+                
+                if (expression != null)
+                    info.expression = Expressions.compile(expression, compileContext);
+                else
+                    info.expression = null;
+                info.enabled = enabled;
+                
+                logFilters.put(name, info);
+            }
+        }
         else if (message.getActionName().equals("time"))
             Times.setTest(Times.getSystemCurrentTime() + (long)message.getParameters().get("delta"));
         else if (message.getActionName().equals("kill"))
@@ -216,5 +219,12 @@ public final class SimExecutor
     public void onDisconnected()
     {
         Times.clearTest();
+    }
+    
+    private static class LogInfo
+    {
+        private ICondition<IMessage> filter;
+        private IExpression expression;
+        private boolean enabled;
     }
 }
