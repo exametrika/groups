@@ -135,7 +135,7 @@ public final class SimCoordinator
                 String name = (String)parameters.get("name");
                 if (parameters.containsKey("add"))
                 {
-                    String expression = (String)parameters.get("expression");
+                    String expression = (String)parameters.get("condition");
                     ICondition<String> condition = new ExpressionCondition<String>(Expressions.compile(expression, compileContext));
                     
                     waitConditions.put(name, condition);
@@ -174,7 +174,32 @@ public final class SimCoordinator
             simulationStarted = true;
         else if (actionName.equals("stop"))
         {
+            if (parameters.containsKey("list"))
+            {
+                shell.getWriter().write(suspendConditions.keySet().toString() + "\n\n");
+                return null;
+            }
             simulationStarted = false;
+            String name = (String)parameters.get("name");
+            Boolean removed = (Boolean)parameters.get("remove");
+            if (Boolean.TRUE.equals(removed))
+                suspendConditions.remove(name);
+            else
+                suspendConditions.put(name, true);
+        }
+        else if (actionName.equals("log"))
+        {
+            if (parameters.containsKey("list"))
+            {
+                shell.getWriter().write(logFilters.keySet().toString() + "\n\n");
+                return null;
+            }
+            String name = (String)parameters.get("name");
+            Boolean removed = (Boolean)parameters.get("remove");
+            if (Boolean.TRUE.equals(removed))
+                logFilters.remove(name);
+            else
+                logFilters.put(name, true);
         }
         else if (actionName.equals("suspend"))
             simulationStarted = false;
