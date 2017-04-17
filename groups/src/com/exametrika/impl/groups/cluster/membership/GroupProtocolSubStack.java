@@ -4,8 +4,11 @@
 package com.exametrika.impl.groups.cluster.membership;
 
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Deque;
+import java.util.Iterator;
 import java.util.LinkedHashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -23,6 +26,7 @@ import com.exametrika.common.messaging.ISink;
 import com.exametrika.common.messaging.impl.protocols.AbstractProtocol;
 import com.exametrika.common.messaging.impl.protocols.composite.ProtocolSubStack;
 import com.exametrika.common.utils.Assert;
+import com.exametrika.impl.groups.cluster.discovery.IGroupNodeDiscoverer;
 import com.exametrika.impl.groups.cluster.flush.IFlushManager;
 
 /**
@@ -40,9 +44,13 @@ public final class GroupProtocolSubStack extends ProtocolSubStack implements IPr
     private long startRemoveTime;
     private final Deque<IGroupMembership> membershipHistory = new ArrayDeque<IGroupMembership>();
     private IFlushManager flushManager;
+    private IGroupNodeDiscoverer nodeDiscoverer;
+    private Deque<MembershipInfo> pendingMemberships = new ArrayDeque<MembershipInfo>();
+    private long lastUpdateTime;
 
     public GroupProtocolSubStack(String channelName, IMessageFactory messageFactory, UUID groupId,
-        List<? extends AbstractProtocol> protocols, GroupMembershipManager membershipManager, int maxGroupMembershipHistorySize)
+        List<? extends AbstractProtocol> protocols, GroupMembershipManager membershipManager, 
+        int maxGroupMembershipHistorySize)
     {
         super(channelName, messageFactory, protocols);
         
@@ -72,6 +80,9 @@ public final class GroupProtocolSubStack extends ProtocolSubStack implements IPr
         membershipManager.start();
         flushManager = find(IFlushManager.class);
         Assert.notNull(flushManager);
+        
+        nodeDiscoverer = find(IGroupNodeDiscoverer.class);
+        Assert.notNull(nodeDiscoverer);
     }
 
     @Override
@@ -80,6 +91,35 @@ public final class GroupProtocolSubStack extends ProtocolSubStack implements IPr
         membershipManager.stop();
         
         super.stop();
+    }
+    
+    @Override
+    public void onTimer(long currentTime)
+    {
+        if (currentTime < lastUpdateTime + 1000)
+            return;
+        
+        lastUpdateTime = currentTime;
+        
+        if (flushManager.isFlushInProgress())
+            return;
+        if (pendingMemberships.isEmpty())
+            return;
+        
+        MembershipInfo info = pendingMemberships.getFirst();
+        for (Iterator<INode> it = info.joiningNodes.iterator(); it.hasNext(); )
+        {
+            INode node = it.next();
+            if (nodeDiscoverer.getDiscoveredNodes().contains(node))
+                it.remove();
+        }
+        
+        if (!info.joiningNodes.isEmpty())
+            return;
+        
+        pendingMemberships.removeFirst();
+        
+        flushManager.install(info.membership, info.membershipDelta);
     }
     
     public IGroupMembership findMembership(long id)
@@ -111,29 +151,56 @@ public final class GroupProtocolSubStack extends ProtocolSubStack implements IPr
     public void installGroupMembership(IGroupChange changedGroup)
     {
         Assert.notNull(changedGroup);
-        Assert.isTrue(changedGroup.getNewGroup().getId().equals(groupId));
         
-        if (!changedGroup.getNewGroup().getCoordinator().equals(membershipManager.getLocalNode()))
+        IGroup group = changedGroup.getNewGroup();
+        Assert.isTrue(group.getId().equals(groupId));
+        
+        if (!group.getCoordinator().equals(membershipManager.getLocalNode()))
             return;
         
-        Assert.checkState(!flushManager.isFlushInProgress());
         IGroupMembership oldMembership = membershipManager.getMembership();
-        Assert.notNull(oldMembership);
+        if (oldMembership == null)
+        {
+            installGroupMembership(group);
+            // TODO: дернуть фидбэк потери данных
+            return;
+        }
         
-        Set<UUID> leftMembers = new LinkedHashSet<UUID>();
+        Set<UUID> leftNodes = new LinkedHashSet<UUID>();
         for (INode node : changedGroup.getLeftMembers())
-            leftMembers.add(node.getId());
+        {
+            if (oldMembership.getGroup().findMember(node.getId()) != null)
+                leftNodes.add(node.getId());
+        }
         
-        Set<UUID> failedMembers = new LinkedHashSet<UUID>();
-        for (INode node : changedGroup.getFailedMembers())
-            failedMembers.add(node.getId());
+        Set<UUID> failedNodes = new LinkedHashSet<UUID>();
+        for (INode node : oldMembership.getGroup().getMembers())
+        {
+            if (group.findMember(node.getId()) == null && !leftNodes.contains(node.getId()))
+                failedNodes.add(node.getId());
+        }
         
-        IGroupMembership newMembership = new GroupMembership(oldMembership.getId() + 1, changedGroup.getNewGroup());
-        IGroupDelta groupDelta = new GroupDelta(changedGroup.getNewGroup().getId(), changedGroup.getNewGroup().isPrimary(),
-            changedGroup.getJoinedMembers(), leftMembers, failedMembers);
+        List<INode> joiningNodes = new LinkedList<INode>();
+        List<INode> joinedNodes = new ArrayList<INode>();
+        for (INode node : group.getMembers())
+        {
+            if (oldMembership.getGroup().findMember(node.getId()) == null)
+            {
+                joiningNodes.add(node);
+                joinedNodes.add(node);
+            }
+        }
+        
+        IGroupMembership newMembership = new GroupMembership(oldMembership.getId() + 1, group);
+        IGroupDelta groupDelta = new GroupDelta(group.getId(), group.isPrimary(),
+            joinedNodes, leftNodes, failedNodes);
         IGroupMembershipDelta membershipDelta = new GroupMembershipDelta(newMembership.getId(), groupDelta);
         
-        flushManager.install(newMembership, membershipDelta);
+        MembershipInfo info = new MembershipInfo();
+        info.membership = newMembership;
+        info.membershipDelta = membershipDelta;
+        info.joiningNodes = joiningNodes;
+        pendingMemberships.addLast(info);
     }
     
     @Override
@@ -155,5 +222,12 @@ public final class GroupProtocolSubStack extends ProtocolSubStack implements IPr
     protected boolean doSend(IFeed feed, ISink sink, IMessage message)
     {
         return super.doSend(feed, sink, message.addPart(new GroupMessagePart(groupId)));
+    }
+    
+    private static class MembershipInfo
+    {
+        private IGroupMembership membership;
+        private IGroupMembershipDelta membershipDelta;
+        private List<INode> joiningNodes;
     }
 }

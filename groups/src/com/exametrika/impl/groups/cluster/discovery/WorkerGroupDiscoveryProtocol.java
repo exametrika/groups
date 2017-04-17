@@ -175,8 +175,8 @@ public final class WorkerGroupDiscoveryProtocol extends AbstractProtocol impleme
         if (domainMembership == null)
             return;
         
-        GroupsMembership groupsMembershipp = domainMembership.findElement(GroupsMembership.class);
-        IGroup group = groupsMembershipp.findGroup(groupId);
+        GroupsMembership groupsMembership = domainMembership.findElement(GroupsMembership.class);
+        IGroup group = groupsMembership.findGroup(groupId);
         if (group == null)
             return;
         
