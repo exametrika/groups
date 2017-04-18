@@ -6,7 +6,6 @@ package com.exametrika.impl.groups.cluster.membership;
 import java.util.List;
 
 import com.exametrika.api.groups.cluster.IGroup;
-import com.exametrika.api.groups.cluster.INode;
 import com.exametrika.common.utils.Pair;
 
 /**
@@ -22,9 +21,12 @@ public interface IGroupMappingStrategy
      * Maps worker nodes to groups.
      *
      * @param domain domain
-     * @param nodes available worker nodes
-     * @param oldGroups old groups or null if old groups are not set
-     * @return new group mappings as pair of group:<group delta>. If group is not changed, group delta is null
+     * @param nodeMembership new worker nodes membership
+     * @param nodesMembershipDelta new worker nodes membership delta
+     * @param oldGroupMembership old groups membership or null if old groups membership is not set
+     * @return new group mappings as pair of group:<group delta>. If group is not changed, group delta is null.
+     *         If all groups are not changed returns null
      */
-    List<Pair<IGroup, IGroupDelta>> mapGroups(String domain, List<INode> nodes, List<IGroup> oldGroups);
+    List<Pair<IGroup, IGroupDelta>> mapGroups(String domain, NodesMembership nodeMembership, NodesMembershipDelta nodesMembershipDelta, 
+        GroupsMembership oldGroupMembership);
 }

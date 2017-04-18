@@ -27,6 +27,9 @@ import com.exametrika.common.messaging.impl.protocols.AbstractProtocol;
 import com.exametrika.common.messaging.impl.protocols.composite.ProtocolSubStack;
 import com.exametrika.common.utils.Assert;
 import com.exametrika.impl.groups.cluster.discovery.IGroupNodeDiscoverer;
+import com.exametrika.impl.groups.cluster.feedback.DataLossState;
+import com.exametrika.impl.groups.cluster.feedback.IDataLossFeedbackService;
+import com.exametrika.impl.groups.cluster.feedback.IDataLossState;
 import com.exametrika.impl.groups.cluster.flush.IFlushManager;
 
 /**
@@ -40,6 +43,7 @@ public final class GroupProtocolSubStack extends ProtocolSubStack implements IPr
 {
     private final UUID groupId;
     private final GroupMembershipManager membershipManager;
+    private final IDataLossFeedbackService dataLossFeedbackService;
     private final int maxGroupMembershipHistorySize;
     private long startRemoveTime;
     private final Deque<IGroupMembership> membershipHistory = new ArrayDeque<IGroupMembership>();
@@ -50,16 +54,18 @@ public final class GroupProtocolSubStack extends ProtocolSubStack implements IPr
 
     public GroupProtocolSubStack(String channelName, IMessageFactory messageFactory, UUID groupId,
         List<? extends AbstractProtocol> protocols, GroupMembershipManager membershipManager, 
-        int maxGroupMembershipHistorySize)
+        IDataLossFeedbackService dataLossFeedbackService, int maxGroupMembershipHistorySize)
     {
         super(channelName, messageFactory, protocols);
         
         Assert.notNull(groupId);
         Assert.notNull(membershipManager);
+        Assert.notNull(dataLossFeedbackService);
         
         this.groupId = groupId;
         this.membershipManager = membershipManager;
         this.maxGroupMembershipHistorySize = maxGroupMembershipHistorySize;
+        this.dataLossFeedbackService = dataLossFeedbackService;
     }
 
     public long getStartRemoveTime()
@@ -162,7 +168,8 @@ public final class GroupProtocolSubStack extends ProtocolSubStack implements IPr
         if (oldMembership == null)
         {
             installGroupMembership(group);
-            // TODO: дернуть фидбэк потери данных
+            IDataLossState state = new DataLossState(group.getCoordinator().getDomain(), groupId);
+            dataLossFeedbackService.updateDataLossState(state);
             return;
         }
         

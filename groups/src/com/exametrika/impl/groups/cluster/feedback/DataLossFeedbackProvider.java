@@ -18,6 +18,7 @@ import com.exametrika.common.io.ISerializationRegistry;
 import com.exametrika.common.utils.Assert;
 import com.exametrika.impl.groups.cluster.exchange.IExchangeData;
 import com.exametrika.impl.groups.cluster.exchange.IFeedbackProvider;
+import com.exametrika.impl.groups.cluster.feedback.IGroupState.State;
 import com.exametrika.impl.groups.cluster.membership.GroupsMembership;
 
 /**
@@ -32,12 +33,15 @@ public final class DataLossFeedbackProvider implements IFeedbackProvider, IDataL
     public static final UUID ID = UUID.fromString("091e054f-6cad-4312-b9e6-bb908d73ad43");
     private final Map<UUID, DataLossInfo> dataLossInfos = new LinkedHashMap<UUID, DataLossInfo>();
     private final IDataLossObserver dataLossObserver;
-    private IClusterMembershipService membershipService;
+    private final IClusterMembershipService membershipService;
+    private final IGroupFeedbackService groupFeedbackService;
     
-    public DataLossFeedbackProvider(IDataLossObserver dataLossObserver, IClusterMembershipService membershipService)
+    public DataLossFeedbackProvider(IDataLossObserver dataLossObserver, IClusterMembershipService membershipService,
+        IGroupFeedbackService groupFeedbackService)
     {
         this.dataLossObserver = dataLossObserver;
         this.membershipService = membershipService;
+        this.groupFeedbackService = groupFeedbackService;
     }
     
     @Override
@@ -132,7 +136,11 @@ public final class DataLossFeedbackProvider implements IFeedbackProvider, IDataL
                     GroupsMembership groupsMembership = domainMembership.findElement(GroupsMembership.class);
                     IGroup group = groupsMembership.findGroup(state.getId());
                     if (group != null)
-                        dataLossObserver.onDataLoss(group);
+                    {
+                        IGroupState groupState = groupFeedbackService.findGroupState(group.getId());
+                        if (groupState != null && (groupState.getMembershipId() > 1 || groupState.getState() == State.NORMAL))
+                            dataLossObserver.onDataLoss(group);
+                    }
                 }
             }
         }

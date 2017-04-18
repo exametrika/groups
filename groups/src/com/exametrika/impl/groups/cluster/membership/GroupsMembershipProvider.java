@@ -63,8 +63,14 @@ public final class GroupsMembershipProvider implements IClusterMembershipProvide
             oldGroups = oldGroupMembership.getGroups();
         }
         NodesMembership nodeMembership = newDomainMembership.findElement(NodesMembership.class);
+        Assert.notNull(nodeMembership);
+        NodesMembershipDelta nodeMembershipDelta = domainMembershipDelta.findDelta(NodesMembershipDelta.class);
+        Assert.notNull(nodeMembershipDelta);
+        
         List<Pair<IGroup, IGroupDelta>> list = groupMappingStrategy.mapGroups(newDomainMembership.getName(),
-            nodeMembership.getNodes(), oldGroups);
+            nodeMembership, nodeMembershipDelta, oldGroupMembership);
+        if (list == null)
+            return new Pair<IClusterMembershipElement, IClusterMembershipElementDelta>(oldMembership, null);
         
         List<IGroup> groups = new ArrayList<IGroup>();
         List<IGroup> newGroups = new ArrayList<IGroup>();
