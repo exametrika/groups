@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
+import com.exametrika.api.groups.cluster.IGroup;
 import com.exametrika.api.groups.cluster.INode;
 import com.exametrika.common.compartment.ICompartment;
 import com.exametrika.common.io.ISerializationRegistry;
@@ -181,8 +182,9 @@ public final class StateTransferClientProtocol extends AbstractProtocol implemen
             if (stateLoadTask != null)
                 stateLoadTask.cancel();
             
+            IGroup group = flush.getNewMembership().getGroup();
             stateLoadTask = new StoreStateLoadTask(stateTransferFactory, stateStore, 
-                flush.getNewMembership().getGroup().getId(), new ICompletionHandler() 
+                group.getId(), group.getName(), marker, new ICompletionHandler() 
             {
                 @Override
                 public void onSucceeded(Object value)

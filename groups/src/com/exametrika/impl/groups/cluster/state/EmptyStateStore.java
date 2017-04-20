@@ -17,8 +17,9 @@ import com.exametrika.spi.groups.IStateStore;
 public final class EmptyStateStore implements IStateStore
 {
     @Override
-    public void load(UUID id, File state)
+    public boolean load(UUID id, File state)
     {
+        return false;
     }
 
     @Override

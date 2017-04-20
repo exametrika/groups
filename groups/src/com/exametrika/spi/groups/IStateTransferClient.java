@@ -17,8 +17,9 @@ public interface IStateTransferClient
 {
     /**
      * Loads snapshot of state from specified file.
-     *
+     * 
+     * @param full if true full (persistent and transient) state is loaded, else only persistent state is loaded
      * @param file file containing state snapshot
      */
-    void loadSnapshot(File file);
+    void loadSnapshot(boolean full, File file);
 }

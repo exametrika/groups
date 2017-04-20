@@ -20,6 +20,7 @@ public interface IGroupMappingStrategy
     /**
      * Maps worker nodes to groups.
      *
+     * @param membershipId new membership identifier
      * @param domain domain
      * @param nodeMembership new worker nodes membership
      * @param nodesMembershipDelta new worker nodes membership delta
@@ -27,6 +28,6 @@ public interface IGroupMappingStrategy
      * @return new group mappings as pair of group:<group delta>. If group is not changed, group delta is null.
      *         If all groups are not changed returns null
      */
-    List<Pair<IGroup, IGroupDelta>> mapGroups(String domain, NodesMembership nodeMembership, NodesMembershipDelta nodesMembershipDelta, 
+    List<Pair<IGroup, IGroupDelta>> mapGroups(long membershipId, String domain, NodesMembership nodeMembership, NodesMembershipDelta nodesMembershipDelta, 
         GroupsMembership oldGroupMembership);
 }

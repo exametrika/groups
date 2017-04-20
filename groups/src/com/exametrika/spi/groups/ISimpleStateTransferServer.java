@@ -39,7 +39,8 @@ public interface ISimpleStateTransferServer
     /**
      * Returns snapshot of group state.
      *
+     * @param full if true full (persistent and transient) state is saved, else only persistent state is saved
      * @return snapshot of group state
      */
-    ByteArray saveSnapshot();
+    ByteArray saveSnapshot(boolean full);
 }

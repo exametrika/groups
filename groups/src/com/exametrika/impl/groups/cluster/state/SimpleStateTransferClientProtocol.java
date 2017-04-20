@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
+import com.exametrika.api.groups.cluster.IGroup;
 import com.exametrika.api.groups.cluster.INode;
 import com.exametrika.common.io.ISerializationRegistry;
 import com.exametrika.common.l10n.DefaultMessage;
@@ -20,6 +21,7 @@ import com.exametrika.common.messaging.IMessageFactory;
 import com.exametrika.common.messaging.IReceiver;
 import com.exametrika.common.messaging.impl.protocols.AbstractProtocol;
 import com.exametrika.common.utils.Assert;
+import com.exametrika.common.utils.ByteArray;
 import com.exametrika.impl.groups.MessageFlags;
 import com.exametrika.impl.groups.cluster.discovery.GroupJoinMessagePart;
 import com.exametrika.impl.groups.cluster.discovery.IGroupJoinStrategy;
@@ -27,6 +29,7 @@ import com.exametrika.impl.groups.cluster.failuredetection.IFailureDetectionList
 import com.exametrika.impl.groups.cluster.flush.IFlush;
 import com.exametrika.impl.groups.cluster.flush.IFlushParticipant;
 import com.exametrika.impl.groups.cluster.membership.IGroupMembershipManager;
+import com.exametrika.spi.groups.ISimpleStateStore;
 import com.exametrika.spi.groups.ISimpleStateTransferClient;
 import com.exametrika.spi.groups.ISimpleStateTransferFactory;
 
@@ -42,6 +45,7 @@ public final class SimpleStateTransferClientProtocol extends AbstractProtocol im
     private static final IMessages messages = Messages.get(IMessages.class);
     private final IGroupMembershipManager membershipManager;
     private final ISimpleStateTransferClient client;
+    private final ISimpleStateStore stateStore;
     private final Random random = new Random();
     private List<IAddress> healthyMembers = new ArrayList<IAddress>();
     private IAddress server;
@@ -49,15 +53,17 @@ public final class SimpleStateTransferClientProtocol extends AbstractProtocol im
     private boolean transferred;
 
     public SimpleStateTransferClientProtocol(String channelName, IMessageFactory messageFactory, IGroupMembershipManager membershipManager, 
-        ISimpleStateTransferFactory stateTransferFactory)
+        ISimpleStateTransferFactory stateTransferFactory, ISimpleStateStore stateStore)
     {
         super(channelName, messageFactory);
         
         Assert.notNull(membershipManager);
         Assert.notNull(stateTransferFactory);
+        Assert.notNull(stateStore);
         
         this.membershipManager = membershipManager;
         this.client = stateTransferFactory.createClient();
+        this.stateStore = stateStore;
     }
 
     @Override
@@ -119,7 +125,21 @@ public final class SimpleStateTransferClientProtocol extends AbstractProtocol im
     @Override
     public void processFlush()
     {
-        if (flush.isGroupForming() || transferred)
+        if (flush.isGroupForming())
+        {
+            IGroup group = flush.getNewMembership().getGroup();
+            ByteArray state = stateStore.load(group.getId());
+            if (state != null)
+                client.loadSnapshot(false, state);
+            else  if (logger.isLogEnabled(LogLevel.WARNING))
+                logger.log(LogLevel.WARNING, marker, messages.stateUnavailable(group.getName()));
+            
+            flush.grantFlush(this);
+            
+            if (logger.isLogEnabled(LogLevel.DEBUG))
+                logger.log(LogLevel.DEBUG, marker, messages.snapshotLoaded());
+        }
+        else if (transferred)
             flush.grantFlush(this);
         else
             updateStateTransfer();
@@ -154,7 +174,7 @@ public final class SimpleStateTransferClientProtocol extends AbstractProtocol im
             Assert.isTrue(server.equals(message.getSource()));
             
             SimpleStateTransferResponseMessagePart part = message.getPart();
-            client.loadSnapshot(part.getState());
+            client.loadSnapshot(true, part.getState());
             transferred = true;
             server = null;
             healthyMembers.clear();
@@ -200,5 +220,11 @@ public final class SimpleStateTransferClientProtocol extends AbstractProtocol im
         
         @DefaultMessage("State transfer from ''{0}'' has been failed.")
         ILocalizedMessage stateTransferFailed(IAddress server);
+        
+        @DefaultMessage("Snapshot has been loaded from external storage.")
+        ILocalizedMessage snapshotLoaded();
+
+        @DefaultMessage("Requested state of group ''{0}'' is not available in state store.")
+        ILocalizedMessage stateUnavailable(String group);
     }
 }

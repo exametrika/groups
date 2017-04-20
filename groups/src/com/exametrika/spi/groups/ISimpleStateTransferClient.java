@@ -18,7 +18,8 @@ public interface ISimpleStateTransferClient
     /**
      * Loads snapshot of state from specified data.
      *
+     * @param full if true full (persistent and transient) state is loaded, else only persistent state is loaded
      * @param data data containing state snapshot
      */
-    void loadSnapshot(ByteArray data);
+    void loadSnapshot(boolean full, ByteArray data);
 }

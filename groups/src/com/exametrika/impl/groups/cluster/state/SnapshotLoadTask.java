@@ -48,7 +48,7 @@ public final class SnapshotLoadTask implements ICompartmentTask
         try
         {
             IStateTransferClient client = stateTransferFactory.createClient();
-            client.loadSnapshot(file);
+            client.loadSnapshot(true, file);
         }
         catch (Exception e)
         {

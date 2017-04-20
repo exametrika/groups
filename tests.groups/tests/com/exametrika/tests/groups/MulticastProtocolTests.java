@@ -418,7 +418,7 @@ public class MulticastProtocolTests
         }
         
         @Override
-        public void loadSnapshot(File file)
+        public void loadSnapshot(boolean full, File file)
         {
             factory.state = Files.readBytes(file);
         }
@@ -446,12 +446,14 @@ public class MulticastProtocolTests
         private ByteArray buffer = createBuffer(17, 100000);
         
         @Override
-        public void load(UUID id, File state)
+        public boolean load(UUID id, File state)
         {
             if (id.equals(GroupMemberships.CORE_GROUP_ID))
                 Files.writeBytes(state, buffer);
             else
                 Assert.error();
+            
+            return true;
         }
 
         @Override

@@ -67,8 +67,10 @@ public final class ClusterMembershipStateTransferFactory implements ISimpleState
         }
 
         @Override
-        public ByteArray saveSnapshot()
+        public ByteArray saveSnapshot(boolean full)
         {
+            if (!full)
+                return new ByteArray(new byte[]{});
             IClusterMembership membership = membershipManager.getMembership();
             ClusterMembershipDelta delta = null;
             if (membership != null)
@@ -99,8 +101,11 @@ public final class ClusterMembershipStateTransferFactory implements ISimpleState
     private class ClusterMembershipStateTransferClient implements ISimpleStateTransferClient
     {
         @Override
-        public void loadSnapshot(ByteArray buffer)
+        public void loadSnapshot(boolean full, ByteArray buffer)
         {
+            if (!full)
+                return;
+            
             SerializationRegistry registry = new SerializationRegistry();
             registry.register(new ClusterMembershipSerializationRegistrar());
             

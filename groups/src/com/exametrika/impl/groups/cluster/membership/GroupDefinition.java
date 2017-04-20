@@ -5,9 +5,7 @@ package com.exametrika.impl.groups.cluster.membership;
 
 import java.util.UUID;
 
-import com.exametrika.api.groups.cluster.INode;
 import com.exametrika.common.utils.Assert;
-import com.exametrika.common.utils.ICondition;
 
 /**
  * The {@link GroupDefinition} is a group definition.
@@ -17,28 +15,33 @@ import com.exametrika.common.utils.ICondition;
  */
 public final class GroupDefinition
 {
+    private final String domain;
     private final UUID id;
     private final String name;
-    private final ICondition<INode> nodeFilter;
-    private final int minNodeCount;
-    private final int maxNodeCount;
+    private final String nodeFilterExpression;
+    private final int nodeCount;
     private final String type;
     
-    public GroupDefinition(UUID id, String name, ICondition<INode> nodeFilter, int minNodeCount, int maxNodeCount,
-        String type)
+    public GroupDefinition(String domain, UUID id, String name, String nodeFilterExpression, int nodeCount, String type)
     {
+        Assert.notNull(domain);
         Assert.notNull(id);
         Assert.notNull(name);
         Assert.notNull(type);
         
+        this.domain = domain;
         this.id = id;
         this.name = name;
-        this.nodeFilter = nodeFilter;
-        this.minNodeCount = minNodeCount;
-        this.maxNodeCount = maxNodeCount;
+        this.nodeFilterExpression = nodeFilterExpression;
+        this.nodeCount = nodeCount;
         this.type = type;
     }
 
+    public String getDomain()
+    {
+        return domain;
+    }
+    
     public UUID getId()
     {
         return id;
@@ -49,19 +52,14 @@ public final class GroupDefinition
         return name;
     }
 
-    public ICondition<INode> getNodeFilter()
+    public String getNodeFilterExpression()
     {
-        return nodeFilter;
+        return nodeFilterExpression;
     }
 
-    public int getMinNodeCount()
+    public int getNodeCount()
     {
-        return minNodeCount;
-    }
-
-    public int getMaxNodeCount()
-    {
-        return maxNodeCount;
+        return nodeCount;
     }
 
     public String getType()
