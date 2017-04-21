@@ -45,9 +45,9 @@ import com.exametrika.common.utils.Files;
 import com.exametrika.common.utils.IOs;
 import com.exametrika.common.utils.Threads;
 import com.exametrika.impl.groups.cluster.channel.CoreNodeChannel;
-import com.exametrika.impl.groups.cluster.channel.CoreChannelFactory;
-import com.exametrika.impl.groups.cluster.channel.CoreChannelFactory.GroupFactoryParameters;
-import com.exametrika.impl.groups.cluster.channel.CoreChannelFactory.GroupParameters;
+import com.exametrika.impl.groups.cluster.channel.CoreNodeChannelFactory;
+import com.exametrika.impl.groups.cluster.channel.CoreNodeChannelFactory.GroupFactoryParameters;
+import com.exametrika.impl.groups.cluster.channel.CoreNodeChannelFactory.GroupParameters;
 import com.exametrika.impl.groups.cluster.discovery.WellKnownAddressesDiscoveryStrategy;
 import com.exametrika.impl.groups.cluster.flush.FlushParticipantProtocol;
 import com.exametrika.impl.groups.cluster.flush.IFlush;
@@ -636,7 +636,7 @@ public class MulticastProtocolTests
         }
     }
     
-    private class TestGroupChannelFactory extends CoreChannelFactory
+    private class TestGroupChannelFactory extends CoreNodeChannelFactory
     {
         public TestGroupChannelFactory(GroupFactoryParameters factoryParameters)
         {

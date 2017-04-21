@@ -12,13 +12,13 @@ import com.exametrika.api.groups.cluster.INode;
 import com.exametrika.common.utils.Assert;
 
 /**
- * The {@link SimpleWorkerToMappingStrategy} is simple implementation of {@link IWorkerToCoreMappingStarategy}
+ * The {@link SimpleWorkerToCoreMappingStrategy} is simple implementation of {@link IWorkerToCoreMappingStarategy}
  * which privides even mapping of worker nodes between core nodes.
  * 
  * @threadsafety This class and its methods are thread safe.
  * @author Medvedev-A
  */
-public final class SimpleWorkerToMappingStrategy implements IWorkerToCoreMappingStarategy
+public final class SimpleWorkerToCoreMappingStrategy implements IWorkerToCoreMappingStarategy
 {
     @Override
     public Map<INode, INode> mapWorkers(List<INode> coreNodes, List<INode> workerNodes,

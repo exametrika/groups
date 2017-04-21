@@ -5,22 +5,19 @@ package com.exametrika.impl.groups.cluster.channel;
 
 import java.util.List;
 
-import com.exametrika.api.groups.cluster.IGroupMembershipService;
+import com.exametrika.api.groups.cluster.IClusterMembershipService;
 import com.exametrika.api.groups.cluster.IMembershipListener.LeaveReason;
 import com.exametrika.api.groups.cluster.INodeChannel;
 import com.exametrika.common.compartment.ICompartment;
 import com.exametrika.common.compartment.ICompartmentTimerProcessor;
-import com.exametrika.common.messaging.IConnectionProvider;
-import com.exametrika.common.messaging.IMessageFactory;
-import com.exametrika.common.messaging.impl.Channel;
-import com.exametrika.common.messaging.impl.protocols.ProtocolStack;
+import com.exametrika.common.messaging.IChannel;
+import com.exametrika.common.messaging.impl.CompositeChannel;
 import com.exametrika.common.messaging.impl.protocols.failuredetection.ChannelObserver;
 import com.exametrika.common.messaging.impl.protocols.failuredetection.LiveNodeManager;
-import com.exametrika.common.messaging.impl.transports.ITransport;
 import com.exametrika.common.tasks.ThreadInterruptedException;
 import com.exametrika.common.utils.Assert;
 import com.exametrika.common.utils.Times;
-import com.exametrika.impl.groups.cluster.membership.GroupMembershipManager;
+import com.exametrika.impl.groups.cluster.membership.ClusterMembershipManager;
 
 /**
  * The {@link NodeChannel} is a node node channel.
@@ -28,22 +25,20 @@ import com.exametrika.impl.groups.cluster.membership.GroupMembershipManager;
  * @threadsafety This class and its methods are thread safe.
  * @author medvedev
  */
-public class NodeChannel extends Channel implements INodeChannel, IChannelReconnector
+public class NodeChannel extends CompositeChannel implements INodeChannel, IChannelReconnector
 {
-    protected final GroupMembershipManager membershipManager;
+    protected final ClusterMembershipManager membershipManager;
     private final List<IGracefulExitStrategy> gracefulExitStrategies;
     private final long gracefulExitTimeout;
     private final Object condition = new Object();
     private boolean canClose;
     private boolean startWait;
     
-    public NodeChannel(String channelName, LiveNodeManager liveNodeManager, ChannelObserver channelObserver,
-        ProtocolStack protocolStack, ITransport transport, IMessageFactory messageFactory,
-        IConnectionProvider connectionProvider, ICompartment compartment, GroupMembershipManager membershipManager, 
+    public NodeChannel(String channelName, LiveNodeManager liveNodeManager, ChannelObserver channelObserver, 
+        List<IChannel> subChannels, IChannel mainSubChannel, ICompartment compartment, ClusterMembershipManager membershipManager, 
         List<IGracefulExitStrategy> gracefulExitStrategies, long gracefulExitTimeout)
     {
-        super(channelName, liveNodeManager, channelObserver, protocolStack, transport, messageFactory, connectionProvider,
-            compartment);
+        super(channelName, liveNodeManager, channelObserver, subChannels, mainSubChannel, compartment);;
         
         Assert.notNull(membershipManager);
         Assert.notNull(gracefulExitStrategies);
@@ -54,7 +49,7 @@ public class NodeChannel extends Channel implements INodeChannel, IChannelReconn
     }
 
     @Override
-    public IGroupMembershipService getMembershipService()
+    public IClusterMembershipService getMembershipService()
     {
         return membershipManager;
     }

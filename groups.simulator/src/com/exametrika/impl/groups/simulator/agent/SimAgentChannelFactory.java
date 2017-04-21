@@ -9,7 +9,7 @@ import java.net.UnknownHostException;
 import com.exametrika.common.messaging.ChannelException;
 import com.exametrika.common.messaging.IChannel;
 import com.exametrika.common.messaging.impl.ChannelFactory;
-import com.exametrika.common.messaging.impl.ChannelFactory.Parameters;
+import com.exametrika.common.messaging.impl.AbstractChannelFactory.Parameters;
 
 
 

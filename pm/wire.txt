@@ -1,0 +1,141 @@
+channel
+  CoreNodeChannel
+  WorkerNodeChannel
+
+management
+  CommandManager
+
+discovery
+  CoreClusterDiscoveryProtocol
+  CoreGroupDiscoveryProtocol
+  WellKnownAddressesDiscoveryStrategy
+  WorkerClusterDiscoveryProtocol
+  WorkerGroupDiscoveryProtocol
+
+exchange
+  CoreFeedbackProtocol
+  GroupDataExchangeProtocol
+  WorkerFeedbackProtocol
+
+failuredetection
+  CoreClusterFailureDetectionProtocol
+  CoreCoordinatorClusterFailureDetectionProtocol
+  CoreGroupFailureDetectionProtocol
+  GroupNodeTrackingStrategy
+  WorkerClusterFailureDetectionProtocol
+  WorkerControllerNodeTrackingStrategy
+  WorkerGroupFailureDetectionProtocol
+  WorkerNodeTrackingStrategy
+
+feedback
+  DataLossFeedbackProvider
+  GroupFeedbackProvider
+  NodeFeedbackProvider
+  WorkerGroupStateUpdater
+
+flush
+  FlushCoordinatorProtocol
+  FlushParticipantProtocol
+
+membership
+  ClusterMembershipManager
+  ClusterMembershipStateTransferFactory
+  CoreClusterMembershipProtocol
+  CoreCoordinatorClusterMembershipProtocol
+  CoreGroupMembershipManager
+  CoreGroupMembershipTracker
+  GroupLeaveGracefulExitStrategy
+  GroupMembershipManager
+  GroupProtocolSubStack
+  GroupsMembershipProvider
+  LocalNodeProvider
+  NodesMembershipProvider
+  SimpleWorkerToMappingStrategy
+  WorkerClusterMembershipProtocol
+  WorkerGroupMembershipProtocol
+  WorkerToCoreMembershipProvider
+  SimpleGroupMappingStrategy
+
+multicast
+  FailureAtomicMulticastProtocol
+  FlowControlProtocol
+
+state
+  SimpleStateTransferClientProtocol
+  SimpleStateTransferServerProtocol
+  StateTransferClientProtocol
+  StateTransferServerProtocol
+  ClusterMembershipStateTransferFactory
+  GroupDefinitionStateTransferFactory
+  CompositeSimpleStateTransferFactory
+
+-------
+Core node
+  - CoreNodeChannel, CoreNodeChannelFactory
+    * ClusterMembershipManager
+    * GroupsMembershipProvider
+    * NodesMembershipProvider
+    * WorkerToCoreMembershipProvider
+    * SimpleWorkerToCoreMappingStrategy
+    * SimpleGroupMappingStrategy
+  - core group channel - как сейчас создается для core группы. Дополнительно выше мультикаста:
+    * CommandManager
+      - SimpleStateTransferClientProtocol
+    * SimpleStateTransferServerProtocol
+      - CompositeSimpleStateTransferFactory + ClusterMembershipStateTransferFactory + 
+        GroupDefinitionStateTransferFactory
+    * CoreFeedbackProtocol (ниже мультикаста, нужен сендер из одного канала в другой,
+      т.к. этот протокол работает в обоих каналах, см. ниже)
+    * CoreCoordinatorClusterFailureDetectionProtocol (ниже мультикаста)
+    * CoreCoordinatorClusterMembershipProtocol
+    * TODO:
+
+  - core to worker channel
+    * CoreClusterDiscoveryProtocol
+    * CoreClusterFailureDetectionProtocol
+      - WorkerControllerNodeTrackingStrategy
+    * CoreFeedbackProtocol
+      - все фидбек провайдеры
+      - нужно разделить простой протокол и протокол координатора на коорлинаторе провайдеры
+         и листенеры срабатывают два раза, т.к. два протокола. Нужно чтобы один
+      - нужно сделать провайдеров между этими протоколами разделяемыми
+    * CoreClusterMembershipProtocol
+
+Worker node:
+  - WorkerNodeChannel, WorkerNodeChannelFactory
+    * ClusterMembershipManager
+    * GroupLeaveGracefulExitStrategy
+    * GroupsMembershipProvider
+    * NodesMembershipProvider
+    * LocalNodeProvider
+  - worker to core group channel
+    * WorkerClusterDiscoveryProtocol
+      - WellKnownAddressesDiscoveryStrategy
+    * WorkerNodeTrackingStrategy
+    * WorkerClusterMembershipProtocol
+
+  - worker group channel
+    * WorkerGroupDiscoveryProtocol
+    * WorkerClusterFailureDetectionProtocol
+    * WorkerFeedbackProtocol
+      - все фидбек провайдеры
+    * WorkerGroupMembershipProtocol
+
+  - per group substack (формируется аналогично core group channel отдельной фабрикой, 
+    порядок от транспорта, при создании фабрикой список обратный)
+    * часть worker group channel
+    * GroupProtocolSubStack
+      - GroupMembershipManager
+    * WorkerGroupDiscoveryProtocol
+    * WorkerGroupFailureDetectionProtocol
+    * FlushCoordinatorProtocol
+    * FlushParticipantProtocol
+      - WorkerGroupStateUpdater (не протокол)
+    * FailureAtomicMulticastProtocol (флаги группы определяет durability, ordering)
+    * флаги группы определяют какой перенос состояния используется (simple/normal/...)
+      - SimpleStateTransferClientProtocol
+      - SimpleStateTransferServerProtocol
+      - StateTransferClientProtocol
+      - StateTransferServerProtocol
+    * FlowControlProtocol
+---------------

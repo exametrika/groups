@@ -37,7 +37,7 @@ import com.exametrika.common.messaging.IStreamSendHandler;
 import com.exametrika.common.messaging.MessageFlags;
 import com.exametrika.common.messaging.impl.Channel;
 import com.exametrika.common.messaging.impl.ChannelFactory;
-import com.exametrika.common.messaging.impl.ChannelFactory.FactoryParameters;
+import com.exametrika.common.messaging.impl.AbstractChannelFactory.FactoryParameters;
 import com.exametrika.common.perf.Benchmark;
 import com.exametrika.common.perf.Probe;
 import com.exametrika.common.tests.Sequencer;

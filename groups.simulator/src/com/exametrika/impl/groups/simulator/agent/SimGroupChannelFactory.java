@@ -25,7 +25,7 @@ import com.exametrika.common.messaging.IMessagePart;
 import com.exametrika.common.messaging.IReceiver;
 import com.exametrika.common.messaging.ISink;
 import com.exametrika.common.messaging.impl.Channel;
-import com.exametrika.common.messaging.impl.ChannelFactory.Parameters;
+import com.exametrika.common.messaging.impl.AbstractChannelFactory.Parameters;
 import com.exametrika.common.messaging.impl.protocols.AbstractProtocol;
 import com.exametrika.common.messaging.impl.protocols.ProtocolStack;
 import com.exametrika.common.messaging.impl.protocols.failuredetection.IFailureObserver;
@@ -35,9 +35,9 @@ import com.exametrika.common.utils.Assert;
 import com.exametrika.common.utils.ByteArray;
 import com.exametrika.common.utils.Bytes;
 import com.exametrika.common.utils.Files;
-import com.exametrika.impl.groups.cluster.channel.CoreChannelFactory;
-import com.exametrika.impl.groups.cluster.channel.CoreChannelFactory.GroupFactoryParameters;
-import com.exametrika.impl.groups.cluster.channel.CoreChannelFactory.GroupParameters;
+import com.exametrika.impl.groups.cluster.channel.CoreNodeChannelFactory;
+import com.exametrika.impl.groups.cluster.channel.CoreNodeChannelFactory.GroupFactoryParameters;
+import com.exametrika.impl.groups.cluster.channel.CoreNodeChannelFactory.GroupParameters;
 import com.exametrika.impl.groups.cluster.discovery.WellKnownAddressesDiscoveryStrategy;
 import com.exametrika.impl.groups.cluster.membership.GroupMemberships;
 import com.exametrika.impl.groups.cluster.multicast.RemoteFlowId;
@@ -370,7 +370,7 @@ public class SimGroupChannelFactory
         }
     }
     
-    private class SimChannelFactory extends CoreChannelFactory
+    private class SimChannelFactory extends CoreNodeChannelFactory
     {
         public SimChannelFactory(GroupFactoryParameters factoryParameters)
         {

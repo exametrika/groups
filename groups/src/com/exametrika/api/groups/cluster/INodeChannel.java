@@ -3,7 +3,7 @@
  */
 package com.exametrika.api.groups.cluster;
 
-import com.exametrika.common.messaging.IChannel;
+import com.exametrika.common.messaging.ICompositeChannel;
 
 /**
  * The {@link INodeChannel} is a node channel.
@@ -11,14 +11,14 @@ import com.exametrika.common.messaging.IChannel;
  * @threadsafety Implementations of this interface and its methods are thread safe.
  * @author Medvedev-A
  */
-public interface INodeChannel extends IChannel
+public interface INodeChannel extends ICompositeChannel
 {
     /**
-     * Returns membership service.
+     * Returns cluster membership service.
      *
-     * @return membership service
+     * @return cluster membership service
      */
-    IGroupMembershipService getMembershipService();
+    IClusterMembershipService getMembershipService();
     
     /**
      * Closes channel.

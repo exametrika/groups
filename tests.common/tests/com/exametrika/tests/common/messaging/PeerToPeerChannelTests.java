@@ -32,7 +32,7 @@ import com.exametrika.common.messaging.ISink;
 import com.exametrika.common.messaging.MessageFlags;
 import com.exametrika.common.messaging.impl.Channel;
 import com.exametrika.common.messaging.impl.ChannelFactory;
-import com.exametrika.common.messaging.impl.ChannelFactory.FactoryParameters;
+import com.exametrika.common.messaging.impl.AbstractChannelFactory.FactoryParameters;
 import com.exametrika.common.tests.Sequencer;
 import com.exametrika.common.utils.Classes;
 import com.exametrika.tests.common.messaging.StreamingProtocolTests.TestStreamReceiveMessagePart;

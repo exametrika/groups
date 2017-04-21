@@ -16,6 +16,7 @@ import com.exametrika.common.io.ISerializationRegistry;
 import com.exametrika.common.messaging.IDeliveryHandler;
 import com.exametrika.common.messaging.ILiveNodeProvider;
 import com.exametrika.common.messaging.IMessageFactory;
+import com.exametrika.common.messaging.impl.AbstractChannelFactory;
 import com.exametrika.common.messaging.impl.Channel;
 import com.exametrika.common.messaging.impl.ChannelFactory;
 import com.exametrika.common.messaging.impl.NoDeliveryHandler;
@@ -60,12 +61,12 @@ import com.exametrika.spi.groups.IStateTransferFactory;
 import com.exametrika.spi.groups.SystemPropertyProvider;
 
 /**
- * The {@link CoreChannelFactory} is a core node channel factory.
+ * The {@link CoreToWorkerSubChannelFactory} is a core to worker node sub-channel factory.
  * 
  * @threadsafety This class and its methods are thread safe.
  * @author medvedev
  */
-public class CoreChannelFactory extends ChannelFactory
+public class CoreToWorkerSubChannelFactory extends AbstractChannelFactory
 {
     private CoreGroupMembershipTracker membershipTracker;
     private CoreGroupMembershipManager membershipManager;
@@ -123,12 +124,12 @@ public class CoreChannelFactory extends ChannelFactory
         public IFlowController<RemoteFlowId> localFlowController = new NoFlowController<RemoteFlowId>();
     }
 
-    public CoreChannelFactory()
+    public CoreToWorkerSubChannelFactory()
     {
         this(new GroupFactoryParameters());
     }
     
-    public CoreChannelFactory(GroupFactoryParameters factoryParameters)
+    public CoreToWorkerSubChannelFactory(GroupFactoryParameters factoryParameters)
     {
         super(factoryParameters);
     }

@@ -8,17 +8,14 @@ import java.util.List;
 import com.exametrika.api.groups.cluster.INode;
 import com.exametrika.api.groups.cluster.IWorkerNodeChannel;
 import com.exametrika.common.compartment.ICompartment;
-import com.exametrika.common.messaging.IConnectionProvider;
-import com.exametrika.common.messaging.IMessageFactory;
-import com.exametrika.common.messaging.impl.protocols.ProtocolStack;
+import com.exametrika.common.messaging.IChannel;
 import com.exametrika.common.messaging.impl.protocols.failuredetection.ChannelObserver;
 import com.exametrika.common.messaging.impl.protocols.failuredetection.LiveNodeManager;
-import com.exametrika.common.messaging.impl.transports.ITransport;
 import com.exametrika.common.utils.Assert;
 import com.exametrika.impl.groups.cluster.feedback.INodeFeedbackService;
 import com.exametrika.impl.groups.cluster.feedback.INodeState;
 import com.exametrika.impl.groups.cluster.feedback.NodeState;
-import com.exametrika.impl.groups.cluster.membership.GroupMembershipManager;
+import com.exametrika.impl.groups.cluster.membership.ClusterMembershipManager;
 
 /**
  * The {@link WorkerNodeChannel} is a worker node channel.
@@ -30,13 +27,12 @@ public class WorkerNodeChannel extends NodeChannel implements IWorkerNodeChannel
 {
     private final INodeFeedbackService feedbackService;
 
-    public WorkerNodeChannel(String channelName, LiveNodeManager liveNodeManager, ChannelObserver channelObserver,
-        ProtocolStack protocolStack, ITransport transport, IMessageFactory messageFactory,
-        IConnectionProvider connectionProvider, ICompartment compartment, GroupMembershipManager membershipManager, 
+    public WorkerNodeChannel(String channelName, LiveNodeManager liveNodeManager, ChannelObserver channelObserver, 
+        List<IChannel> subChannels, IChannel mainSubChannel, ICompartment compartment, ClusterMembershipManager membershipManager, 
         List<IGracefulExitStrategy> gracefulExitStrategies, long gracefulExitTimeout, INodeFeedbackService feedbackService)
     {
-        super(channelName, liveNodeManager, channelObserver, protocolStack, transport, messageFactory, connectionProvider,
-            compartment, membershipManager, gracefulExitStrategies, gracefulExitTimeout);
+        super(channelName, liveNodeManager, channelObserver, subChannels, mainSubChannel, compartment, membershipManager, 
+            gracefulExitStrategies, gracefulExitTimeout);
         
         Assert.notNull(feedbackService);
         

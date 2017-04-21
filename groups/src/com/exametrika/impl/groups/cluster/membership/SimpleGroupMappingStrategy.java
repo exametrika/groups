@@ -4,8 +4,10 @@
 package com.exametrika.impl.groups.cluster.membership;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -15,6 +17,11 @@ import com.exametrika.api.groups.cluster.IGroup;
 import com.exametrika.api.groups.cluster.INode;
 import com.exametrika.common.utils.Assert;
 import com.exametrika.common.utils.Pair;
+import com.exametrika.impl.groups.cluster.feedback.IGroupFeedbackService;
+import com.exametrika.impl.groups.cluster.feedback.IGroupState;
+import com.exametrika.impl.groups.cluster.feedback.INodeFeedbackService;
+import com.exametrika.impl.groups.cluster.feedback.INodeState;
+import com.exametrika.impl.groups.cluster.feedback.INodeState.State;
 import com.exametrika.impl.groups.cluster.management.ICommand;
 import com.exametrika.impl.groups.cluster.management.ICommandHandler;
 
@@ -26,7 +33,18 @@ import com.exametrika.impl.groups.cluster.management.ICommandHandler;
  */
 public final class SimpleGroupMappingStrategy implements IGroupMappingStrategy, ICommandHandler
 {
+    private final IGroupFeedbackService groupFeedbackService;
+    private final INodeFeedbackService nodeFeedbackService;
     private final Map<String, DomainInfo> domains = new LinkedHashMap<String, DomainInfo>();
+    
+    public SimpleGroupMappingStrategy(IGroupFeedbackService groupFeedbackService, INodeFeedbackService nodeFeedbackService)
+    {
+        Assert.notNull(groupFeedbackService);
+        Assert.notNull(nodeFeedbackService);
+        
+        this.groupFeedbackService = groupFeedbackService;
+        this.nodeFeedbackService = nodeFeedbackService;
+    }
     
     public List<GroupDefinition> getGroupDefinitions()
     {
@@ -80,20 +98,29 @@ public final class SimpleGroupMappingStrategy implements IGroupMappingStrategy, 
         
         List<Pair<IGroup, IGroupDelta>> resultGroups = new ArrayList<Pair<IGroup, IGroupDelta>>();
         Map<UUID, ChangedGroupInfo> changedGroups = new LinkedHashMap<UUID, ChangedGroupInfo>();
+        Set<UUID> gracefulExitNodes = new HashSet<UUID>();
         if (oldGroupMembership != null)
         {
             for (UUID nodeId : nodesMembershipDelta.getLeftNodes())
             {
                 List<IGroup> groups = oldGroupMembership.findNodeGroups(nodeId);
                 for (IGroup group : groups)
+                {
                     domainInfo.changedGroups.add(group.getId());
+                    ChangedGroupInfo changedGroup = ensureChangedGroup(domainInfo, changedGroups, group.getId(), group);
+                    changedGroup.leftNodes.add(nodeId);
+                }
             }
             
             for (UUID nodeId : nodesMembershipDelta.getFailedNodes())
             {
                 List<IGroup> groups = oldGroupMembership.findNodeGroups(nodeId);
                 for (IGroup group : groups)
+                {
                     domainInfo.changedGroups.add(group.getId());
+                    ChangedGroupInfo changedGroup = ensureChangedGroup(domainInfo, changedGroups, group.getId(), group);
+                    changedGroup.failedNodes.add(nodeId);
+                }
             }
             
             for (IGroup group : oldGroupMembership.getGroups())
@@ -102,17 +129,50 @@ public final class SimpleGroupMappingStrategy implements IGroupMappingStrategy, 
                     resultGroups.add(new Pair<IGroup, IGroupDelta>(group, null));
                         
             }
+            
+            for (INodeState nodeState : nodeFeedbackService.getNodeStates())
+            {
+                if (nodeState.getState() == State.GRACEFUL_EXIT_REQUESTED && nodeState.getDomain().equals(domain))
+                {
+                    gracefulExitNodes.add(nodeState.getId());
+                    
+                    List<IGroup> groups = oldGroupMembership.findNodeGroups(nodeState.getId());
+                    for (IGroup group : groups)
+                    {
+                        domainInfo.changedGroups.add(group.getId());
+                        ChangedGroupInfo changedGroup = ensureChangedGroup(domainInfo, changedGroups, group.getId(), group);
+                        changedGroup.gracefulExitNodes.add(nodeState.getId());
+                    }
+                }
+            }
         }
         
         for (UUID groupId : domainInfo.changedGroups)
         {
-            ChangedGroupInfo changedGroup = new ChangedGroupInfo();
-            changedGroup.definition = domainInfo.groupDefinitions.get(groupId);
-            if (oldGroupMembership != null)
-                changedGroup.group = oldGroupMembership.findGroup(groupId);
+            ChangedGroupInfo changedGroup = ensureChangedGroup(domainInfo, changedGroups, groupId, null);
             if (changedGroup.group != null)
+            {
+                for (INode node : changedGroup.group.getMembers())
+                {
+                    if (!changedGroup.failedNodes.contains(node.getId()) && ! changedGroup.leftNodes.contains(node.getId()))
+                        changedGroup.nodes.add(node);
+                }
+            }
             
+            int nodeCount = changedGroup.nodes.size() - changedGroup.gracefulExitNodes.size();
+            if (nodeCount >= changedGroup.definition.getNodeCount())
+            {
+                while (changedGroup.nodes.size() > changedGroup.definition.getNodeCount())
+                {
+                    // TODO: УДАЛИТЬ gracefulexit потом остальные лишниЕ
+                }
+            }
+            else if (changedGroup.groupState.getState() == IGroupState.State.NORMAL)
+            {
+                int requiredNodesCount = changedGroup.definition.getNodeCount() - nodeCount;
+            }
         }
+        
         // TODO:
         // - найти группы удаленных вышедших и добавить их в набор измененных
         // - если если старое членство, пройти по всем его группам и добавить в список новых групп,
@@ -145,6 +205,27 @@ public final class SimpleGroupMappingStrategy implements IGroupMappingStrategy, 
         // - add/remove group definition
     }
     
+    private ChangedGroupInfo ensureChangedGroup(DomainInfo domain, Map<UUID, ChangedGroupInfo> changedGroups, UUID groupId, IGroup group)
+    {
+        ChangedGroupInfo changedGroup = changedGroups.get(groupId);
+        if (changedGroup == null)
+        {
+            changedGroup = new ChangedGroupInfo();
+            changedGroups.put(group.getId(), changedGroup);
+        }   
+        
+        if (group != null)
+            changedGroup.group = group;
+        
+        if (changedGroup.definition == null)
+        {
+            changedGroup.definition = domain.groupDefinitions.get(groupId);
+            changedGroup.groupState = groupFeedbackService.findGroupState(groupId);
+        }
+        
+        return changedGroup;
+    }
+    
     private static class DomainInfo
     {
         private final Map<UUID, GroupDefinition> groupDefinitions = new LinkedHashMap<UUID, GroupDefinition>();
@@ -156,9 +237,10 @@ public final class SimpleGroupMappingStrategy implements IGroupMappingStrategy, 
     {
         GroupDefinition definition;
         IGroup group;
-        List<INode> nodes = new ArrayList<INode>();
-        Set<UUID> failedNodes;
-        Set<UUID> leftNodes;
-        Set<UUID> gracefulExitNodes;
+        IGroupState groupState;
+        List<INode> nodes = new LinkedList<INode>();
+        Set<UUID> failedNodes = new HashSet<UUID>();
+        Set<UUID> leftNodes = new HashSet<UUID>();
+        Set<UUID> gracefulExitNodes = new HashSet<UUID>();
     }
 }

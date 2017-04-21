@@ -56,6 +56,11 @@ public final class LiveNodeManager implements IFailureObserver, IConnectionObser
         this.marker = Loggers.getMarker(channelName);
     }
 
+    public List<IFailureObserver> getFailureObservers()
+    {
+        return failureObservers;
+    }
+    
     @Override
     public long getId()
     {
