@@ -269,7 +269,7 @@ public abstract class AbstractChannelFactory
         highLocal.setCompartment(compartment);
         lowLocal.setCompartment(compartment);
         
-        Channel channel = createChannel(channelName, channelObserver, liveNodeManager, messageFactory, protocolStack, transport,
+        IChannel channel = createChannel(channelName, channelObserver, liveNodeManager, messageFactory, protocolStack, transport,
             connectionManager, compartment);
         
         if (parameters.multiThreaded)
@@ -281,7 +281,7 @@ public abstract class AbstractChannelFactory
         return channel;
     }
 
-    protected Channel createChannel(String channelName, ChannelObserver channelObserver, LiveNodeManager liveNodeManager,
+    protected IChannel createChannel(String channelName, ChannelObserver channelObserver, LiveNodeManager liveNodeManager,
         MessageFactory messageFactory, ProtocolStack protocolStack, TcpTransport transport,
         ConnectionManager connectionManager, ICompartment compartment)
     {
@@ -299,7 +299,7 @@ public abstract class AbstractChannelFactory
     {
     }
 
-    protected void wireProtocols(Channel channel, TcpTransport transport, ProtocolStack protocolStack)
+    protected void wireProtocols(IChannel channel, TcpTransport transport, ProtocolStack protocolStack)
     {
     }
     

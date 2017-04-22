@@ -71,18 +71,18 @@ state
 
 -------
 Core node
-  - CoreNodeChannel, CoreNodeChannelFactory
-    * ClusterMembershipManager
+  + CoreNodeChannel, CoreNodeChannelFactory
+    + ClusterMembershipManager
     * GroupsMembershipProvider
     * NodesMembershipProvider
     * WorkerToCoreMembershipProvider
     * SimpleWorkerToCoreMappingStrategy
     * SimpleGroupMappingStrategy
   - core group channel - как сейчас создается для core группы. Дополнительно выше мультикаста:
-    * CommandManager
-      - SimpleStateTransferClientProtocol
-    * SimpleStateTransferServerProtocol
-      - CompositeSimpleStateTransferFactory + ClusterMembershipStateTransferFactory + 
+    + CommandManager
+    * SimpleStateTransferClientProtocol
+    + SimpleStateTransferServerProtocol
+      + CompositeSimpleStateTransferFactory + ClusterMembershipStateTransferFactory + 
         GroupDefinitionStateTransferFactory
     * CoreFeedbackProtocol (ниже мультикаста, нужен сендер из одного канала в другой,
       т.к. этот протокол работает в обоих каналах, см. ниже)

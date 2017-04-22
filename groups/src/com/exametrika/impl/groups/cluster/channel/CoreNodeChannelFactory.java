@@ -27,7 +27,6 @@ import com.exametrika.impl.groups.cluster.membership.CoreGroupMembershipManager;
 public class CoreNodeChannelFactory extends CompositeChannelFactory
 {
     private ClusterMembershipManager membershipManager;
-    private List<IGracefulExitStrategy> gracefulExitStrategies = new ArrayList<IGracefulExitStrategy>();
     
     public CoreNodeChannelFactory(List<AbstractChannelFactory> subChannelFactories, int mainSubChannelIndex)
     {
@@ -38,7 +37,8 @@ public class CoreNodeChannelFactory extends CompositeChannelFactory
     protected ICompositeChannel createChannel(String channelName, ChannelObserver channelObserver, LiveNodeManager liveNodeManager,
         ICompartment compartment, List<IChannel> subChannels)
     {
-        // TODO: parameters, membershipManager, gracefulExitStrategies
+        // TODO: parameters
+        List<IGracefulExitStrategy> gracefulExitStrategies = ((CoreGroupSubChannelFactory)subChannelFactories.get(0)).getGracefulExitStrategies();
         GroupFactoryParameters groupFactoryParameters = (GroupFactoryParameters)factoryParameters;
         return new CoreNodeChannel(channelName, liveNodeManager, channelObserver, subChannels, 
             subChannels.get(mainSubChannelIndex), compartment, membershipManager, gracefulExitStrategies,

@@ -7,7 +7,7 @@ import com.exametrika.common.messaging.IDeliveryHandler;
 import com.exametrika.common.messaging.IMessage;
 
 /**
- * The {@link NoDeliveryHandler} represents a no deluvery handler.
+ * The {@link NoDeliveryHandler} represents a no delivery handler.
  * 
  * @threadsafety This class and its methods are thread safe.
  * @author Medvedev-A

@@ -27,22 +27,28 @@ import com.exametrika.impl.groups.cluster.membership.GroupAddress;
 public final class CommandManager extends AbstractProtocol implements ICommandManager, IDeliveryHandler
 {
     private final GroupAddress groupAddress;
-    private final ICompartment compartment;
+    private ICompartment compartment;
     private final List<ICommandHandler> commandHandlers;
     private final Deque<CommandTask> commands = new ArrayDeque<CommandTask>();
 
-    public CommandManager(String channelName, IMessageFactory messageFactory, GroupAddress groupAddress, ICompartment compartment,
+    public CommandManager(String channelName, IMessageFactory messageFactory, GroupAddress groupAddress,
         List<ICommandHandler> commandHandlers)
     {
         super(channelName, null, messageFactory);
         
         Assert.notNull(groupAddress);
-        Assert.notNull(compartment);
         Assert.notNull(commandHandlers);
         
         this.groupAddress = groupAddress;
-        this.compartment = compartment;
         this.commandHandlers = commandHandlers;
+    }
+    
+    public void setCompartment(ICompartment compartment)
+    {
+        Assert.notNull(compartment);
+        Assert.isNull(this.compartment);
+        
+        this.compartment = compartment;
     }
     
     @Override

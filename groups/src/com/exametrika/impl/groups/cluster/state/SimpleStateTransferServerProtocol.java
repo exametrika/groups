@@ -80,7 +80,6 @@ public final class SimpleStateTransferServerProtocol extends AbstractProtocol im
                 logger.log(LogLevel.DEBUG, marker, messages.snapshotSaved());
         }
     }
-    
 
     @Override
     public boolean isFlushProcessingRequired()

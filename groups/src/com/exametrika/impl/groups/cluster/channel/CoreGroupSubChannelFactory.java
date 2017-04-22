@@ -9,17 +9,17 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import com.exametrika.api.groups.cluster.ICoreNodeChannel;
 import com.exametrika.api.groups.cluster.IGroupMembershipListener;
 import com.exametrika.common.compartment.ICompartment;
 import com.exametrika.common.io.ISerializationRegistry;
+import com.exametrika.common.messaging.IChannel;
 import com.exametrika.common.messaging.IDeliveryHandler;
 import com.exametrika.common.messaging.ILiveNodeProvider;
 import com.exametrika.common.messaging.IMessageFactory;
 import com.exametrika.common.messaging.impl.AbstractChannelFactory;
-import com.exametrika.common.messaging.impl.Channel;
-import com.exametrika.common.messaging.impl.ChannelFactory;
+import com.exametrika.common.messaging.impl.CompositeDeliveryHandler;
 import com.exametrika.common.messaging.impl.NoDeliveryHandler;
+import com.exametrika.common.messaging.impl.SubChannel;
 import com.exametrika.common.messaging.impl.message.MessageFactory;
 import com.exametrika.common.messaging.impl.protocols.AbstractProtocol;
 import com.exametrika.common.messaging.impl.protocols.ProtocolStack;
@@ -43,8 +43,12 @@ import com.exametrika.impl.groups.cluster.flush.FlushCoordinatorProtocol;
 import com.exametrika.impl.groups.cluster.flush.FlushParticipantProtocol;
 import com.exametrika.impl.groups.cluster.flush.IFlushCondition;
 import com.exametrika.impl.groups.cluster.flush.IFlushParticipant;
+import com.exametrika.impl.groups.cluster.management.CommandManager;
+import com.exametrika.impl.groups.cluster.management.ICommandHandler;
+import com.exametrika.impl.groups.cluster.membership.ClusterMembershipStateTransferFactory;
 import com.exametrika.impl.groups.cluster.membership.CoreGroupMembershipManager;
 import com.exametrika.impl.groups.cluster.membership.CoreGroupMembershipTracker;
+import com.exametrika.impl.groups.cluster.membership.GroupDefinitionStateTransferFactory;
 import com.exametrika.impl.groups.cluster.membership.GroupMemberships;
 import com.exametrika.impl.groups.cluster.membership.IGroupMembershipManager;
 import com.exametrika.impl.groups.cluster.membership.IPreparedGroupMembershipListener;
@@ -52,12 +56,15 @@ import com.exametrika.impl.groups.cluster.membership.LocalNodeProvider;
 import com.exametrika.impl.groups.cluster.multicast.FailureAtomicMulticastProtocol;
 import com.exametrika.impl.groups.cluster.multicast.FlowControlProtocol;
 import com.exametrika.impl.groups.cluster.multicast.RemoteFlowId;
+import com.exametrika.impl.groups.cluster.state.CompositeSimpleStateTransferFactory;
+import com.exametrika.impl.groups.cluster.state.SimpleStateTransferClientProtocol;
+import com.exametrika.impl.groups.cluster.state.SimpleStateTransferServerProtocol;
 import com.exametrika.impl.groups.cluster.state.StateTransferClientProtocol;
 import com.exametrika.impl.groups.cluster.state.StateTransferServerProtocol;
 import com.exametrika.spi.groups.IDiscoveryStrategy;
 import com.exametrika.spi.groups.IPropertyProvider;
-import com.exametrika.spi.groups.IStateStore;
-import com.exametrika.spi.groups.IStateTransferFactory;
+import com.exametrika.spi.groups.ISimpleStateStore;
+import com.exametrika.spi.groups.ISimpleStateTransferFactory;
 import com.exametrika.spi.groups.SystemPropertyProvider;
 
 /**
@@ -118,8 +125,7 @@ public class CoreGroupSubChannelFactory extends AbstractChannelFactory
     {
         public IPropertyProvider propertyProvider = new SystemPropertyProvider();
         public IDiscoveryStrategy discoveryStrategy;
-        public IStateStore stateStore;
-        public IStateTransferFactory stateTransferFactory;
+        public ISimpleStateStore stateStore;
         public IDeliveryHandler deliveryHandler = new NoDeliveryHandler();
         public IFlowController<RemoteFlowId> localFlowController = new NoFlowController<RemoteFlowId>();
     }
@@ -134,6 +140,11 @@ public class CoreGroupSubChannelFactory extends AbstractChannelFactory
         super(factoryParameters);
     }
     
+    public List<IGracefulExitStrategy> getGracefulExitStrategies()
+    {
+        return gracefulExitStrategies;
+    }
+
     @Override
     protected INodeTrackingStrategy createNodeTrackingStrategy()
     {
@@ -149,7 +160,6 @@ public class CoreGroupSubChannelFactory extends AbstractChannelFactory
         Assert.notNull(groupParameters.propertyProvider);
         Assert.notNull(groupParameters.discoveryStrategy);
         Assert.notNull(groupParameters.stateStore);
-        Assert.notNull(groupParameters.stateTransferFactory);
         Assert.notNull(groupParameters.deliveryHandler);
         Assert.notNull(groupParameters.localFlowController);
         
@@ -176,33 +186,38 @@ public class CoreGroupSubChannelFactory extends AbstractChannelFactory
         membershipListeners.add(discoveryProtocol);
         membershipManager.setNodeDiscoverer(discoveryProtocol);
         
+        List<ICommandHandler> commandHandlers = new ArrayList<ICommandHandler>();// TODO:
+        CommandManager commandManager = new CommandManager(channelName, messageFactory, GroupMemberships.CORE_GROUP_ADDRESS, 
+            commandHandlers);
+        protocols.add(commandManager);
+        
         FlowControlProtocol flowControlProtocol = new FlowControlProtocol(channelName, messageFactory, membershipManager);
         protocols.add(flowControlProtocol);
         failureDetectionListeners.add(flowControlProtocol);
         flowControlProtocol.setFailureDetector(failureDetectionProtocol);
         
-        StateTransferClientProtocol stateTransferClientProtocol = new StateTransferClientProtocol(channelName,
-            messageFactory, membershipManager, groupParameters.stateTransferFactory, groupParameters.stateStore, 
-            serializationRegistry, groupFactoryParameters.maxStateTransferPeriod, groupFactoryParameters.stateSizeThreshold);
+        ISimpleStateTransferFactory stateTransferFactory = new CompositeSimpleStateTransferFactory(Arrays.asList(
+            new ClusterMembershipStateTransferFactory(clusterMembershipManager, membershipProviders), 
+            new GroupDefinitionStateTransferFactory(groupMappingStrategy)));
+        
+        SimpleStateTransferClientProtocol stateTransferClientProtocol = new SimpleStateTransferClientProtocol(channelName,
+            messageFactory, membershipManager, stateTransferFactory, groupParameters.stateStore);
         protocols.add(stateTransferClientProtocol);
         discoveryProtocol.setGroupJoinStrategy(stateTransferClientProtocol);
         failureDetectionListeners.add(stateTransferClientProtocol);
         
-        StateTransferServerProtocol stateTransferServerProtocol = new StateTransferServerProtocol(channelName, 
-            messageFactory, membershipManager, failureDetectionProtocol, groupParameters.stateTransferFactory, 
-            groupParameters.stateStore, serializationRegistry, 
-            groupFactoryParameters.saveSnapshotPeriod, groupFactoryParameters.transferLogRecordPeriod, 
-            groupFactoryParameters.transferLogMessagesCount, groupFactoryParameters.minLockQueueCapacity,
-            GroupMemberships.CORE_GROUP_ADDRESS, GroupMemberships.CORE_GROUP_ID);
+        SimpleStateTransferServerProtocol stateTransferServerProtocol = new SimpleStateTransferServerProtocol(channelName, 
+            messageFactory, membershipManager, failureDetectionProtocol, stateTransferFactory, 
+            groupParameters.stateStore, groupFactoryParameters.saveSnapshotPeriod);
         protocols.add(stateTransferServerProtocol);
-        stateTransferServerProtocol.setFlowController(flowControlProtocol);
         
         FailureAtomicMulticastProtocol multicastProtocol = new FailureAtomicMulticastProtocol(channelName, 
             messageFactory, membershipManager, failureDetectionProtocol, groupFactoryParameters.maxBundlingMessageSize, 
             groupFactoryParameters.maxBundlingPeriod, 
             groupFactoryParameters.maxBundleSize, groupFactoryParameters.maxTotalOrderBundlingMessageCount, 
             groupFactoryParameters.maxUnacknowledgedPeriod, groupFactoryParameters.maxUnacknowledgedMessageCount, 
-            groupFactoryParameters.maxIdleReceiveQueuePeriod, groupParameters.deliveryHandler, true, true, 
+            groupFactoryParameters.maxIdleReceiveQueuePeriod, new CompositeDeliveryHandler(
+                Arrays.<IDeliveryHandler>asList(commandManager, groupParameters.deliveryHandler)), true, true, 
             groupFactoryParameters.maxUnlockQueueCapacity, groupFactoryParameters.minLockQueueCapacity, 
             serializationRegistry, GroupMemberships.CORE_GROUP_ADDRESS, GroupMemberships.CORE_GROUP_ID);
         protocols.add(multicastProtocol);
@@ -241,7 +256,7 @@ public class CoreGroupSubChannelFactory extends AbstractChannelFactory
     }
     
     @Override
-    protected void wireProtocols(Channel channel, TcpTransport transport, ProtocolStack protocolStack)
+    protected void wireProtocols(IChannel channel, TcpTransport transport, ProtocolStack protocolStack)
     {
         CoreGroupFailureDetectionProtocol failureDetectionProtocol = protocolStack.find(CoreGroupFailureDetectionProtocol.class);
         failureDetectionProtocol.setFailureObserver(transport);
@@ -252,25 +267,21 @@ public class CoreGroupSubChannelFactory extends AbstractChannelFactory
         strategy.setFailureDetector(failureDetectionProtocol);
         strategy.setMembershipManager((IGroupMembershipManager)failureDetectionProtocol.getMembersipService());
         
-        StateTransferClientProtocol stateTransferClientProtocol = protocolStack.find(StateTransferClientProtocol.class);
-        stateTransferClientProtocol.setChannelReconnector((IChannelReconnector)channel);
-        stateTransferClientProtocol.setCompartment(channel.getCompartment());
-        
-        StateTransferServerProtocol stateTransferServerProtocol = protocolStack.find(StateTransferServerProtocol.class);
-        stateTransferServerProtocol.setCompartment(channel.getCompartment());
-        
         FailureAtomicMulticastProtocol multicastProtocol = protocolStack.find(FailureAtomicMulticastProtocol.class);
         multicastProtocol.setCompartment(channel.getCompartment());
         channel.getCompartment().addProcessor(multicastProtocol);
+        
+        CommandManager commandManager = protocolStack.find(CommandManager.class);
+        commandManager.setCompartment(channel.getCompartment());
     }
     
     @Override
-    protected Channel createChannel(String channelName, ChannelObserver channelObserver, LiveNodeManager liveNodeManager,
+    protected SubChannel createChannel(String channelName, ChannelObserver channelObserver, LiveNodeManager liveNodeManager,
         MessageFactory messageFactory, ProtocolStack protocolStack, TcpTransport transport,
         ConnectionManager connectionManager, ICompartment compartment)
     {
         GroupFactoryParameters groupFactoryParameters = (GroupFactoryParameters)factoryParameters;
         return new CoreGroupSubChannel(channelName, liveNodeManager, channelObserver, protocolStack, transport, messageFactory, 
-            connectionManager, compartment, membershipManager, gracefulExitStrategies, groupFactoryParameters.gracefulExitTimeout);
+            connectionManager, compartment, membershipManager);
     }
 }
