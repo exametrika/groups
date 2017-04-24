@@ -14,8 +14,6 @@ import com.exametrika.common.log.ILogger;
 import com.exametrika.common.log.Loggers;
 import com.exametrika.common.messaging.IChannel;
 import com.exametrika.common.messaging.ICompositeChannel;
-import com.exametrika.common.messaging.impl.AbstractChannelFactory.FactoryParameters;
-import com.exametrika.common.messaging.impl.AbstractChannelFactory.Parameters;
 import com.exametrika.common.messaging.impl.protocols.failuredetection.ChannelObserver;
 import com.exametrika.common.messaging.impl.protocols.failuredetection.IFailureObserver;
 import com.exametrika.common.messaging.impl.protocols.failuredetection.LiveNodeManager;
@@ -34,15 +32,15 @@ public class CompositeChannelFactory
     protected final ILogger logger = Loggers.get(getClass());
     protected final List<AbstractChannelFactory> subChannelFactories;
     protected final int mainSubChannelIndex;
-    protected final FactoryParameters factoryParameters;
+    protected final ChannelFactoryParameters factoryParameters;
     
     public CompositeChannelFactory(List<AbstractChannelFactory> subChannelFactories, int mainSubChannelIndex)
     {
-        this(subChannelFactories, mainSubChannelIndex, new FactoryParameters());
+        this(subChannelFactories, mainSubChannelIndex, new ChannelFactoryParameters());
     }
     
     public CompositeChannelFactory(List<AbstractChannelFactory> subChannelFactories, int mainSubChannelIndex, 
-        FactoryParameters factoryParameters)
+        ChannelFactoryParameters factoryParameters)
     {
         Assert.notNull(subChannelFactories);
         Assert.notNull(factoryParameters);
@@ -52,7 +50,7 @@ public class CompositeChannelFactory
         this.factoryParameters = factoryParameters;
     }
     
-    protected ICompositeChannel createChannel(String channelName, List<Parameters> parameters)
+    protected ICompositeChannel createChannel(String channelName, List<? extends ChannelParameters> parameters)
     {
         Assert.notNull(parameters);
         Assert.isTrue(parameters.size() == subChannelFactories.size());
@@ -78,12 +76,27 @@ public class CompositeChannelFactory
         
         ICompartment compartment = new CompartmentFactory().createCompartment(compartmentParameters);
         
+        List<IChannel> subChannels = createSubChannels(channelName, parameters, channelObserver, liveNodeManager,
+            dispatcher, compartment);
+        
+        wireSubChannels(subChannels);
+        
+        return createChannel(channelName, channelObserver, liveNodeManager, compartment, subChannels);
+    }
+
+    protected List<IChannel> createSubChannels(String channelName, List<? extends ChannelParameters> parameters,
+        ChannelObserver channelObserver, LiveNodeManager liveNodeManager, TcpNioDispatcher dispatcher,
+        ICompartment compartment)
+    {
         List<IChannel> subChannels = new ArrayList<IChannel>();
         for (int i = 0; i < parameters.size(); i++)
             subChannels.add(subChannelFactories.get(i).createChannel(channelName, channelObserver, liveNodeManager, dispatcher, 
                 compartment, parameters.get(i)));
-        
-        return createChannel(channelName, channelObserver, liveNodeManager, compartment, subChannels);
+        return subChannels;
+    }
+
+    protected void wireSubChannels(List<IChannel> subChannels)
+    {
     }
 
     protected ICompositeChannel createChannel(String channelName, ChannelObserver channelObserver, LiveNodeManager liveNodeManager,

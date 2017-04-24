@@ -22,7 +22,7 @@ import com.exametrika.impl.groups.cluster.feedback.IGroupState.State;
 import com.exametrika.impl.groups.cluster.membership.GroupsMembership;
 
 /**
- * The {@link DataLossFeedbackProvider} is a data lose feedback provider.
+ * The {@link DataLossFeedbackProvider} is a data loss feedback provider.
  * 
  * @threadsafety This class and its methods are thread safe.
  * @author Medvedev-A

@@ -37,7 +37,8 @@ import com.exametrika.common.messaging.IStreamSendHandler;
 import com.exametrika.common.messaging.MessageFlags;
 import com.exametrika.common.messaging.impl.Channel;
 import com.exametrika.common.messaging.impl.ChannelFactory;
-import com.exametrika.common.messaging.impl.AbstractChannelFactory.FactoryParameters;
+import com.exametrika.common.messaging.impl.ChannelFactoryParameters;
+import com.exametrika.common.messaging.impl.ChannelParameters;
 import com.exametrika.common.perf.Benchmark;
 import com.exametrika.common.perf.Probe;
 import com.exametrika.common.tests.Sequencer;
@@ -154,8 +155,8 @@ public class ChannelPerfTests
     private void createChannels(boolean secured, boolean streamOriented, boolean compressed, boolean pull, boolean multiThreaded,
         int size, int count) throws Throwable
     {
-        ChannelFactory factory = new ChannelFactory(new FactoryParameters());
-        ChannelFactory.Parameters parameters = new ChannelFactory.Parameters();
+        ChannelFactory factory = new ChannelFactory(new ChannelFactoryParameters());
+        ChannelParameters parameters = new ChannelParameters();
         
         parameters.channelName = "server";
         receiver = new TestReceiver(count, size, streamOriented, compressed);

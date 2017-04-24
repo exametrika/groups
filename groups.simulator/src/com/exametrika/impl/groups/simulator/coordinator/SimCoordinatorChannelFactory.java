@@ -9,7 +9,7 @@ import java.net.UnknownHostException;
 import com.exametrika.common.messaging.ChannelException;
 import com.exametrika.common.messaging.IChannel;
 import com.exametrika.common.messaging.impl.ChannelFactory;
-import com.exametrika.common.messaging.impl.AbstractChannelFactory.Parameters;
+import com.exametrika.common.messaging.impl.ChannelParameters;
 
 
 
@@ -26,7 +26,7 @@ public final class SimCoordinatorChannelFactory
         ChannelFactory factory = new ChannelFactory();
         SimCoordinatorChannel coordinatorChannel = new SimCoordinatorChannel(channelName);
         
-        Parameters parameters = new Parameters();
+        ChannelParameters parameters = new ChannelParameters();
         parameters.channelName = channelName;
         parameters.serverPart = true;
         parameters.portRangeStart = port;

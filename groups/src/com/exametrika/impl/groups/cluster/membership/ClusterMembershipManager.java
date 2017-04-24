@@ -11,7 +11,6 @@ import com.exametrika.api.groups.cluster.IClusterMembership;
 import com.exametrika.api.groups.cluster.IClusterMembershipChange;
 import com.exametrika.api.groups.cluster.IClusterMembershipListener;
 import com.exametrika.api.groups.cluster.IMembershipListener.LeaveReason;
-import com.exametrika.api.groups.cluster.IGroupMembershipService;
 import com.exametrika.api.groups.cluster.INode;
 import com.exametrika.common.l10n.DefaultMessage;
 import com.exametrika.common.l10n.ILocalizedMessage;
@@ -44,7 +43,7 @@ public final class ClusterMembershipManager implements IClusterMembershipManager
     private volatile IClusterMembership membership;
 
     public ClusterMembershipManager(String channelName, LocalNodeProvider localNodeProvider,
-        IGroupMembershipService  membershipService, Set<IClusterMembershipListener> membershipListeners)
+        Set<IClusterMembershipListener> membershipListeners)
     {
         Assert.notNull(channelName);
         Assert.notNull(localNodeProvider);

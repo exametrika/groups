@@ -32,19 +32,28 @@ import com.exametrika.impl.groups.cluster.failuredetection.IGroupFailureDetector
 public final class CoreClusterDiscoveryProtocol extends AbstractProtocol implements IWorkerNodeDiscoverer
 {
     private static final IMessages messages = Messages.get(IMessages.class);
-    private final IGroupMembershipService membershipService;
-    private final IGroupFailureDetector failureDetector;
+    private IGroupMembershipService membershipService;
+    private IGroupFailureDetector failureDetector;
     private Set<INode> discoveredNodes = new HashSet<INode>();
 
-    public CoreClusterDiscoveryProtocol(String channelName, IMessageFactory messageFactory, IGroupMembershipService membershipService, 
-        IGroupFailureDetector failureDetector)
+    public CoreClusterDiscoveryProtocol(String channelName, IMessageFactory messageFactory)
     {
         super(channelName, messageFactory);
+    }
 
+    public void setMembershipService(IGroupMembershipService membershipService)
+    {
         Assert.notNull(membershipService);
-        Assert.notNull(failureDetector);
-
+        Assert.isNull(this.membershipService);
+        
         this.membershipService = membershipService;
+    }
+
+    public void setFailureDetector(IGroupFailureDetector failureDetector)
+    {
+        Assert.notNull(failureDetector);
+        Assert.isNull(this.failureDetector);
+        
         this.failureDetector = failureDetector;
     }
 

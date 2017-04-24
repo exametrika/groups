@@ -17,6 +17,7 @@ import com.exametrika.common.messaging.IAddress;
 import com.exametrika.common.messaging.IMessage;
 import com.exametrika.common.messaging.IMessageFactory;
 import com.exametrika.common.messaging.IReceiver;
+import com.exametrika.common.messaging.ISender;
 import com.exametrika.common.messaging.impl.protocols.AbstractProtocol;
 import com.exametrika.common.tasks.ThreadInterruptedException;
 import com.exametrika.common.utils.Assert;
@@ -126,6 +127,10 @@ public abstract class AbstractFeedbackProtocol extends AbstractProtocol implemen
     
     protected void sendData(boolean force)
     {
+        IAddress destination = getDestination();
+        if (destination == null)
+            return;
+        
         Map<UUID, IExchangeData> dataExchanges = new LinkedHashMap<UUID, IExchangeData>();
         for (IFeedbackProvider provider : feedbackProviders)
         {
@@ -134,12 +139,16 @@ public abstract class AbstractFeedbackProtocol extends AbstractProtocol implemen
                 dataExchanges.put(provider.getId(), data);
         }
         
-        IAddress destination = getDestination();
-        if (!dataExchanges.isEmpty() && destination != null)
-            send(messageFactory.create(destination, new FeedbackMessagePart(dataExchanges)));
+        if (!dataExchanges.isEmpty())
+            getFeedbackSender().send(messageFactory.create(destination, new FeedbackMessagePart(dataExchanges)));
     }
 
     protected abstract IAddress getDestination();
+    
+    protected ISender getFeedbackSender()
+    {
+        return getSender();
+    }
     
     private void updateClusterMembership()
     {

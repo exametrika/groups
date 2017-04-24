@@ -73,27 +73,26 @@ state
 Core node
   + CoreNodeChannel, CoreNodeChannelFactory
     + ClusterMembershipManager
-    * GroupsMembershipProvider
-    * NodesMembershipProvider
-    * WorkerToCoreMembershipProvider
-    * SimpleWorkerToCoreMappingStrategy
-    * SimpleGroupMappingStrategy
+    + GroupsMembershipProvider
+    + NodesMembershipProvider
+    + WorkerToCoreMembershipProvider
+    + SimpleWorkerToCoreMappingStrategy
+    + SimpleGroupMappingStrategy
   - core group channel - как сейчас создается для core группы. Дополнительно выше мультикаста:
     + CommandManager
-    * SimpleStateTransferClientProtocol
+    + SimpleStateTransferClientProtocol
     + SimpleStateTransferServerProtocol
       + CompositeSimpleStateTransferFactory + ClusterMembershipStateTransferFactory + 
         GroupDefinitionStateTransferFactory
-    * CoreFeedbackProtocol (ниже мультикаста, нужен сендер из одного канала в другой,
+    + CoreFeedbackProtocol (ниже мультикаста, нужен сендер из одного канала в другой,
       т.к. этот протокол работает в обоих каналах, см. ниже)
-    * CoreCoordinatorClusterFailureDetectionProtocol (ниже мультикаста)
-    * CoreCoordinatorClusterMembershipProtocol
-    * TODO:
+    + CoreCoordinatorClusterFailureDetectionProtocol (ниже мультикаста)
+    + CoreCoordinatorClusterMembershipProtocol
 
   - core to worker channel
-    * CoreClusterDiscoveryProtocol
+    + CoreClusterDiscoveryProtocol
     * CoreClusterFailureDetectionProtocol
-      - WorkerControllerNodeTrackingStrategy
+      + WorkerControllerNodeTrackingStrategy
     * CoreFeedbackProtocol
       - все фидбек провайдеры
       - нужно разделить простой протокол и протокол координатора на коорлинаторе провайдеры

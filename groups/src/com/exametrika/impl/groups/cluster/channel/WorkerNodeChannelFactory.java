@@ -77,9 +77,21 @@ public class WorkerNodeChannelFactory extends CompositeChannelFactory
     private ClusterMembershipManager membershipManager;
     private List<IGracefulExitStrategy> gracefulExitStrategies = new ArrayList<IGracefulExitStrategy>();
     
-    public WorkerNodeChannelFactory(List<AbstractChannelFactory> subChannelFactories, int mainSubChannelIndex)
+    public WorkerNodeChannelFactory()
     {
-        super(Arrays.asList(new WorkerGroupSubChannelFactory(), new WorkerToCoreSubChannelFactory()), 0);
+        this(new WorkerNodeFactoryParameters());
+    }
+    
+    public WorkerNodeChannelFactory(WorkerNodeFactoryParameters factoryParameters)
+    {
+        super(Arrays.asList(new WorkerGroupSubChannelFactory(), new WorkerToCoreSubChannelFactory()), 0, factoryParameters);
+    }
+    
+    public ICompositeChannel createChannel(WorkerNodeParameters parameters)
+    {
+        Assert.notNull(parameters);
+        
+        return createChannel(parameters.channelName, Arrays.asList(parameters, parameters));
     }
     
     @Override

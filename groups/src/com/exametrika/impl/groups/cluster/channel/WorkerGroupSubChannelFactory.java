@@ -19,7 +19,9 @@ import com.exametrika.common.messaging.IMessageFactory;
 import com.exametrika.common.messaging.impl.AbstractChannelFactory;
 import com.exametrika.common.messaging.impl.Channel;
 import com.exametrika.common.messaging.impl.ChannelFactory;
+import com.exametrika.common.messaging.impl.ChannelFactoryParameters;
 import com.exametrika.common.messaging.impl.NoDeliveryHandler;
+import com.exametrika.common.messaging.impl.ChannelParameters;
 import com.exametrika.common.messaging.impl.message.MessageFactory;
 import com.exametrika.common.messaging.impl.protocols.AbstractProtocol;
 import com.exametrika.common.messaging.impl.protocols.ProtocolStack;
@@ -72,7 +74,7 @@ public class WorkerGroupSubChannelFactory extends AbstractChannelFactory
     private CoreGroupMembershipManager membershipManager;
     private List<IGracefulExitStrategy> gracefulExitStrategies = new ArrayList<IGracefulExitStrategy>();
     
-    public static class GroupFactoryParameters extends FactoryParameters
+    public static class GroupFactoryParameters extends ChannelFactoryParameters
     {
         public long discoveryPeriod = 500;
         public long groupFormationPeriod = 10000;
@@ -114,7 +116,7 @@ public class WorkerGroupSubChannelFactory extends AbstractChannelFactory
         }
     }
     
-    public static class GroupParameters extends Parameters
+    public static class GroupParameters extends ChannelParameters
     {
         public IPropertyProvider propertyProvider = new SystemPropertyProvider();
         public IDiscoveryStrategy discoveryStrategy;
@@ -146,7 +148,7 @@ public class WorkerGroupSubChannelFactory extends AbstractChannelFactory
     }
     
     @Override
-    protected void createProtocols(Parameters parameters, String channelName, IMessageFactory messageFactory, 
+    protected void createProtocols(ChannelParameters parameters, String channelName, IMessageFactory messageFactory, 
         ISerializationRegistry serializationRegistry, ILiveNodeProvider liveNodeProvider, List<IFailureObserver> failureObservers, 
         List<AbstractProtocol> protocols)
     {

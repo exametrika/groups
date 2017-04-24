@@ -39,7 +39,8 @@ import com.exametrika.common.messaging.IStreamSendHandler;
 import com.exametrika.common.messaging.MessageFlags;
 import com.exametrika.common.messaging.impl.Channel;
 import com.exametrika.common.messaging.impl.ChannelFactory;
-import com.exametrika.common.messaging.impl.AbstractChannelFactory.FactoryParameters;
+import com.exametrika.common.messaging.impl.ChannelFactoryParameters;
+import com.exametrika.common.messaging.impl.ChannelParameters;
 import com.exametrika.common.perf.Benchmark;
 import com.exametrika.common.perf.Probe;
 import com.exametrika.common.utils.Assert;
@@ -167,10 +168,10 @@ public class ScalabilityChannelPerfTests
     private void createChannels(boolean secured, boolean streamOriented, boolean compressed, boolean pull, ByteArray buffer) throws Throwable
     {
         boolean debug = true;
-        FactoryParameters factoryParameters = new FactoryParameters(debug);
+        ChannelFactoryParameters factoryParameters = new ChannelFactoryParameters(debug);
         factoryParameters.selectionPeriod = 1000;
-        ChannelFactory factory = new ChannelFactory(new FactoryParameters(debug));
-        ChannelFactory.Parameters parameters = new ChannelFactory.Parameters();
+        ChannelFactory factory = new ChannelFactory(new ChannelFactoryParameters(debug));
+        ChannelParameters parameters = new ChannelParameters();
         
         parameters.channelName = "server";
         receiver = new ChannelReceiver(buffer, streamOriented, compressed);
@@ -185,7 +186,7 @@ public class ScalabilityChannelPerfTests
         server = factory.createChannel(parameters);
         server.start();
         
-        factoryParameters = new FactoryParameters(debug);
+        factoryParameters = new ChannelFactoryParameters(debug);
         factoryParameters.selectionPeriod = 1000;
         factoryParameters.transportReceiveThreadCount = 1;
         factory = new ChannelFactory(factoryParameters);

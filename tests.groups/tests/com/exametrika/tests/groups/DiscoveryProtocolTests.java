@@ -29,8 +29,8 @@ import com.exametrika.common.messaging.IChannel;
 import com.exametrika.common.messaging.ILiveNodeProvider;
 import com.exametrika.common.messaging.IMessageFactory;
 import com.exametrika.common.messaging.impl.ChannelFactory;
-import com.exametrika.common.messaging.impl.AbstractChannelFactory.FactoryParameters;
-import com.exametrika.common.messaging.impl.AbstractChannelFactory.Parameters;
+import com.exametrika.common.messaging.impl.ChannelFactoryParameters;
+import com.exametrika.common.messaging.impl.ChannelParameters;
 import com.exametrika.common.messaging.impl.protocols.AbstractProtocol;
 import com.exametrika.common.messaging.impl.protocols.failuredetection.IFailureObserver;
 import com.exametrika.common.utils.Debug;
@@ -74,7 +74,7 @@ public class DiscoveryProtocolTests
         TestChannelFactory channelFactory = new TestChannelFactory(new WellKnownAddressesDiscoveryStrategy(wellKnownAddresses));
         for (int i = 0; i < COUNT; i++)
         {
-            Parameters parameters = new Parameters();
+            ChannelParameters parameters = new ChannelParameters();
             parameters.channelName = "test" + i;
             parameters.clientPart = true;
             parameters.serverPart = true;
@@ -115,12 +115,12 @@ public class DiscoveryProtocolTests
     public void testGroupFormationWithChanges()
     {
         Set<String> wellKnownAddresses = new ConcurrentHashMap<String, String>().keySet("");
-        FactoryParameters factoryParameters = new FactoryParameters();
+        ChannelFactoryParameters factoryParameters = new ChannelFactoryParameters();
         factoryParameters.nodeCleanupPeriod = 1000;
         TestChannelFactory channelFactory = new TestChannelFactory(factoryParameters, new WellKnownAddressesDiscoveryStrategy(wellKnownAddresses));
         for (int i = 0; i < COUNT; i++)
         {
-            Parameters parameters = new Parameters();
+            ChannelParameters parameters = new ChannelParameters();
             parameters.channelName = "test" + i;
             parameters.clientPart = true;
             parameters.serverPart = true;
@@ -176,7 +176,7 @@ public class DiscoveryProtocolTests
     {
         Set<String> wellKnownAddresses = new ConcurrentHashMap<String, String>().keySet("");
         TestChannelFactory channelFactory = new TestChannelFactory(new WellKnownAddressesDiscoveryStrategy(wellKnownAddresses));
-        Parameters parameters = new Parameters();
+        ChannelParameters parameters = new ChannelParameters();
         parameters.channelName = "test0";
         parameters.clientPart = true;
         parameters.serverPart = true;
@@ -202,7 +202,7 @@ public class DiscoveryProtocolTests
         TestChannelFactory channelFactory = new TestChannelFactory(new WellKnownAddressesDiscoveryStrategy(wellKnownAddresses));
         for (int i = 0; i < COUNT; i++)
         {
-            Parameters parameters = new Parameters();
+            ChannelParameters parameters = new ChannelParameters();
             parameters.channelName = "test" + i;
             parameters.clientPart = true;
             parameters.serverPart = true;
@@ -257,7 +257,7 @@ public class DiscoveryProtocolTests
         TestChannelFactory channelFactory = new TestChannelFactory(new WellKnownAddressesDiscoveryStrategy(wellKnownAddresses));
         for (int i = 0; i < COUNT; i++)
         {
-            Parameters parameters = new Parameters();
+            ChannelParameters parameters = new ChannelParameters();
             parameters.channelName = "test" + i;
             parameters.clientPart = true;
             parameters.serverPart = true;
@@ -312,7 +312,7 @@ public class DiscoveryProtocolTests
         TestChannelFactory channelFactory = new TestChannelFactory(new WellKnownAddressesDiscoveryStrategy(wellKnownAddresses));
         for (int i = 0; i < COUNT; i++)
         {
-            Parameters parameters = new Parameters();
+            ChannelParameters parameters = new ChannelParameters();
             parameters.channelName = "test" + i;
             parameters.clientPart = true;
             parameters.serverPart = true;
@@ -375,12 +375,12 @@ public class DiscoveryProtocolTests
     public void testGroupJoinWithGroupFailure()
     {
         Set<String> wellKnownAddresses = new ConcurrentHashMap<String, String>().keySet("");
-        FactoryParameters factoryParameters = new FactoryParameters();
+        ChannelFactoryParameters factoryParameters = new ChannelFactoryParameters();
         factoryParameters.nodeCleanupPeriod = 1000;
         TestChannelFactory channelFactory = new TestChannelFactory(factoryParameters, new WellKnownAddressesDiscoveryStrategy(wellKnownAddresses));
         for (int i = 0; i < COUNT; i++)
         {
-            Parameters parameters = new Parameters();
+            ChannelParameters parameters = new ChannelParameters();
             parameters.channelName = "test" + i;
             parameters.clientPart = true;
             parameters.serverPart = true;
@@ -568,7 +568,7 @@ public class DiscoveryProtocolTests
         private List<MembershipServiceMock> membershipServices = new ArrayList<MembershipServiceMock>();
         private List<FailureDetectorMock> failureDetectors = new ArrayList<FailureDetectorMock>();
         
-        public TestChannelFactory(FactoryParameters factoryParameters, IDiscoveryStrategy discoveryStrategy)
+        public TestChannelFactory(ChannelFactoryParameters factoryParameters, IDiscoveryStrategy discoveryStrategy)
         {
             super(factoryParameters);
             this.discoveryStrategy = discoveryStrategy;
@@ -576,11 +576,11 @@ public class DiscoveryProtocolTests
         
         public TestChannelFactory(IDiscoveryStrategy discoveryStrategy)
         {
-            this(new FactoryParameters(Debug.isDebug()), discoveryStrategy);
+            this(new ChannelFactoryParameters(Debug.isDebug()), discoveryStrategy);
         }
         
         @Override
-        protected void createProtocols(Parameters parameters, String channelName, IMessageFactory messageFactory, 
+        protected void createProtocols(ChannelParameters parameters, String channelName, IMessageFactory messageFactory, 
             ISerializationRegistry serializationRegistry, ILiveNodeProvider liveNodeProvider, List<IFailureObserver> failureObservers,
             List<AbstractProtocol> protocols)
         {

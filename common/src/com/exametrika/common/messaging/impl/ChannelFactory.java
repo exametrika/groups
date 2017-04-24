@@ -28,15 +28,15 @@ public class ChannelFactory extends AbstractChannelFactory
 {
     public ChannelFactory()
     {
-        this(new FactoryParameters());
+        this(new ChannelFactoryParameters());
     }
     
-    public ChannelFactory(FactoryParameters factoryParameters)
+    public ChannelFactory(ChannelFactoryParameters factoryParameters)
     {
         super(factoryParameters);
     }
     
-    public IChannel createChannel(Parameters parameters)
+    public IChannel createChannel(ChannelParameters parameters)
     {
         Assert.notNull(parameters);
         

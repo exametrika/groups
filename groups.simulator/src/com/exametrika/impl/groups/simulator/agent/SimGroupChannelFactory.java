@@ -25,7 +25,7 @@ import com.exametrika.common.messaging.IMessagePart;
 import com.exametrika.common.messaging.IReceiver;
 import com.exametrika.common.messaging.ISink;
 import com.exametrika.common.messaging.impl.Channel;
-import com.exametrika.common.messaging.impl.AbstractChannelFactory.Parameters;
+import com.exametrika.common.messaging.impl.ChannelParameters;
 import com.exametrika.common.messaging.impl.protocols.AbstractProtocol;
 import com.exametrika.common.messaging.impl.protocols.ProtocolStack;
 import com.exametrika.common.messaging.impl.protocols.failuredetection.IFailureObserver;
@@ -378,7 +378,7 @@ public class SimGroupChannelFactory
         }
         
         @Override
-        protected void createProtocols(Parameters parameters, String channelName, IMessageFactory messageFactory, 
+        protected void createProtocols(ChannelParameters parameters, String channelName, IMessageFactory messageFactory, 
             ISerializationRegistry serializationRegistry, ILiveNodeProvider liveNodeProvider, List<IFailureObserver> failureObservers, 
             List<AbstractProtocol> protocols)
         {

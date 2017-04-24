@@ -20,7 +20,9 @@ import com.exametrika.common.messaging.IReceiver;
 import com.exametrika.common.messaging.ISender;
 import com.exametrika.common.messaging.impl.Channel;
 import com.exametrika.common.messaging.impl.ChannelFactory;
+import com.exametrika.common.messaging.impl.ChannelFactoryParameters;
 import com.exametrika.common.messaging.impl.MessageFlags;
+import com.exametrika.common.messaging.impl.ChannelParameters;
 import com.exametrika.common.messaging.impl.protocols.AbstractProtocol;
 import com.exametrika.common.messaging.impl.protocols.ProtocolStack;
 import com.exametrika.common.messaging.impl.transports.UnicastAddress;
@@ -64,7 +66,7 @@ public class FailureChannelTests
     @Test
     public void testDisconnect() throws Throwable
     {
-        ChannelFactory.FactoryParameters parameters = new ChannelFactory.FactoryParameters();
+        ChannelFactoryParameters parameters = new ChannelFactoryParameters();
         parameters.cleanupPeriod = 100;
         parameters.transportMinReconnectPeriod = 1000;
         
@@ -94,7 +96,7 @@ public class FailureChannelTests
     @Test
     public void testSecuredDisconnect() throws Throwable
     {
-        ChannelFactory.FactoryParameters parameters = new ChannelFactory.FactoryParameters();
+        ChannelFactoryParameters parameters = new ChannelFactoryParameters();
         parameters.cleanupPeriod = 100;
         parameters.transportMinReconnectPeriod = 1000;
         
@@ -124,7 +126,7 @@ public class FailureChannelTests
     @Test
     public void testTcpFailure() throws Throwable
     {
-        ChannelFactory.FactoryParameters parameters = new ChannelFactory.FactoryParameters();
+        ChannelFactoryParameters parameters = new ChannelFactoryParameters();
         parameters.cleanupPeriod = 100;
         parameters.transportMinReconnectPeriod = 1000;
 
@@ -157,7 +159,7 @@ public class FailureChannelTests
     @Test
     public void testHeartbeatFailure() throws Throwable
     {
-        ChannelFactory.FactoryParameters parameters = new ChannelFactory.FactoryParameters();
+        ChannelFactoryParameters parameters = new ChannelFactoryParameters();
         parameters.heartbeatFailureDetectionPeriod = 1000;
         parameters.heartbeatPeriod = 100;
         parameters.heartbeatStartPeriod = 200;
@@ -205,7 +207,7 @@ public class FailureChannelTests
     @Test
     public void testBlockReconnect() throws Throwable
     {
-        ChannelFactory.FactoryParameters factoryParameters = new ChannelFactory.FactoryParameters();
+        ChannelFactoryParameters factoryParameters = new ChannelFactoryParameters();
         factoryParameters.cleanupPeriod = 100;
         factoryParameters.transportMinReconnectPeriod = 1000;
         
@@ -219,7 +221,7 @@ public class FailureChannelTests
         assertThat(!client.getLiveNodeProvider().isLive(server.getLiveNodeProvider().getLocalNode()), is(true));
         assertThat(clientListener.disconnected.contains(server.getLiveNodeProvider().getLocalNode()), is(true));
         
-        ChannelFactory.Parameters parameters = new ChannelFactory.Parameters();
+        ChannelParameters parameters = new ChannelParameters();
         
         parameters.channelName = "server";
         parameters.receiver = serverReceiver;
@@ -258,7 +260,7 @@ public class FailureChannelTests
     @Test
     public void testQueueOverflow() throws Throwable
     {
-        ChannelFactory.FactoryParameters factoryParameters = new ChannelFactory.FactoryParameters(true);
+        ChannelFactoryParameters factoryParameters = new ChannelFactoryParameters(true);
         factoryParameters.heartbeatStartPeriod = 1000000;
         factoryParameters.transportMaxUnlockSendQueueCapacity = 0;
         factoryParameters.transportMinLockSendQueueCapacity = 100;
@@ -291,7 +293,7 @@ public class FailureChannelTests
 
     private void createChannels(boolean secured, ChannelFactory factory) throws Throwable
     {
-        ChannelFactory.Parameters parameters = new ChannelFactory.Parameters();
+        ChannelParameters parameters = new ChannelParameters();
         
         parameters.channelName = "server";
         parameters.receiver = serverReceiver;

@@ -30,8 +30,8 @@ import com.exametrika.common.messaging.ILiveNodeProvider;
 import com.exametrika.common.messaging.IMessageFactory;
 import com.exametrika.common.messaging.impl.Channel;
 import com.exametrika.common.messaging.impl.ChannelFactory;
-import com.exametrika.common.messaging.impl.AbstractChannelFactory.FactoryParameters;
-import com.exametrika.common.messaging.impl.AbstractChannelFactory.Parameters;
+import com.exametrika.common.messaging.impl.ChannelFactoryParameters;
+import com.exametrika.common.messaging.impl.ChannelParameters;
 import com.exametrika.common.messaging.impl.protocols.AbstractProtocol;
 import com.exametrika.common.messaging.impl.protocols.ProtocolStack;
 import com.exametrika.common.messaging.impl.protocols.failuredetection.HeartbeatProtocol;
@@ -77,11 +77,11 @@ public class FailureDetectionProtocolTests
     @Test
     public void testExplicitLeaveFailure() throws Exception
     {
-        TestChannelFactory channelFactory = new TestChannelFactory(new FactoryParameters(Debug.isDebug()));
+        TestChannelFactory channelFactory = new TestChannelFactory(new ChannelFactoryParameters(Debug.isDebug()));
         List<INode> nodes = new ArrayList<INode>();
         for (int i = 0; i < COUNT; i++)
         {
-            Parameters parameters = new Parameters();
+            ChannelParameters parameters = new ChannelParameters();
             parameters.channelName = "test" + i;
             parameters.clientPart = true;
             parameters.serverPart = true;
@@ -172,12 +172,12 @@ public class FailureDetectionProtocolTests
     @Test @Ignore
     public void testShun() throws Exception
     {
-        TestChannelFactory channelFactory = new TestChannelFactory(new FactoryParameters(Debug.isDebug()));
+        TestChannelFactory channelFactory = new TestChannelFactory(new ChannelFactoryParameters(Debug.isDebug()));
         channelFactory.failureHistoryPeriod = 20000;
         List<INode> nodes = new ArrayList<INode>();
         for (int i = 0; i < COUNT; i++)
         {
-            Parameters parameters = new Parameters();
+            ChannelParameters parameters = new ChannelParameters();
             parameters.channelName = "test" + i;
             parameters.clientPart = true;
             parameters.serverPart = true;
@@ -237,7 +237,7 @@ public class FailureDetectionProtocolTests
     @Test
     public void testDetectedLeaveFailure() throws Exception
     {
-        FactoryParameters factoryParameters = new FactoryParameters(Debug.isDebug());
+        ChannelFactoryParameters factoryParameters = new ChannelFactoryParameters(Debug.isDebug());
         factoryParameters.heartbeatTrackPeriod = 100;
         factoryParameters.heartbeatPeriod = 100;
         factoryParameters.heartbeatStartPeriod = 300;
@@ -247,7 +247,7 @@ public class FailureDetectionProtocolTests
         List<INode> nodes = new ArrayList<INode>();
         for (int i = 0; i < COUNT; i++)
         {
-            Parameters parameters = new Parameters();
+            ChannelParameters parameters = new ChannelParameters();
             parameters.channelName = "test" + i;
             parameters.clientPart = true;
             parameters.serverPart = true;
@@ -445,7 +445,7 @@ public class FailureDetectionProtocolTests
         private List<ChannelReconnectorMock> channelReconnectors = new ArrayList<ChannelReconnectorMock>();
         private List<IMessageFactory> messageFactories = new ArrayList<IMessageFactory>();
         
-        public TestChannelFactory(FactoryParameters factoryParameters)
+        public TestChannelFactory(ChannelFactoryParameters factoryParameters)
         {
             super(factoryParameters);
         }
@@ -457,7 +457,7 @@ public class FailureDetectionProtocolTests
         }
         
         @Override
-        protected void createProtocols(Parameters parameters, String channelName, IMessageFactory messageFactory, 
+        protected void createProtocols(ChannelParameters parameters, String channelName, IMessageFactory messageFactory, 
             ISerializationRegistry serializationRegistry, ILiveNodeProvider liveNodeProvider, List<IFailureObserver> failureObservers,
             List<AbstractProtocol> protocols)
         {

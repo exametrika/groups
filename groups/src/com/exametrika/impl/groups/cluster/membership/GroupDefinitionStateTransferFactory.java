@@ -26,11 +26,12 @@ import com.exametrika.spi.groups.ISimpleStateTransferServer;
  */
 public final class GroupDefinitionStateTransferFactory implements ISimpleStateTransferFactory
 {
-    private final SimpleGroupMappingStrategy groupMappingStrategy;
+    private SimpleGroupMappingStrategy groupMappingStrategy;
 
-    public GroupDefinitionStateTransferFactory(SimpleGroupMappingStrategy groupMappingStrategy)
+    public void setGroupMappingStrategy(SimpleGroupMappingStrategy groupMappingStrategy)
     {
         Assert.notNull(groupMappingStrategy);
+        Assert.isNull(this.groupMappingStrategy);
         
         this.groupMappingStrategy = groupMappingStrategy;
     }

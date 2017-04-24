@@ -82,7 +82,7 @@ public class ClientServerChannelTests
     public void setUp() throws Throwable
     {
         ChannelFactory factory = new ChannelFactory();
-        ChannelFactory.Parameters parameters = new ChannelFactory.Parameters();
+        Parameters parameters = new Parameters();
         
         parameters.channelName = "server";
         parameters.receiver = serverReceiver;

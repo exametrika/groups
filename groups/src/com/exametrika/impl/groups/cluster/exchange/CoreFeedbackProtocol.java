@@ -11,6 +11,7 @@ import com.exametrika.api.groups.cluster.IGroupMembershipService;
 import com.exametrika.api.groups.cluster.INode;
 import com.exametrika.common.messaging.IAddress;
 import com.exametrika.common.messaging.IMessageFactory;
+import com.exametrika.common.messaging.ISender;
 import com.exametrika.common.utils.Assert;
 import com.exametrika.impl.groups.cluster.failuredetection.IFailureDetectionListener;
 import com.exametrika.impl.groups.cluster.failuredetection.IGroupFailureDetector;
@@ -29,6 +30,7 @@ public final class CoreFeedbackProtocol extends AbstractFeedbackProtocol impleme
     private final IGroupMembershipService membershipService;
     private final IGroupFailureDetector failureDetector;
     private IAddress coordinator;
+    private ISender feedbackSender;
     
     public CoreFeedbackProtocol(String channelName, IMessageFactory messageFactory, IClusterMembershipManager membershipManager, 
         List<IFeedbackProvider> feedbackProviders, List<IFeedbackListener> listeners, long dataExchangePeriod, 
@@ -43,6 +45,14 @@ public final class CoreFeedbackProtocol extends AbstractFeedbackProtocol impleme
         this.membershipService = membershipService;
     }
 
+    public void setFeedbackSender(ISender feedBackSender)
+    {
+        Assert.notNull(feedBackSender);
+        Assert.isNull(this.feedbackSender);
+        
+        this.feedbackSender = feedBackSender;
+    }
+    
     @Override
     protected IAddress getDestination()
     {
@@ -66,6 +76,12 @@ public final class CoreFeedbackProtocol extends AbstractFeedbackProtocol impleme
     public void onMemberLeft(INode member)
     {
         updateCoordinator();
+    }
+    
+    @Override
+    protected ISender getFeedbackSender()
+    {
+        return feedbackSender;
     }
     
     private void updateCoordinator()

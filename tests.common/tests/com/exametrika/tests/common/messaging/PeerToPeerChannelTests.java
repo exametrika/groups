@@ -32,7 +32,7 @@ import com.exametrika.common.messaging.ISink;
 import com.exametrika.common.messaging.MessageFlags;
 import com.exametrika.common.messaging.impl.Channel;
 import com.exametrika.common.messaging.impl.ChannelFactory;
-import com.exametrika.common.messaging.impl.AbstractChannelFactory.FactoryParameters;
+import com.exametrika.common.messaging.impl.ChannelFactoryParameters;
 import com.exametrika.common.tests.Sequencer;
 import com.exametrika.common.utils.Classes;
 import com.exametrika.tests.common.messaging.StreamingProtocolTests.TestStreamReceiveMessagePart;
@@ -76,8 +76,8 @@ public class PeerToPeerChannelTests
     @Before
     public void setUp() throws Throwable
     {
-        ChannelFactory factory = new ChannelFactory(new FactoryParameters());
-        ChannelFactory.Parameters parameters = new ChannelFactory.Parameters();
+        ChannelFactory factory = new ChannelFactory(new ChannelFactoryParameters());
+        Parameters parameters = new Parameters();
         
         parameters.channelName = "server";
         parameters.secured = secured;

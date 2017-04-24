@@ -4,7 +4,6 @@
 package com.exametrika.common.messaging.impl;
 
 import java.io.InputStream;
-import java.net.InetAddress;
 import java.security.KeyStore;
 import java.security.SecureRandom;
 import java.util.ArrayList;
@@ -33,9 +32,7 @@ import com.exametrika.common.messaging.ChannelException;
 import com.exametrika.common.messaging.IChannel;
 import com.exametrika.common.messaging.IConnectionProvider;
 import com.exametrika.common.messaging.ILiveNodeProvider;
-import com.exametrika.common.messaging.IMessage;
 import com.exametrika.common.messaging.IMessageFactory;
-import com.exametrika.common.messaging.IReceiver;
 import com.exametrika.common.messaging.impl.message.MessageFactory;
 import com.exametrika.common.messaging.impl.protocols.AbstractProtocol;
 import com.exametrika.common.messaging.impl.protocols.ProtocolStack;
@@ -53,14 +50,10 @@ import com.exametrika.common.messaging.impl.protocols.trace.InterceptorProtocol;
 import com.exametrika.common.messaging.impl.protocols.trace.TracingProtocol;
 import com.exametrika.common.messaging.impl.transports.ConnectionManager;
 import com.exametrika.common.messaging.impl.transports.tcp.TcpTransport;
-import com.exametrika.common.net.ITcpConnectionFilter;
-import com.exametrika.common.net.ITcpRateControllerFactory;
 import com.exametrika.common.net.nio.TcpNioDispatcher;
 import com.exametrika.common.net.nio.socket.ITcpSocketChannelFactory;
 import com.exametrika.common.net.nio.socket.TcpSocketChannelFactory;
 import com.exametrika.common.net.nio.ssl.TcpSslSocketChannelFactory;
-import com.exametrika.common.net.utils.ITcpPacketDiscardPolicy;
-import com.exametrika.common.net.utils.TcpNameFilter;
 import com.exametrika.common.utils.Assert;
 import com.exametrika.common.utils.IOs;
 import com.exametrika.common.utils.Serializers;
@@ -75,75 +68,14 @@ public abstract class AbstractChannelFactory
 {
     private static final IMessages messages = Messages.get(IMessages.class);
     protected final ILogger logger = Loggers.get(getClass());
-    protected final FactoryParameters factoryParameters;
-    
-    public static class FactoryParameters
-    {
-        public long selectionPeriod = 100;
-        public long cleanupPeriod = 1000;
-        public long nodeCleanupPeriod = 30000;
-        public int compressionLevel = 5;
-        public int streamingMaxFragmentSize = 10000; 
-        public long heartbeatTrackPeriod = 500;
-        public long heartbeatStartPeriod = 10000;
-        public long heartbeatPeriod = 1000;
-        public long heartbeatFailureDetectionPeriod = 60000;
-        public long transportChannelTimeout = 10000;
-        public long transportMaxChannelIdlePeriod = 600000;
-        public Integer transportReceiveThreadCount = null;
-        public int transportMaxUnlockSendQueueCapacity = 700000;
-        public int transportMinLockSendQueueCapacity = 1000000;
-        public int transportMaxPacketSize = 1000000;
-        public long transportMinReconnectPeriod = 60000;
-        public int compartmentMaxUnlockQueueCapacity = 7000000;
-        public int compartmentMinLockQueueCapacity = 10000000;
-        public int maxBundlingMessageSize = 10000;
-        public int maxBundlingPeriod = 100;
-        public int maxBundleSize = 1000000;
-        public boolean receiveMessageList = false;
-        public int sendQueueIdlePeriod = 600000;
-        
-        public FactoryParameters()
-        {
-            this(false);
-        }
-        
-        public FactoryParameters(boolean debug)
-        {
-            int timeMultiplier = !debug ? 1 : 1000; 
-            heartbeatFailureDetectionPeriod *= timeMultiplier;
-            heartbeatStartPeriod *= timeMultiplier;
-            transportChannelTimeout *= timeMultiplier;
-            transportMaxChannelIdlePeriod *= timeMultiplier;
-        }
-    }
-    
-    public static class Parameters
-    {
-        public String channelName;
-        public boolean clientPart;
-        public boolean serverPart;
-        public IReceiver receiver;
-        public InetAddress bindAddress;
-        public Integer portRangeStart;
-        public Integer portRangeEnd;
-        public boolean secured;
-        public String keyStorePath;
-        public String keyStorePassword;
-        public ITcpConnectionFilter connectionFilter;
-        public ITcpRateControllerFactory rateController;
-        public TcpNameFilter adminFilter;
-        public List<ISerializationRegistrar> serializationRegistrars = new ArrayList<ISerializationRegistrar>();
-        public boolean multiThreaded = false;
-        public ITcpPacketDiscardPolicy<IMessage> discardPolicy;
-    }
+    protected final ChannelFactoryParameters factoryParameters;
     
     public AbstractChannelFactory()
     {
-        this(new FactoryParameters());
+        this(new ChannelFactoryParameters());
     }
     
-    public AbstractChannelFactory(FactoryParameters factoryParameters)
+    public AbstractChannelFactory(ChannelFactoryParameters factoryParameters)
     {
         Assert.notNull(factoryParameters);
         
@@ -151,7 +83,7 @@ public abstract class AbstractChannelFactory
     }
     
     protected IChannel createChannel(String channelName, ChannelObserver channelObserver, LiveNodeManager liveNodeManager, 
-        TcpNioDispatcher dispatcher, ICompartment compartment, Parameters parameters)
+        TcpNioDispatcher dispatcher, ICompartment compartment, ChannelParameters parameters)
     {
         Assert.notNull(parameters);
         Assert.notNull(parameters.receiver);
@@ -294,7 +226,7 @@ public abstract class AbstractChannelFactory
         return new FullNodeTrackingStrategy();
     }
     
-    protected void createProtocols(Parameters parameters, String channelName, IMessageFactory messageFactory, ISerializationRegistry serializationRegistry, 
+    protected void createProtocols(ChannelParameters parameters, String channelName, IMessageFactory messageFactory, ISerializationRegistry serializationRegistry, 
         ILiveNodeProvider liveNodeProvider, List<IFailureObserver> failureObservers, List<AbstractProtocol> protocols)
     {
     }

@@ -27,21 +27,27 @@ import com.exametrika.impl.groups.cluster.failuredetection.IClusterFailureDetect
  */
 public final class NodesMembershipProvider implements IClusterMembershipProvider
 {
-    private final IWorkerNodeDiscoverer nodeDiscoverer;
+    private IWorkerNodeDiscoverer nodeDiscoverer;
     private final IClusterFailureDetector failureDetector;
     private Set<INode> discoveredNodes;
     private Set<INode> failedNodes;
     private Set<INode> leftNodes;
     
-    public NodesMembershipProvider(IWorkerNodeDiscoverer nodeDiscoverer, IClusterFailureDetector failureDetector)
+    public NodesMembershipProvider(IClusterFailureDetector failureDetector)
     {
-        Assert.notNull(nodeDiscoverer);
         Assert.notNull(failureDetector);
         
-        this.nodeDiscoverer = nodeDiscoverer;
         this.failureDetector = failureDetector;
     }
     
+    public void setNodeDiscoverer(IWorkerNodeDiscoverer nodeDiscoverer)
+    {
+        Assert.notNull(nodeDiscoverer);
+        Assert.isNull(this.nodeDiscoverer);
+        
+        this.nodeDiscoverer = nodeDiscoverer;
+    }
+
     @Override
     public boolean isCoreGroupOnly()
     {

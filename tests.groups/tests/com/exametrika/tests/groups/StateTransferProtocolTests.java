@@ -37,8 +37,8 @@ import com.exametrika.common.messaging.IMessagePart;
 import com.exametrika.common.messaging.IReceiver;
 import com.exametrika.common.messaging.impl.Channel;
 import com.exametrika.common.messaging.impl.ChannelFactory;
-import com.exametrika.common.messaging.impl.AbstractChannelFactory.FactoryParameters;
-import com.exametrika.common.messaging.impl.AbstractChannelFactory.Parameters;
+import com.exametrika.common.messaging.impl.ChannelFactoryParameters;
+import com.exametrika.common.messaging.impl.ChannelParameters;
 import com.exametrika.common.messaging.impl.message.MessageFactory;
 import com.exametrika.common.messaging.impl.protocols.AbstractProtocol;
 import com.exametrika.common.messaging.impl.protocols.ProtocolStack;
@@ -411,7 +411,7 @@ public class StateTransferProtocolTests
     {
         for (int i = 0; i < COUNT; i++)
         {
-            Parameters parameters = new Parameters();
+            ChannelParameters parameters = new ChannelParameters();
             parameters.channelName = "test" + i;
             parameters.clientPart = true;
             parameters.serverPart = true;
@@ -770,11 +770,11 @@ public class StateTransferProtocolTests
         }
     }
     
-    private static FactoryParameters getFactoryParameters()
+    private static ChannelFactoryParameters getFactoryParameters()
     {
         boolean debug = Debug.isDebug();
         
-        FactoryParameters factoryParameters = new FactoryParameters(debug);
+        ChannelFactoryParameters factoryParameters = new ChannelFactoryParameters(debug);
         if (!debug)
         {
             factoryParameters.heartbeatTrackPeriod = 100;
@@ -829,7 +829,7 @@ public class StateTransferProtocolTests
         }
         
         @Override
-        protected void createProtocols(Parameters parameters, String channelName, IMessageFactory messageFactory, 
+        protected void createProtocols(ChannelParameters parameters, String channelName, IMessageFactory messageFactory, 
             ISerializationRegistry serializationRegistry, ILiveNodeProvider liveNodeProvider, List<IFailureObserver> failureObservers, 
             List<AbstractProtocol> protocols)
         {
