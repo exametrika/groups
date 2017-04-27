@@ -9,7 +9,7 @@ import com.exametrika.common.compartment.ICompartmentTask;
 import com.exametrika.common.messaging.ChannelException;
 import com.exametrika.common.utils.Assert;
 import com.exametrika.common.utils.ICompletionHandler;
-import com.exametrika.spi.groups.IStateTransferServer;
+import com.exametrika.spi.groups.IAsyncStateTransferServer;
 
 /**
  * The {@link SnapshotSaveTask} represents a task which saves state to temporal file.
@@ -19,11 +19,11 @@ import com.exametrika.spi.groups.IStateTransferServer;
  */
 public final class SnapshotSaveTask implements ICompartmentTask<File>
 {
-    private final IStateTransferServer stateTransferServer;
+    private final IAsyncStateTransferServer stateTransferServer;
     private final ICompletionHandler completionHandler;
     private boolean canceled;
 
-    public SnapshotSaveTask(IStateTransferServer stateTransferServer, ICompletionHandler completionHandler)
+    public SnapshotSaveTask(IAsyncStateTransferServer stateTransferServer, ICompletionHandler completionHandler)
     {
         Assert.notNull(stateTransferServer);
         Assert.notNull(completionHandler);

@@ -32,6 +32,7 @@ public final class FailureUpdateMessagePartSerializer extends AbstractSerializer
     {
         FailureUpdateMessagePart part = (FailureUpdateMessagePart)object;
 
+        serialization.writeBoolean(part.isCore());
         serialization.writeInt(part.getFailedMembers().size());
         
         for (UUID id : part.getFailedMembers())
@@ -46,6 +47,7 @@ public final class FailureUpdateMessagePartSerializer extends AbstractSerializer
     @Override
     public Object deserialize(IDeserialization deserialization, UUID id)
     {
+        boolean core = deserialization.readBoolean();
         int count = deserialization.readInt();
         
         Set<UUID> failedMembers = new HashSet<UUID>();
@@ -58,6 +60,6 @@ public final class FailureUpdateMessagePartSerializer extends AbstractSerializer
         for (int i = 0; i < count; i++)
             leftMembers.add(Serializers.readUUID(deserialization));
         
-        return new FailureUpdateMessagePart(failedMembers, leftMembers);
+        return new FailureUpdateMessagePart(failedMembers, leftMembers, core);
     }
 }

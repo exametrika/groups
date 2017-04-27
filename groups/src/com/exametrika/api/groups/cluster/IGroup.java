@@ -4,6 +4,7 @@
 package com.exametrika.api.groups.cluster;
 
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 import com.exametrika.common.messaging.IAddress;
@@ -36,6 +37,13 @@ public interface IGroup extends Comparable<IGroup>
      * @return group address
      */
     IAddress getAddress();
+    
+    /**
+     * Returns group options.
+     *
+     * @return group options
+     */
+    Set<GroupOption> getOptions();
     
     /**
      * Is local node belongs to group primary partition?

@@ -36,6 +36,13 @@ public final class DataLossFeedbackProvider implements IFeedbackProvider, IDataL
     private final IClusterMembershipService membershipService;
     private final IGroupFeedbackService groupFeedbackService;
     
+    public DataLossFeedbackProvider()
+    {
+        this.dataLossObserver = null;
+        this.membershipService = null;
+        this.groupFeedbackService = null;
+    }
+    
     public DataLossFeedbackProvider(IDataLossObserver dataLossObserver, IClusterMembershipService membershipService,
         IGroupFeedbackService groupFeedbackService)
     {

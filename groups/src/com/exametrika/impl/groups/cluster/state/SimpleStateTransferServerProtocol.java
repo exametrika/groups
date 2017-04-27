@@ -3,6 +3,8 @@
  */
 package com.exametrika.impl.groups.cluster.state;
 
+import java.util.UUID;
+
 import com.exametrika.api.groups.cluster.INode;
 import com.exametrika.common.l10n.DefaultMessage;
 import com.exametrika.common.l10n.ILocalizedMessage;
@@ -21,8 +23,8 @@ import com.exametrika.impl.groups.cluster.flush.IFlush;
 import com.exametrika.impl.groups.cluster.flush.IFlushParticipant;
 import com.exametrika.impl.groups.cluster.membership.IGroupMembershipManager;
 import com.exametrika.spi.groups.ISimpleStateStore;
-import com.exametrika.spi.groups.ISimpleStateTransferFactory;
 import com.exametrika.spi.groups.ISimpleStateTransferServer;
+import com.exametrika.spi.groups.IStateTransferFactory;
 
 /**
  * The {@link SimpleStateTransferServerProtocol} represents a simple state transfer server protocol, which keeps state in memory.
@@ -43,7 +45,7 @@ public final class SimpleStateTransferServerProtocol extends AbstractProtocol im
     private IFlush flush;
     
     public SimpleStateTransferServerProtocol(String channelName, IMessageFactory messageFactory, IGroupMembershipManager membershipManager, 
-        IGroupFailureDetector failureDetector, ISimpleStateTransferFactory stateTransferFactory, ISimpleStateStore stateStore,
+        IGroupFailureDetector failureDetector, IStateTransferFactory stateTransferFactory, UUID groupId,
         long saveSnapshotPeriod)
     {
         super(channelName, messageFactory);
@@ -51,12 +53,12 @@ public final class SimpleStateTransferServerProtocol extends AbstractProtocol im
         Assert.notNull(membershipManager);
         Assert.notNull(failureDetector);
         Assert.notNull(stateTransferFactory);
-        Assert.notNull(stateStore);
+        Assert.notNull(groupId);
         
         this.membershipManager = membershipManager;
         this.failureDetector = failureDetector;
-        this.server = stateTransferFactory.createServer();
-        this.stateStore = stateStore;
+        this.server = (ISimpleStateTransferServer)stateTransferFactory.createServer(groupId);
+        this.stateStore = (ISimpleStateStore)stateTransferFactory.createStore(groupId);
         this.saveSnapshotPeriod = saveSnapshotPeriod;
     }
 

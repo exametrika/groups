@@ -8,6 +8,7 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+import java.util.UUID;
 
 import com.exametrika.api.groups.cluster.IGroup;
 import com.exametrika.api.groups.cluster.INode;
@@ -34,22 +35,23 @@ import com.exametrika.impl.groups.cluster.failuredetection.IFailureDetectionList
 import com.exametrika.impl.groups.cluster.flush.IFlush;
 import com.exametrika.impl.groups.cluster.flush.IFlushParticipant;
 import com.exametrika.impl.groups.cluster.membership.IGroupMembershipManager;
-import com.exametrika.spi.groups.IStateStore;
+import com.exametrika.spi.groups.IAsyncStateStore;
 import com.exametrika.spi.groups.IStateTransferFactory;
 
 /**
- * The {@link StateTransferClientProtocol} represents a state transfer client protocol.
+ * The {@link AsyncStateTransferClientProtocol} represents a state transfer client protocol.
  * 
  * @threadsafety This class and its methods are not thread safe.
  * @author Medvedev-A
  */
-public final class StateTransferClientProtocol extends AbstractProtocol implements IFailureDetectionListener,
+public final class AsyncStateTransferClientProtocol extends AbstractProtocol implements IFailureDetectionListener,
     IFlushParticipant, IGroupJoinStrategy
 {
     private static final IMessages messages = Messages.get(IMessages.class);
     private final IGroupMembershipManager membershipManager;
     private final IStateTransferFactory stateTransferFactory;
-    private final IStateStore stateStore;
+    private final UUID groupId;
+    private final IAsyncStateStore stateStore;
     private ICompartment compartment;
     private IChannelReconnector channelReconnector;
     private final ISerializationRegistry serializationRegistry;
@@ -66,20 +68,21 @@ public final class StateTransferClientProtocol extends AbstractProtocol implemen
     private boolean transferred;
     private boolean discovered;
 
-    public StateTransferClientProtocol(String channelName, IMessageFactory messageFactory, IGroupMembershipManager membershipManager, 
-        IStateTransferFactory stateTransferFactory, IStateStore stateStore,
+    public AsyncStateTransferClientProtocol(String channelName, IMessageFactory messageFactory, IGroupMembershipManager membershipManager, 
+        IStateTransferFactory stateTransferFactory, UUID groupId,
         ISerializationRegistry serializationRegistry, long maxStateTransferPeriod, long stateSizeThreshold)
     {
         super(channelName, messageFactory);
         
         Assert.notNull(membershipManager);
         Assert.notNull(stateTransferFactory);
-        Assert.notNull(stateStore);
         Assert.notNull(serializationRegistry);
+        Assert.notNull(groupId);
         
         this.membershipManager = membershipManager;
         this.stateTransferFactory = stateTransferFactory;
-        this.stateStore = stateStore;
+        this.groupId = groupId;
+        this.stateStore = (IAsyncStateStore)stateTransferFactory.createStore(groupId);
         this.maxStateTransferPeriod = maxStateTransferPeriod;
         this.stateSizeThreshold = stateSizeThreshold;
         this.serializationRegistry = serializationRegistry;
@@ -190,7 +193,7 @@ public final class StateTransferClientProtocol extends AbstractProtocol implemen
                 public void onSucceeded(Object value)
                 {
                     stateLoadTask = null;
-                    flush.grantFlush(StateTransferClientProtocol.this);
+                    flush.grantFlush(AsyncStateTransferClientProtocol.this);
                 }
                 
                 @Override
@@ -369,7 +372,7 @@ public final class StateTransferClientProtocol extends AbstractProtocol implemen
             Assert.checkState(!last || flush != null);
             
             this.last = last;
-            loadSnapshotTask = new SnapshotLoadTask(stateTransferFactory, snapshotFile, this);
+            loadSnapshotTask = new SnapshotLoadTask(stateTransferFactory, snapshotFile, this, groupId);
             compartment.execute(loadSnapshotTask);
         }
         
@@ -421,7 +424,7 @@ public final class StateTransferClientProtocol extends AbstractProtocol implemen
             {
                 Assert.checkState(messagesFiles.isEmpty());
                 
-                flush.grantFlush(StateTransferClientProtocol.this);
+                flush.grantFlush(AsyncStateTransferClientProtocol.this);
                 
                 if (logger.isLogEnabled(LogLevel.DEBUG))
                     logger.log(LogLevel.DEBUG, marker, messages.stateTransferCompleted(server));

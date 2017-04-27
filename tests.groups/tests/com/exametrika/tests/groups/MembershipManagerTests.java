@@ -122,7 +122,7 @@ public class MembershipManagerTests
         Node node4 = new Node(address4, Collections.<String, Object>singletonMap("key", "value"), "core");
         Node node5 = new Node(address5, Collections.<String, Object>singletonMap("key", "value"), "core");
         
-        IGroupMembership membership = GroupMemberships.createMembership(GroupMemberships.CORE_GROUP_ADDRESS, node1, com.exametrika.common.utils.Collections.<INode>asSet(node2, node3));
+        IGroupMembership membership = GroupMemberships.createCoreMembership(GroupMemberships.CORE_GROUP_ADDRESS, node1, com.exametrika.common.utils.Collections.<INode>asSet(node2, node3));
         assertThat(membership.getId(), is(1l));
         assertThat(membership.getGroup().getCoordinator(), is((INode)node1));
         assertThat(membership.getGroup().getMembers().size(), is(3));

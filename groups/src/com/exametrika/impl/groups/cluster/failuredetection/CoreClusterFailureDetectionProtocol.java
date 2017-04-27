@@ -20,6 +20,7 @@ import com.exametrika.common.l10n.Messages;
 import com.exametrika.common.log.LogLevel;
 import com.exametrika.common.messaging.IAddress;
 import com.exametrika.common.messaging.IMessageFactory;
+import com.exametrika.common.messaging.ISender;
 import com.exametrika.common.messaging.impl.protocols.AbstractProtocol;
 import com.exametrika.common.messaging.impl.protocols.failuredetection.IFailureObserver;
 import com.exametrika.common.tasks.ThreadInterruptedException;
@@ -43,6 +44,7 @@ public final class CoreClusterFailureDetectionProtocol extends AbstractProtocol 
     private final IGroupFailureDetector failureDetector;
     private final Set<IFailureDetectionListener> failureDetectionListeners;
     private final long failureUpdatePeriod;
+    private ISender bridgeSender;
     private Set<IAddress> workerNodes;
     private Map<UUID, INode> workerNodesMap;
     private Set<UUID> failedNodes = new LinkedHashSet<UUID>();
@@ -66,6 +68,14 @@ public final class CoreClusterFailureDetectionProtocol extends AbstractProtocol 
         this.failureUpdatePeriod = failureUpdatePeriod;
     }
 
+    public void setBridgeSender(ISender bridgeSender)
+    {
+        Assert.notNull(bridgeSender);
+        Assert.isNull(this.bridgeSender);
+        
+        this.bridgeSender = bridgeSender;
+    }
+    
     public Set<IAddress> getWorkerNodes()
     {
         if (workerNodes != null)
@@ -86,8 +96,8 @@ public final class CoreClusterFailureDetectionProtocol extends AbstractProtocol 
             if ((!currentCoordinator.equals(this.currentCoordinator) || modified) && 
                 (!failedNodes.isEmpty() || !leftNodes.isEmpty()))
             {
-                send(messageFactory.create(currentCoordinator.getAddress(), new FailureUpdateMessagePart(
-                    failedNodes, leftNodes), MessageFlags.HIGH_PRIORITY | MessageFlags.PARALLEL));
+                bridgeSender.send(messageFactory.create(currentCoordinator.getAddress(), new FailureUpdateMessagePart(
+                    failedNodes, leftNodes, false), MessageFlags.HIGH_PRIORITY | MessageFlags.PARALLEL));
                 
                 lastFailureUpdateTime = timeService.getCurrentTime();
                 modified = false;

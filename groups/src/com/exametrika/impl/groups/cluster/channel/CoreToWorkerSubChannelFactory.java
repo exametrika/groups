@@ -3,14 +3,18 @@
  */
 package com.exametrika.impl.groups.cluster.channel;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
-import com.exametrika.api.groups.cluster.IGroupMembershipService;
+import com.exametrika.api.groups.cluster.CoreNodeFactoryParameters;
+import com.exametrika.api.groups.cluster.IClusterMembershipListener;
 import com.exametrika.common.compartment.ICompartment;
 import com.exametrika.common.io.ISerializationRegistry;
 import com.exametrika.common.messaging.IChannel;
 import com.exametrika.common.messaging.ILiveNodeProvider;
 import com.exametrika.common.messaging.IMessageFactory;
+import com.exametrika.common.messaging.ISender;
 import com.exametrika.common.messaging.impl.AbstractChannelFactory;
 import com.exametrika.common.messaging.impl.ChannelParameters;
 import com.exametrika.common.messaging.impl.SubChannel;
@@ -24,10 +28,12 @@ import com.exametrika.common.messaging.impl.protocols.failuredetection.LiveNodeM
 import com.exametrika.common.messaging.impl.transports.ConnectionManager;
 import com.exametrika.common.messaging.impl.transports.tcp.TcpTransport;
 import com.exametrika.impl.groups.cluster.discovery.CoreClusterDiscoveryProtocol;
-import com.exametrika.impl.groups.cluster.discovery.IWorkerNodeDiscoverer;
+import com.exametrika.impl.groups.cluster.exchange.CoreFeedbackProtocol;
 import com.exametrika.impl.groups.cluster.failuredetection.CoreClusterFailureDetectionProtocol;
+import com.exametrika.impl.groups.cluster.failuredetection.IFailureDetectionListener;
 import com.exametrika.impl.groups.cluster.failuredetection.IGroupFailureDetector;
 import com.exametrika.impl.groups.cluster.failuredetection.WorkerControllerNodeTrackingStrategy;
+import com.exametrika.impl.groups.cluster.membership.ClusterMembershipManager;
 
 /**
  * The {@link CoreToWorkerSubChannelFactory} is a core to worker node sub-channel factory.
@@ -37,34 +43,53 @@ import com.exametrika.impl.groups.cluster.failuredetection.WorkerControllerNodeT
  */
 public class CoreToWorkerSubChannelFactory extends AbstractChannelFactory
 {
+    private Set<IClusterMembershipListener> clusterMembershipListeners;
     private CoreClusterFailureDetectionProtocol clusterFailureDetectionProtocol;
-    private IGroupMembershipService membershipService;
+    private ClusterMembershipManager clusterMembershipManager;
     private IGroupFailureDetector failureDetector;
     private CoreClusterDiscoveryProtocol clusterDiscoveryProtocol;
+    private ISender bridgeSender;
+    private CoreFeedbackProtocol coreToWorkerFeedbackProtocol;
+    private ISender workerSender;
     
     public CoreToWorkerSubChannelFactory()
     {
-        this(new NodeFactoryParameters());
+        this(new CoreNodeFactoryParameters());
     }
     
-    public CoreToWorkerSubChannelFactory(NodeFactoryParameters factoryParameters)
+    public CoreToWorkerSubChannelFactory(CoreNodeFactoryParameters factoryParameters)
     {
         super(factoryParameters);
     }
     
-    public void setMembershipService(IGroupMembershipService membershipService)
+    public void setClusterMembershipListeners(Set<IClusterMembershipListener> clusterMembershipListeners)
     {
-        this.membershipService = membershipService;
+        this.clusterMembershipListeners = clusterMembershipListeners;
     }
-
+    
+    public void setClusterMembershipManager(ClusterMembershipManager clusterMembershipManager)
+    {
+        this.clusterMembershipManager = clusterMembershipManager;
+    }
+    
     public void setFailureDetector(IGroupFailureDetector failureDetector)
     {
         this.failureDetector = failureDetector;
     }
 
-    public IWorkerNodeDiscoverer getWorkerNodeDiscoverer()
+    public void setBridgeSender(ISender bridgeSender)
     {
-        return clusterDiscoveryProtocol;
+        this.bridgeSender = bridgeSender;
+    }
+    
+    public void setCoreToWorkerFeedbackProtocol(CoreFeedbackProtocol coreToWorkerFeedbackProtocol)
+    {
+        this.coreToWorkerFeedbackProtocol = coreToWorkerFeedbackProtocol;
+    }
+    
+    public ISender getWorkerSender()
+    {
+        return workerSender;
     }
     
     @Override
@@ -78,12 +103,21 @@ public class CoreToWorkerSubChannelFactory extends AbstractChannelFactory
         ISerializationRegistry serializationRegistry, ILiveNodeProvider liveNodeProvider, List<IFailureObserver> failureObservers, 
         List<AbstractProtocol> protocols)
     {
-        NodeParameters nodeParameters = (NodeParameters)parameters;
+        CoreNodeFactoryParameters nodeFactoryParameters = (CoreNodeFactoryParameters)factoryParameters;
         
         clusterDiscoveryProtocol = new CoreClusterDiscoveryProtocol(channelName, messageFactory);
         protocols.add(clusterDiscoveryProtocol);
         
+        Set<IFailureDetectionListener> failureDetectionListeners = new HashSet<IFailureDetectionListener>();
+        clusterFailureDetectionProtocol = new CoreClusterFailureDetectionProtocol(
+            channelName, messageFactory, clusterMembershipManager, failureDetector, failureDetectionListeners, nodeFactoryParameters.failureUpdatePeriod);
+        protocols.add(clusterFailureDetectionProtocol);
+        clusterMembershipListeners.add(clusterFailureDetectionProtocol);
+        failureObservers.add(clusterFailureDetectionProtocol);
         
+        protocols.add(coreToWorkerFeedbackProtocol);
+        
+        workerSender = protocols.get(protocols.size() - 1);
     }
     
     @Override
@@ -95,7 +129,9 @@ public class CoreToWorkerSubChannelFactory extends AbstractChannelFactory
     protected void wireSubChannel()
     {
         clusterDiscoveryProtocol.setFailureDetector(failureDetector);
-        clusterDiscoveryProtocol.setMembershipService(membershipService);
+        clusterDiscoveryProtocol.setBridgeSender(bridgeSender);
+        
+        clusterFailureDetectionProtocol.setBridgeSender(bridgeSender);
     }
     
     @Override

@@ -79,9 +79,9 @@ public class CompositeChannelFactory
         List<IChannel> subChannels = createSubChannels(channelName, parameters, channelObserver, liveNodeManager,
             dispatcher, compartment);
         
-        wireSubChannels(subChannels);
-        
-        return createChannel(channelName, channelObserver, liveNodeManager, compartment, subChannels);
+        ICompositeChannel channel = createChannel(channelName, channelObserver, liveNodeManager, compartment, subChannels);
+        wireSubChannels(channel, subChannels);
+        return channel;
     }
 
     protected List<IChannel> createSubChannels(String channelName, List<? extends ChannelParameters> parameters,
@@ -90,12 +90,19 @@ public class CompositeChannelFactory
     {
         List<IChannel> subChannels = new ArrayList<IChannel>();
         for (int i = 0; i < parameters.size(); i++)
+        {
             subChannels.add(subChannelFactories.get(i).createChannel(channelName, channelObserver, liveNodeManager, dispatcher, 
                 compartment, parameters.get(i)));
+            wireSubChannel(i, subChannels);
+        }
         return subChannels;
     }
 
-    protected void wireSubChannels(List<IChannel> subChannels)
+    protected void wireSubChannel(int index, List<IChannel> subChannels)
+    {
+    }
+    
+    protected void wireSubChannels(ICompositeChannel channel, List<IChannel> subChannels)
     {
     }
 

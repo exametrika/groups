@@ -3,8 +3,7 @@
  */
 package com.exametrika.spi.groups;
 
-
-
+import java.util.UUID;
 
 /**
  * The {@link IStateTransferFactory} is a state transfer factory.
@@ -15,16 +14,26 @@ package com.exametrika.spi.groups;
 public interface IStateTransferFactory
 {
     /**
+     * Creates state store.
+     *
+     * @param groupId identifier of group where state is transferred
+     * @return state store
+     */
+    IStateStore createStore(UUID groupId);
+    
+    /**
      * Creates server part of state transfer.
      *
+     * @param groupId identifier of group where state is transferred
      * @return server part of state transfer
      */
-    IStateTransferServer createServer();
+    IStateTransferServer createServer(UUID groupId);
     
     /**
      * Creates client part of state transfer.
      *
+     * @param groupId identifier of group where state is transferred
      * @return client part of state transfer
      */
-    IStateTransferClient createClient();
+    IStateTransferClient createClient(UUID groupId);
 }

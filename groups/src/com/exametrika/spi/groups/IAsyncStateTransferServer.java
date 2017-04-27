@@ -3,23 +3,23 @@
  */
 package com.exametrika.spi.groups;
 
-import com.exametrika.common.utils.ByteArray;
+import java.io.File;
 
 
 
 /**
- * The {@link ISimpleStateTransferServer} is a server used in simple state transfer process.
+ * The {@link IAsyncStateTransferServer} is a server used in state transfer process.
  * 
  * @threadsafety Implementations of this interface and its methods are thread safe.
  * @author Medvedev-A
  */
-public interface ISimpleStateTransferServer extends IStateTransferServer
+public interface IAsyncStateTransferServer extends IStateTransferServer
 {
     /**
-     * Returns snapshot of group state.
+     * Saves snapshot of group state into the specified file.
      *
      * @param full if true full (persistent and transient) state is saved, else only persistent state is saved
-     * @return snapshot of group state
+     * @param file file for storing snapshot
      */
-    ByteArray saveSnapshot(boolean full);
+    void saveSnapshot(boolean full, File file);
 }

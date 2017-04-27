@@ -7,8 +7,10 @@ import java.text.MessageFormat;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
+import com.exametrika.api.groups.cluster.GroupOption;
 import com.exametrika.api.groups.cluster.IGroup;
 import com.exametrika.api.groups.cluster.INode;
 import com.exametrika.common.messaging.IAddress;
@@ -31,15 +33,18 @@ public final class Group implements IGroup
     private final Map<UUID, INode> membersByIdMap;
     private final Map<IAddress, INode> membersByAddressMap;
     private final GroupAddress address;
+    private final Set<GroupOption> options;
 
-    public Group(GroupAddress address, boolean primary, List<INode> members)
+    public Group(GroupAddress address, boolean primary, List<INode> members, Set<GroupOption> options)
     {
         Assert.notNull(address);
         Assert.notNull(members);
         Assert.isTrue(!members.isEmpty());
+        Assert.notNull(options);
 
         this.id = address.getId();
         this.name = address.getName();
+        this.options = Immutables.wrap(options);
         this.primary = primary;
         this.coordinator = members.get(0);
         this.members = Immutables.wrap(members);
@@ -73,6 +78,12 @@ public final class Group implements IGroup
     public GroupAddress getAddress()
     {
         return address;
+    }
+    
+    @Override
+    public Set<GroupOption> getOptions()
+    {
+        return options;
     }
     
     @Override

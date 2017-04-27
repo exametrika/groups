@@ -13,7 +13,7 @@ import com.exametrika.common.utils.ByteArray;
  * @threadsafety Implementations of this interface and its methods are thread safe.
  * @author Medvedev-A
  */
-public interface ISimpleStateTransferClient
+public interface ISimpleStateTransferClient extends IStateTransferClient
 {
     /**
      * Loads snapshot of state from specified data.

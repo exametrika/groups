@@ -33,6 +33,7 @@ public final class DiscoveryMessagePartSerializer extends AbstractSerializer
     {
         DiscoveryMessagePart part = (DiscoveryMessagePart)object;
 
+        serialization.writeBoolean(part.isCore());
         serialization.writeInt(part.getDiscoveredNodes().size());
         
         for (INode node : part.getDiscoveredNodes())
@@ -42,12 +43,13 @@ public final class DiscoveryMessagePartSerializer extends AbstractSerializer
     @Override
     public Object deserialize(IDeserialization deserialization, UUID id)
     {
+        boolean core = deserialization.readBoolean();
         int count = deserialization.readInt();
         
         Set<INode> discoveredNodes = new HashSet<INode>();
         for (int i = 0; i < count; i++)
             discoveredNodes.add(deserialization.readTypedObject(Node.class));
         
-        return new DiscoveryMessagePart(discoveredNodes);
+        return new DiscoveryMessagePart(discoveredNodes, core);
     }
 }

@@ -77,7 +77,7 @@ public final class CoreGroupMembershipTracker implements ICompartmentTimerProces
         
         if (oldMembership == null)
         {
-            IGroupMembership newMembership = GroupMemberships.createMembership(GroupMemberships.CORE_GROUP_ADDRESS, membershipManager.getLocalNode(), nodeDiscoverer.getDiscoveredNodes());
+            IGroupMembership newMembership = GroupMemberships.createCoreMembership(membershipManager.getLocalNode(), nodeDiscoverer.getDiscoveredNodes());
             flushManager.install(newMembership, null);
         }
         else

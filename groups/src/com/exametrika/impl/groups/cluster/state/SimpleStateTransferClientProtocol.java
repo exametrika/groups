@@ -7,6 +7,7 @@ package com.exametrika.impl.groups.cluster.state;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+import java.util.UUID;
 
 import com.exametrika.api.groups.cluster.IGroup;
 import com.exametrika.api.groups.cluster.INode;
@@ -31,7 +32,7 @@ import com.exametrika.impl.groups.cluster.flush.IFlushParticipant;
 import com.exametrika.impl.groups.cluster.membership.IGroupMembershipManager;
 import com.exametrika.spi.groups.ISimpleStateStore;
 import com.exametrika.spi.groups.ISimpleStateTransferClient;
-import com.exametrika.spi.groups.ISimpleStateTransferFactory;
+import com.exametrika.spi.groups.IStateTransferFactory;
 
 /**
  * The {@link SimpleStateTransferClientProtocol} represents a simple state transfer client protocol, which keeps state in memory.
@@ -53,17 +54,17 @@ public final class SimpleStateTransferClientProtocol extends AbstractProtocol im
     private boolean transferred;
 
     public SimpleStateTransferClientProtocol(String channelName, IMessageFactory messageFactory, IGroupMembershipManager membershipManager, 
-        ISimpleStateTransferFactory stateTransferFactory, ISimpleStateStore stateStore)
+        IStateTransferFactory stateTransferFactory, UUID groupId)
     {
         super(channelName, messageFactory);
         
         Assert.notNull(membershipManager);
         Assert.notNull(stateTransferFactory);
-        Assert.notNull(stateStore);
+        Assert.notNull(groupId);
         
         this.membershipManager = membershipManager;
-        this.client = stateTransferFactory.createClient();
-        this.stateStore = stateStore;
+        this.client = (ISimpleStateTransferClient)stateTransferFactory.createClient(groupId);
+        this.stateStore = (ISimpleStateStore)stateTransferFactory.createStore(groupId);
     }
 
     @Override

@@ -30,7 +30,7 @@ public final class CoreFeedbackProtocol extends AbstractFeedbackProtocol impleme
     private final IGroupMembershipService membershipService;
     private final IGroupFailureDetector failureDetector;
     private IAddress coordinator;
-    private ISender feedbackSender;
+    private ISender bridgeSender;
     
     public CoreFeedbackProtocol(String channelName, IMessageFactory messageFactory, IClusterMembershipManager membershipManager, 
         List<IFeedbackProvider> feedbackProviders, List<IFeedbackListener> listeners, long dataExchangePeriod, 
@@ -45,12 +45,12 @@ public final class CoreFeedbackProtocol extends AbstractFeedbackProtocol impleme
         this.membershipService = membershipService;
     }
 
-    public void setFeedbackSender(ISender feedBackSender)
+    public void setBridgeSender(ISender bridgeSender)
     {
-        Assert.notNull(feedBackSender);
-        Assert.isNull(this.feedbackSender);
+        Assert.notNull(bridgeSender);
+        Assert.isNull(this.bridgeSender);
         
-        this.feedbackSender = feedBackSender;
+        this.bridgeSender = bridgeSender;
     }
     
     @Override
@@ -81,7 +81,10 @@ public final class CoreFeedbackProtocol extends AbstractFeedbackProtocol impleme
     @Override
     protected ISender getFeedbackSender()
     {
-        return feedbackSender;
+        if (bridgeSender != null)
+            return bridgeSender;
+        else
+            return getSender();
     }
     
     private void updateCoordinator()

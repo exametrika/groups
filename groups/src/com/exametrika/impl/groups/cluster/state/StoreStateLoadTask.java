@@ -18,8 +18,8 @@ import com.exametrika.common.log.Loggers;
 import com.exametrika.common.messaging.ChannelException;
 import com.exametrika.common.utils.Assert;
 import com.exametrika.common.utils.ICompletionHandler;
-import com.exametrika.spi.groups.IStateStore;
-import com.exametrika.spi.groups.IStateTransferClient;
+import com.exametrika.spi.groups.IAsyncStateStore;
+import com.exametrika.spi.groups.IAsyncStateTransferClient;
 import com.exametrika.spi.groups.IStateTransferFactory;
 
 /**
@@ -36,11 +36,11 @@ public final class StoreStateLoadTask implements ICompartmentTask
     private final String groupName;
     private final IMarker marker;
     private final IStateTransferFactory stateTransferFactory;
-    private final IStateStore stateStore;
+    private final IAsyncStateStore stateStore;
     private final ICompletionHandler completionHandler;
     private boolean canceled;
 
-    public StoreStateLoadTask(IStateTransferFactory stateTransferFactory, IStateStore stateStore, UUID groupId, 
+    public StoreStateLoadTask(IStateTransferFactory stateTransferFactory, IAsyncStateStore stateStore, UUID groupId, 
         String groupName, IMarker marker, ICompletionHandler completionHandler)
     {
         Assert.notNull(stateTransferFactory);
@@ -72,7 +72,7 @@ public final class StoreStateLoadTask implements ICompartmentTask
             file = File.createTempFile("groups-state", null);
             if (stateStore.load(groupId, file))
             {
-                IStateTransferClient client = stateTransferFactory.createClient();
+                IAsyncStateTransferClient client = (IAsyncStateTransferClient)stateTransferFactory.createClient(groupId);
                 client.loadSnapshot(false, file);
             }
             else if (logger.isLogEnabled(LogLevel.WARNING))

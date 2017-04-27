@@ -11,8 +11,8 @@ import com.exametrika.common.compartment.ICompartmentTask;
 import com.exametrika.common.messaging.ChannelException;
 import com.exametrika.common.utils.Assert;
 import com.exametrika.common.utils.ICompletionHandler;
-import com.exametrika.spi.groups.IStateStore;
-import com.exametrika.spi.groups.IStateTransferServer;
+import com.exametrika.spi.groups.IAsyncStateStore;
+import com.exametrika.spi.groups.IAsyncStateTransferServer;
 
 /**
  * The {@link StoreStateSaveTask} represents a task which saves state to external state store.
@@ -23,12 +23,12 @@ import com.exametrika.spi.groups.IStateTransferServer;
 public final class StoreStateSaveTask implements ICompartmentTask
 {
     private final UUID groupId;
-    private final IStateStore stateStore;
+    private final IAsyncStateStore stateStore;
     private final ICompletionHandler completionHandler;
-    private final IStateTransferServer server; 
+    private final IAsyncStateTransferServer server; 
     private boolean canceled;
 
-    public StoreStateSaveTask(IStateTransferServer stateTransferServer, IStateStore stateStore, UUID groupId, ICompletionHandler completionHandler)
+    public StoreStateSaveTask(IAsyncStateTransferServer stateTransferServer, IAsyncStateStore stateStore, UUID groupId, ICompletionHandler completionHandler)
     {
         Assert.notNull(stateTransferServer);
         Assert.notNull(stateStore);
@@ -41,7 +41,7 @@ public final class StoreStateSaveTask implements ICompartmentTask
         this.server = stateTransferServer;
     }
     
-    public IStateTransferServer getServer()
+    public IAsyncStateTransferServer getServer()
     {
         return server;
     }

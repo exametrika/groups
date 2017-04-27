@@ -1,7 +1,9 @@
 /**
  * Copyright 2017 Andrey Medvedev. All rights reserved.
  */
-package com.exametrika.impl.groups.cluster.channel;
+package com.exametrika.api.groups.cluster;
+
+import com.exametrika.spi.groups.ISimpleStateStore;
 
 /**
  * The {@link CoreNodeParameters} is a core node parameters.
@@ -11,4 +13,5 @@ package com.exametrika.impl.groups.cluster.channel;
  */
 public class CoreNodeParameters extends NodeParameters
 {
+    public ISimpleStateStore stateStore;
 }

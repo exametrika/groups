@@ -104,9 +104,6 @@ public final class TcpTransport implements ITransport, ITcpChannelAcceptor, ITcp
         public ISerializationRegistry serializationRegistry;
         public IMessageFactory messageFactory;
         public long timerPeriod = 1000;
-        public long selectionPeriod = 100;
-        public long channelTimeout;
-        public long maxChannelIdlePeriod;
         public ITcpSocketChannelFactory socketChannelFactory;
         public ITcpConnectionFilter connectionFilter;
         public ITcpRateControllerFactory rateController;
@@ -124,7 +121,7 @@ public final class TcpTransport implements ITransport, ITcpChannelAcceptor, ITcp
         public IConnectionObserver connectionObserver;
         public ILocalNodeAware localNodeInitializer; 
         public long minReconnectPeriod;
-        public boolean multiThreaded = true;
+        public boolean multiThreaded;
         public IFlowController<IAddress> flowController;
         public ITcpPacketDiscardPolicy<IMessage> discardPolicy;
     }

@@ -34,22 +34,22 @@ import com.exametrika.impl.groups.cluster.membership.GroupAddress;
 import com.exametrika.impl.groups.cluster.membership.IGroupMembershipManager;
 import com.exametrika.impl.groups.cluster.multicast.QueueCapacityController;
 import com.exametrika.impl.groups.cluster.multicast.RemoteFlowId;
-import com.exametrika.spi.groups.IStateStore;
+import com.exametrika.spi.groups.IAsyncStateStore;
+import com.exametrika.spi.groups.IAsyncStateTransferServer;
 import com.exametrika.spi.groups.IStateTransferFactory;
-import com.exametrika.spi.groups.IStateTransferServer;
 
 /**
- * The {@link StateTransferServerProtocol} represents a state transfer server protocol.
+ * The {@link AsyncStateTransferServerProtocol} represents a state transfer server protocol.
  * 
  * @threadsafety This class and its methods are not thread safe.
  * @author Medvedev-A
  */
-public final class StateTransferServerProtocol extends AbstractProtocol implements IFlushParticipant
+public final class AsyncStateTransferServerProtocol extends AbstractProtocol implements IFlushParticipant
 {
     private static final IMessages messages = Messages.get(IMessages.class);
     private final IGroupMembershipManager membershipManager;
     private final IGroupFailureDetector failureDetector;
-    private final IStateStore stateStore;
+    private final IAsyncStateStore stateStore;
     private ICompartment compartment;
     private final ISerializationRegistry serializationRegistry;
     private final long saveSnapshotPeriod;
@@ -62,13 +62,12 @@ public final class StateTransferServerProtocol extends AbstractProtocol implemen
     private List<IMessage> pendingMessages;
     private final long transferLogRecordPeriod;
     private final int transferLogMessagesCount;
-    private final IStateTransferServer server;
+    private final IAsyncStateTransferServer server;
     private boolean snapshotRequest;
     private final QueueCapacityController capacityController;
     
-    public StateTransferServerProtocol(String channelName, IMessageFactory messageFactory, IGroupMembershipManager membershipManager, 
-        IGroupFailureDetector failureDetector, IStateTransferFactory stateTransferFactory, IStateStore stateStore,
-        ISerializationRegistry serializationRegistry,
+    public AsyncStateTransferServerProtocol(String channelName, IMessageFactory messageFactory, IGroupMembershipManager membershipManager, 
+        IGroupFailureDetector failureDetector, IStateTransferFactory stateTransferFactory, ISerializationRegistry serializationRegistry,
         long saveSnapshotPeriod, long transferLogRecordPeriod, int transferLogMessagesCount, int minLockQueueCapacity,
         GroupAddress groupAddress, UUID groupId)
     {
@@ -77,17 +76,17 @@ public final class StateTransferServerProtocol extends AbstractProtocol implemen
         Assert.notNull(membershipManager);
         Assert.notNull(failureDetector);
         Assert.notNull(stateTransferFactory);
-        Assert.notNull(stateStore);
         Assert.notNull(serializationRegistry);
+        Assert.notNull(groupId);
         
         this.membershipManager = membershipManager;
         this.failureDetector = failureDetector;
-        this.stateStore = stateStore;
+        this.stateStore = (IAsyncStateStore)stateTransferFactory.createStore(groupId);
         this.saveSnapshotPeriod = saveSnapshotPeriod;
         this.transferLogRecordPeriod = transferLogRecordPeriod;
         this.transferLogMessagesCount = transferLogMessagesCount;
         this.serializationRegistry = serializationRegistry;
-        this.server = stateTransferFactory.createServer();
+        this.server = (IAsyncStateTransferServer)stateTransferFactory.createServer(groupId);
         this.capacityController = new QueueCapacityController(minLockQueueCapacity, 0, groupAddress, groupId);
     }
 
@@ -247,14 +246,14 @@ public final class StateTransferServerProtocol extends AbstractProtocol implemen
         }
         else if ((stateSaveTask != null || (stateTransfer != null && stateTransfer.saveSnapshotTask != null)))
         {
-            if (server.classifyMessage(message) != IStateTransferServer.MessageType.NON_STATE)
+            if (server.classifyMessage(message) != IAsyncStateTransferServer.MessageType.NON_STATE)
                 addPendingMessage(message);
             else
                 receiver.receive(message);
         }
         else
         {
-            if (!snapshotRequest && server.classifyMessage(message) == IStateTransferServer.MessageType.STATE_WRITE)
+            if (!snapshotRequest && server.classifyMessage(message) == IAsyncStateTransferServer.MessageType.STATE_WRITE)
             {
                 if (stateTransfer != null)
                     stateTransfer.addMessage(message);
@@ -335,7 +334,7 @@ public final class StateTransferServerProtocol extends AbstractProtocol implemen
                 deliverPendingMessages();
                 
                 if (logger.isLogEnabled(LogLevel.DEBUG))
-                    logger.log(LogLevel.DEBUG, marker, StateTransferServerProtocol.messages.stateTransferCanceled(client));
+                    logger.log(LogLevel.DEBUG, marker, AsyncStateTransferServerProtocol.messages.stateTransferCanceled(client));
             }
             
             if (saveMessagesTask != null)

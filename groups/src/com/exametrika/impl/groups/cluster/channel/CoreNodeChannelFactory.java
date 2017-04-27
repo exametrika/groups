@@ -8,6 +8,8 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
+import com.exametrika.api.groups.cluster.CoreNodeFactoryParameters;
+import com.exametrika.api.groups.cluster.CoreNodeParameters;
 import com.exametrika.api.groups.cluster.IClusterMembershipListener;
 import com.exametrika.common.compartment.ICompartment;
 import com.exametrika.common.messaging.IChannel;
@@ -66,17 +68,35 @@ public class CoreNodeChannelFactory extends CompositeChannelFactory
         coreGroupSubChannelFactory.setClusterMembershipListeners(clusterMembershipListeners);
         coreGroupSubChannelFactory.setClusterMembershipManager(membershipManager);
         
+        CoreToWorkerSubChannelFactory coreToWorkerSubChannelFactory = (CoreToWorkerSubChannelFactory)subChannelFactories.get(1);
+        coreToWorkerSubChannelFactory.setClusterMembershipListeners(clusterMembershipListeners);
+        coreToWorkerSubChannelFactory.setClusterMembershipManager(membershipManager);
+        
         return super.createSubChannels(channelName, parameters, channelObserver, liveNodeManager, dispatcher, compartment);
     }
     
     @Override
-    protected void wireSubChannels(List<IChannel> subChannels)
+    protected void wireSubChannel(int index, List<IChannel> subChannels)
+    {
+        if (index == 0)
+        {
+            CoreGroupSubChannelFactory coreGroupSubChannelFactory = (CoreGroupSubChannelFactory)subChannelFactories.get(0);
+            CoreToWorkerSubChannelFactory coreToWorkerSubChannelFactory = (CoreToWorkerSubChannelFactory)subChannelFactories.get(1);
+            
+            coreToWorkerSubChannelFactory.setCoreToWorkerFeedbackProtocol(coreGroupSubChannelFactory.getCoreToWorkerFeedbackProtocol());
+        }
+    }
+    
+    @Override
+    protected void wireSubChannels(ICompositeChannel channel, List<IChannel> subChannels)
     {
         CoreGroupSubChannelFactory coreGroupSubChannelFactory = (CoreGroupSubChannelFactory)subChannels.get(0);
         CoreToWorkerSubChannelFactory coreToWorkerSubChannelFactory = (CoreToWorkerSubChannelFactory)subChannels.get(1);
-        coreGroupSubChannelFactory.setWorkerNodeDiscoverer(coreToWorkerSubChannelFactory.getWorkerNodeDiscoverer());
         coreToWorkerSubChannelFactory.setFailureDetector(coreGroupSubChannelFactory.getFailureDetector());
-        coreToWorkerSubChannelFactory.setMembershipService(coreGroupSubChannelFactory.getMembershipManager());
+        coreToWorkerSubChannelFactory.setBridgeSender(coreGroupSubChannelFactory.getBridgeSender());
+        
+        coreGroupSubChannelFactory.setWorkerSender(coreToWorkerSubChannelFactory.getWorkerSender());
+        coreGroupSubChannelFactory.setChannelReconnector((CoreNodeChannel)channel);
         
         coreGroupSubChannelFactory.wireSubChannel();
         coreToWorkerSubChannelFactory.wireSubChannel();

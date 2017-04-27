@@ -128,7 +128,7 @@ public abstract class AbstractFeedbackProtocol extends AbstractProtocol implemen
     protected void sendData(boolean force)
     {
         IAddress destination = getDestination();
-        if (destination == null)
+        if (destination == null || membershipManager.getLocalNode().getAddress().equals(destination))
             return;
         
         Map<UUID, IExchangeData> dataExchanges = new LinkedHashMap<UUID, IExchangeData>();

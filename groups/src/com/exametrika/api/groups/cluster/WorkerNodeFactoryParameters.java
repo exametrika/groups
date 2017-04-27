@@ -1,7 +1,7 @@
 /**
  * Copyright 2017 Andrey Medvedev. All rights reserved.
  */
-package com.exametrika.impl.groups.cluster.channel;
+package com.exametrika.api.groups.cluster;
 
 /**
  * The {@link WorkerNodeFactoryParameters} is a worker node factory parameters.
@@ -11,6 +11,11 @@ package com.exametrika.impl.groups.cluster.channel;
  */
 public class WorkerNodeFactoryParameters extends NodeFactoryParameters
 {
+    public long nodeOrphanPeriod = 600000;
+    public int maxSubStackPendingMessageCount = 1000;
+    public long groupSubStackRemoveDelay = 300000;
+    public int maxGroupMembershipHistorySize = 10;
+    
     public WorkerNodeFactoryParameters()
     {
         super(false);

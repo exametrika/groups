@@ -39,10 +39,10 @@ public final class CoreClusterMembershipProtocol extends AbstractClusterMembersh
 {
     private static final IMessages messages = Messages.get(IMessages.class);
     private final IGroupMembershipManager membershipManager;
-    private final ISender workerSender;
+    private ISender workerSender;
     private final CoreCoordinatorClusterMembershipProtocol coordinatorProtocol;
     private final long membershipTimeout;
-    private final IFailureObserver failureObserver;
+    private IFailureObserver failureObserver;
     private IGroupFailureDetector failureDetector;
     private IFlushManager flushManager;
     private Set<INode> workerNodes = Collections.emptySet();
@@ -52,22 +52,17 @@ public final class CoreClusterMembershipProtocol extends AbstractClusterMembersh
     
     public CoreClusterMembershipProtocol(String channelName, IMessageFactory messageFactory, 
         IClusterMembershipManager clusterMembershipManager, List<IClusterMembershipProvider> membershipProviders,
-        IGroupMembershipManager membershipManager, ISender workerSender,
-        CoreCoordinatorClusterMembershipProtocol coordinatorProtocol, IFailureObserver failureObserver,
+        IGroupMembershipManager membershipManager, CoreCoordinatorClusterMembershipProtocol coordinatorProtocol, 
         long membershipTimeout)
     {
         super(channelName, messageFactory, clusterMembershipManager, membershipProviders);
         
         Assert.notNull(membershipManager);
-        Assert.notNull(workerSender);
         Assert.notNull(coordinatorProtocol);
-        Assert.notNull(failureObserver);
         
         this.membershipManager = membershipManager;
-        this.workerSender = workerSender;
         this.coordinatorProtocol = coordinatorProtocol;
         this.membershipTimeout = membershipTimeout;
-        this.failureObserver = failureObserver;
     }
     
     public void setFailureDetector(IGroupFailureDetector failureDetector)
@@ -78,12 +73,28 @@ public final class CoreClusterMembershipProtocol extends AbstractClusterMembersh
         this.failureDetector = failureDetector;
     }
     
+    public void setFailureObserver(IFailureObserver failureObserver)
+    {
+        Assert.notNull(failureObserver);
+        Assert.isNull(this.failureObserver);
+        
+        this.failureObserver = failureObserver;
+    }
+    
     public void setFlushManager(IFlushManager flushManager)
     {
         Assert.notNull(flushManager);
         Assert.isNull(this.flushManager);
         
         this.flushManager = flushManager;
+    }
+    
+    public void setWorkerSender(ISender workerSender)
+    {
+        Assert.notNull(workerSender);
+        Assert.isNull(this.workerSender);
+        
+        this.workerSender = workerSender;
     }
     
     @Override

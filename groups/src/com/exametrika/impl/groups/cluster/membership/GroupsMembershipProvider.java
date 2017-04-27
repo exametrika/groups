@@ -31,6 +31,11 @@ public final class GroupsMembershipProvider implements IClusterMembershipProvide
 {
     private final IGroupMappingStrategy groupMappingStrategy;
 
+    public GroupsMembershipProvider()
+    {
+        this.groupMappingStrategy = null;
+    }
+    
     public GroupsMembershipProvider(IGroupMappingStrategy groupMappingStrategy)
     {
         Assert.notNull(groupMappingStrategy);
@@ -178,7 +183,7 @@ public final class GroupsMembershipProvider implements IClusterMembershipProvide
                     }
                     
                     members.addAll(changedGroup.getJoinedMembers());
-                    group = new Group((GroupAddress)group.getAddress(), changedGroup.isPrimary(), members);
+                    group = new Group((GroupAddress)group.getAddress(), changedGroup.isPrimary(), members, group.getOptions());
                 }
                 
                 groups.add(group); 

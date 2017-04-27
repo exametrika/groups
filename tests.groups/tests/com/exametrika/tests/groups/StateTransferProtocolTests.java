@@ -80,13 +80,13 @@ import com.exametrika.impl.groups.cluster.membership.IPreparedGroupMembershipLis
 import com.exametrika.impl.groups.cluster.membership.LocalNodeProvider;
 import com.exametrika.impl.groups.cluster.multicast.FlowControlProtocol;
 import com.exametrika.impl.groups.cluster.multicast.RemoteFlowId;
-import com.exametrika.impl.groups.cluster.state.StateTransferClientProtocol;
-import com.exametrika.impl.groups.cluster.state.StateTransferServerProtocol;
+import com.exametrika.impl.groups.cluster.state.AsyncStateTransferClientProtocol;
+import com.exametrika.impl.groups.cluster.state.AsyncStateTransferServerProtocol;
 import com.exametrika.spi.groups.IDiscoveryStrategy;
-import com.exametrika.spi.groups.IStateStore;
-import com.exametrika.spi.groups.IStateTransferClient;
+import com.exametrika.spi.groups.IAsyncStateStore;
+import com.exametrika.spi.groups.IAsyncStateTransferClient;
 import com.exametrika.spi.groups.IStateTransferFactory;
-import com.exametrika.spi.groups.IStateTransferServer;
+import com.exametrika.spi.groups.IAsyncStateTransferServer;
 import com.exametrika.tests.common.messaging.ReceiverMock;
 import com.exametrika.tests.groups.MembershipManagerTests.PropertyProviderMock;
 
@@ -535,7 +535,7 @@ public class StateTransferProtocolTests
         }
     }
 
-    private class TestStateTransferServer implements IStateTransferServer
+    private class TestStateTransferServer implements IAsyncStateTransferServer
     {
         TestStateTransferFactory factory;
         
@@ -561,7 +561,7 @@ public class StateTransferProtocolTests
         }
     }
     
-    private class TestStateTransferClient implements IStateTransferClient
+    private class TestStateTransferClient implements IAsyncStateTransferClient
     {
         TestStateTransferFactory factory;
         
@@ -585,19 +585,19 @@ public class StateTransferProtocolTests
         private ByteArray state;
         
         @Override
-        public IStateTransferServer createServer()
+        public IAsyncStateTransferServer createServer()
         {
             return new TestStateTransferServer(this);
         }
 
         @Override
-        public IStateTransferClient createClient()
+        public IAsyncStateTransferClient createClient()
         {
             return new TestStateTransferClient(this);
         }
     }
     
-    private class TestStateStore implements IStateStore
+    private class TestStateStore implements IAsyncStateStore
     {
         private ByteArray buffer = createBuffer(17, 100000);
         private ByteArray savedBuffer;
@@ -809,7 +809,7 @@ public class StateTransferProtocolTests
         private List<IGracefulExitStrategy> gracefulExitStrategies = new ArrayList<IGracefulExitStrategy>();
         private TestStateStore stateStore = new TestStateStore();
         private List<TestMessageSender> messageSenders = new ArrayList<TestMessageSender>();
-        private List<StateTransferClientProtocol> clientProtocols = new ArrayList<StateTransferClientProtocol>();
+        private List<AsyncStateTransferClientProtocol> clientProtocols = new ArrayList<AsyncStateTransferClientProtocol>();
         
         public TestChannelFactory(IDiscoveryStrategy discoveryStrategy)
         {
@@ -855,7 +855,7 @@ public class StateTransferProtocolTests
             
             TestStateTransferFactory stateTransferFactory = new TestStateTransferFactory();
             stateTransferFactories.add(stateTransferFactory);
-            StateTransferClientProtocol stateTransferClientProtocol = new StateTransferClientProtocol(channelName,
+            AsyncStateTransferClientProtocol stateTransferClientProtocol = new AsyncStateTransferClientProtocol(channelName,
                 messageFactory, membershipManager, stateTransferFactory, stateStore, serializationRegistry, 
                 maxStateTransferPeriod, stateSizeThreshold);
             protocols.add(stateTransferClientProtocol);
@@ -863,7 +863,7 @@ public class StateTransferProtocolTests
             failureDetectionListeners.add(stateTransferClientProtocol);
             clientProtocols.add(stateTransferClientProtocol);
             
-            StateTransferServerProtocol stateTransferServerProtocol = new StateTransferServerProtocol(channelName, 
+            AsyncStateTransferServerProtocol stateTransferServerProtocol = new AsyncStateTransferServerProtocol(channelName, 
                 messageFactory, membershipManager, failureDetectionProtocol, stateTransferFactory, stateStore, serializationRegistry, 
                 saveSnapshotPeriod, transferLogRecordPeriod, transferLogMessagesCount, minLockQueueCapacity,
                 GroupMemberships.CORE_GROUP_ADDRESS, GroupMemberships.CORE_GROUP_ID);
@@ -912,11 +912,11 @@ public class StateTransferProtocolTests
             strategy.setFailureDetector(failureDetectionProtocol);
             strategy.setMembershipManager((IGroupMembershipManager)failureDetectionProtocol.getMembersipService());
             
-            StateTransferClientProtocol stateTransferClientProtocol = protocolStack.find(StateTransferClientProtocol.class);
+            AsyncStateTransferClientProtocol stateTransferClientProtocol = protocolStack.find(AsyncStateTransferClientProtocol.class);
             stateTransferClientProtocol.setChannelReconnector((IChannelReconnector)channel);
             stateTransferClientProtocol.setCompartment(channel.getCompartment());
             
-            StateTransferServerProtocol stateTransferServerProtocol = protocolStack.find(StateTransferServerProtocol.class);
+            AsyncStateTransferServerProtocol stateTransferServerProtocol = protocolStack.find(AsyncStateTransferServerProtocol.class);
             stateTransferServerProtocol.setCompartment(channel.getCompartment());
         }
         

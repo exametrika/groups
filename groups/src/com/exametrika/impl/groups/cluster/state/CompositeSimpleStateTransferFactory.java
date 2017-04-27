@@ -5,6 +5,7 @@ package com.exametrika.impl.groups.cluster.state;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 import com.exametrika.common.io.impl.ByteInputStream;
 import com.exametrika.common.io.impl.ByteOutputStream;
@@ -14,8 +15,11 @@ import com.exametrika.common.messaging.IMessage;
 import com.exametrika.common.utils.Assert;
 import com.exametrika.common.utils.ByteArray;
 import com.exametrika.spi.groups.ISimpleStateTransferClient;
-import com.exametrika.spi.groups.ISimpleStateTransferFactory;
 import com.exametrika.spi.groups.ISimpleStateTransferServer;
+import com.exametrika.spi.groups.IStateStore;
+import com.exametrika.spi.groups.IStateTransferClient;
+import com.exametrika.spi.groups.IStateTransferFactory;
+import com.exametrika.spi.groups.IStateTransferServer;
 
 /**
  * The {@link CompositeSimpleStateTransferFactory} represents a composite simple state transfer factory.
@@ -23,11 +27,11 @@ import com.exametrika.spi.groups.ISimpleStateTransferServer;
  * @threadsafety This class and its methods are thread safe.
  * @author Medvedev-A
  */
-public final class CompositeSimpleStateTransferFactory implements ISimpleStateTransferFactory
+public final class CompositeSimpleStateTransferFactory implements IStateTransferFactory
 {
-    private final List<ISimpleStateTransferFactory> factories;
+    private final List<IStateTransferFactory> factories;
 
-    public CompositeSimpleStateTransferFactory(List<ISimpleStateTransferFactory> factories)
+    public CompositeSimpleStateTransferFactory(List<IStateTransferFactory> factories)
     {
         Assert.notNull(factories);
         
@@ -35,21 +39,27 @@ public final class CompositeSimpleStateTransferFactory implements ISimpleStateTr
     }
     
     @Override
-    public ISimpleStateTransferServer createServer()
+    public IStateStore createStore(UUID groupId)
+    {
+        return factories.get(0).createStore(groupId);
+    }
+    
+    @Override
+    public IStateTransferServer createServer(UUID groupId)
     {
         List<ISimpleStateTransferServer> servers = new ArrayList<ISimpleStateTransferServer>();
-        for (ISimpleStateTransferFactory factory : factories)
-            servers.add(factory.createServer());
+        for (IStateTransferFactory factory : factories)
+            servers.add((ISimpleStateTransferServer)factory.createServer(groupId));
         
         return new CompositeSimpleStateTransferServer(servers);
     }
 
     @Override
-    public ISimpleStateTransferClient createClient()
+    public IStateTransferClient createClient(UUID groupId)
     {
         List<ISimpleStateTransferClient> clients = new ArrayList<ISimpleStateTransferClient>();
-        for (ISimpleStateTransferFactory factory : factories)
-            clients.add(factory.createClient());
+        for (IStateTransferFactory factory : factories)
+            clients.add((ISimpleStateTransferClient)factory.createClient(groupId));
         
         return new CompositeSimpleStateTransferClient(clients);
     }

@@ -5,8 +5,10 @@ package com.exametrika.impl.groups.cluster.membership;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
+import com.exametrika.api.groups.cluster.GroupOption;
 import com.exametrika.api.groups.cluster.INode;
 import com.exametrika.common.io.IDeserialization;
 import com.exametrika.common.io.ISerialization;
@@ -34,6 +36,7 @@ public final class GroupSerializer extends AbstractSerializer
     {
         UUID groupId = Serializers.readUUID(deserialization);
         String name = deserialization.readString();
+        Set<GroupOption> options = Serializers.readEnumSet(deserialization, GroupOption.class);
         boolean primary = deserialization.readBoolean();
         
         int count = deserialization.readInt();
@@ -41,7 +44,7 @@ public final class GroupSerializer extends AbstractSerializer
         for (int i = 0; i < count; i++)
             members.add(deserialization.readTypedObject(Node.class));
         
-        return new Group(new GroupAddress(groupId, name), primary, members);
+        return new Group(new GroupAddress(groupId, name), primary, members, options);
     }
 
     @Override
@@ -50,6 +53,7 @@ public final class GroupSerializer extends AbstractSerializer
         Group group = (Group)object;
         Serializers.writeUUID(serialization, group.getId());
         serialization.writeString(group.getName());
+        Serializers.writeEnumSet(serialization, group.getOptions());
         serialization.writeBoolean(group.isPrimary());
         
         serialization.writeInt(group.getMembers().size());

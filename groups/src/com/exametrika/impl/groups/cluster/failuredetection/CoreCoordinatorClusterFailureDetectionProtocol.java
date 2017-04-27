@@ -76,7 +76,7 @@ public final class CoreCoordinatorClusterFailureDetectionProtocol extends Abstra
     @Override
     protected void doReceive(IReceiver receiver, IMessage message)
     {
-        if (message.getPart() instanceof FailureUpdateMessagePart)
+        if (message.getPart() instanceof FailureUpdateMessagePart && !((FailureUpdateMessagePart)message.getPart()).isCore())
         {
             FailureUpdateMessagePart part = message.getPart();
             IClusterMembership membership = membershipService.getMembership();

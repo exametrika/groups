@@ -10,12 +10,13 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
+import com.exametrika.api.groups.cluster.GroupOption;
 import com.exametrika.api.groups.cluster.IGroup;
 import com.exametrika.api.groups.cluster.IGroupMembership;
 import com.exametrika.api.groups.cluster.IGroupMembershipChange;
 import com.exametrika.api.groups.cluster.INode;
-import com.exametrika.common.messaging.IAddress;
 import com.exametrika.common.utils.Assert;
+import com.exametrika.common.utils.Enums;
 import com.exametrika.impl.groups.cluster.flush.IFlushCondition;
 
 
@@ -69,9 +70,8 @@ public final class GroupMemberships
         }
     }
     
-    public static IGroupMembership createMembership(IAddress groupAddress, INode localNode, Set<INode> discoveredNodes)
+    public static IGroupMembership createCoreMembership(INode localNode, Set<INode> discoveredNodes)
     {
-        Assert.isInstanceOf(GroupAddress.class, groupAddress);
         Assert.notNull(localNode);
         Assert.notNull(discoveredNodes);
         Assert.isTrue(!discoveredNodes.contains(localNode));
@@ -80,7 +80,8 @@ public final class GroupMemberships
         members.add(localNode);
         members.addAll(discoveredNodes);
 
-        IGroup group = new Group((GroupAddress)groupAddress, true, members);
+        IGroup group = new Group(CORE_GROUP_ADDRESS, true, members, Enums.of(GroupOption.DURABLE, GroupOption.ORDERED, 
+            GroupOption.SIMPLE_STATE_TRANSFER));
         
         return new GroupMembership(1, group);
     }
@@ -136,7 +137,8 @@ public final class GroupMemberships
         if (flushCondition != null && !flushCondition.canStartFlush(members, joinedMembers, failedMemberIds, leftMemberIds))
             return null;
         
-        IGroup group = new Group((GroupAddress)oldMembership.getGroup().getAddress(), primaryGroup, members);
+        IGroup group = new Group((GroupAddress)oldMembership.getGroup().getAddress(), primaryGroup, members, 
+            oldMembership.getGroup().getOptions());
         
         IGroupMembership newMembership = new GroupMembership(oldMembership.getId() + 1, group);
         IGroupMembershipDelta membershipDelta = new GroupMembershipDelta(newMembership.getId(), 
@@ -172,7 +174,8 @@ public final class GroupMemberships
         else
             primaryGroup = false;
 
-        IGroup group = new Group((GroupAddress)oldMembership.getGroup().getAddress(), primaryGroup, members);
+        IGroup group = new Group((GroupAddress)oldMembership.getGroup().getAddress(), primaryGroup, members,
+            oldMembership.getGroup().getOptions());
         
         IGroupMembership newMembership = new GroupMembership(oldMembership.getId() + 1, group);
         IGroupMembershipChange membershipChange = new GroupMembershipChange(new GroupChange(group, oldMembership.getGroup(), 

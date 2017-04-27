@@ -54,10 +54,10 @@ import com.exametrika.impl.groups.cluster.flush.IFlush;
 import com.exametrika.impl.groups.cluster.flush.IFlushParticipant;
 import com.exametrika.impl.groups.cluster.membership.GroupMemberships;
 import com.exametrika.impl.groups.cluster.multicast.RemoteFlowId;
-import com.exametrika.spi.groups.IStateStore;
-import com.exametrika.spi.groups.IStateTransferClient;
+import com.exametrika.spi.groups.IAsyncStateStore;
+import com.exametrika.spi.groups.IAsyncStateTransferClient;
 import com.exametrika.spi.groups.IStateTransferFactory;
-import com.exametrika.spi.groups.IStateTransferServer;
+import com.exametrika.spi.groups.IAsyncStateTransferServer;
 
 /**
  * The {@link MulticastProtocolTests} are tests for flush.
@@ -382,7 +382,7 @@ public class MulticastProtocolTests
             participant.failOnFlush = true;
     }
     
-    private class TestStateTransferServer implements IStateTransferServer
+    private class TestStateTransferServer implements IAsyncStateTransferServer
     {
         TestStateTransferFactory factory;
         
@@ -408,7 +408,7 @@ public class MulticastProtocolTests
         }
     }
     
-    private class TestStateTransferClient implements IStateTransferClient
+    private class TestStateTransferClient implements IAsyncStateTransferClient
     {
         TestStateTransferFactory factory;
         
@@ -429,19 +429,19 @@ public class MulticastProtocolTests
         private ByteArray state;
         
         @Override
-        public IStateTransferServer createServer()
+        public IAsyncStateTransferServer createServer()
         {
             return new TestStateTransferServer(this);
         }
 
         @Override
-        public IStateTransferClient createClient()
+        public IAsyncStateTransferClient createClient()
         {
             return new TestStateTransferClient(this);
         }
     }
     
-    private class TestStateStore implements IStateStore
+    private class TestStateStore implements IAsyncStateStore
     {
         private ByteArray buffer = createBuffer(17, 100000);
         

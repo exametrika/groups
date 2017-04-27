@@ -174,7 +174,7 @@ public final class CoreGroupDiscoveryProtocol extends AbstractProtocol implement
                 }
                 
                 nodes.add(membershipService.getLocalNode());
-                DiscoveryMessagePart discoveryPart = new DiscoveryMessagePart(nodes);
+                DiscoveryMessagePart discoveryPart = new DiscoveryMessagePart(nodes, true);
                 
                 Set<IAddress> addresses = new HashSet<IAddress>();
                 for (String entryPoint : discoveryStrategy.getEntryPoints())
@@ -199,7 +199,8 @@ public final class CoreGroupDiscoveryProtocol extends AbstractProtocol implement
         {
             if (currentTime > lastDiscoveryTime + discoveryPeriod)
             {
-                DiscoveryMessagePart discoveryPart = new DiscoveryMessagePart(java.util.Collections.singleton(membershipService.getLocalNode()));
+                DiscoveryMessagePart discoveryPart = new DiscoveryMessagePart(
+                    java.util.Collections.singleton(membershipService.getLocalNode()), true);
                 
                 Set<IAddress> addresses = new HashSet<IAddress>(healthyMembers);
                 for (String entryPoint : discoveryStrategy.getEntryPoints())
@@ -265,7 +266,7 @@ public final class CoreGroupDiscoveryProtocol extends AbstractProtocol implement
     @Override
     protected void doReceive(IReceiver receiver, IMessage message)
     {
-        if (message.getPart() instanceof DiscoveryMessagePart)
+        if (message.getPart() instanceof DiscoveryMessagePart && !((DiscoveryMessagePart)message.getPart()).isCore())
         {
             DiscoveryMessagePart part = message.getPart();
 

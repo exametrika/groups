@@ -3,8 +3,10 @@
  */
 package com.exametrika.impl.groups.cluster.membership;
 
+import java.util.Set;
 import java.util.UUID;
 
+import com.exametrika.api.groups.cluster.GroupOption;
 import com.exametrika.common.io.IDeserialization;
 import com.exametrika.common.io.ISerialization;
 import com.exametrika.common.io.impl.AbstractSerializer;
@@ -36,6 +38,7 @@ public final class GroupDefinitionSerializer extends AbstractSerializer
         serialization.writeString(group.getNodeFilterExpression());
         serialization.writeInt(group.getNodeCount());
         serialization.writeString(group.getType());
+        Serializers.writeEnumSet(serialization, group.getOptions());
     }
     
     @Override
@@ -47,7 +50,8 @@ public final class GroupDefinitionSerializer extends AbstractSerializer
         String nodeFilterExpression = deserialization.readString();
         int nodeCount = deserialization.readInt();
         String type = deserialization.readString();
+        Set<GroupOption> options = Serializers.readEnumSet(deserialization, GroupOption.class);
         
-        return new GroupDefinition(domain, groupId, name, nodeFilterExpression, nodeCount, type);
+        return new GroupDefinition(domain, groupId, name, options, nodeFilterExpression, nodeCount, type);
     }
 }

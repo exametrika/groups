@@ -9,6 +9,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import com.exametrika.api.groups.cluster.CoreNodeFactoryParameters;
+import com.exametrika.api.groups.cluster.CoreNodeParameters;
 import com.exametrika.api.groups.cluster.IClusterMembershipListener;
 import com.exametrika.api.groups.cluster.IGroupMembershipListener;
 import com.exametrika.common.compartment.ICompartment;
@@ -17,6 +19,7 @@ import com.exametrika.common.messaging.IChannel;
 import com.exametrika.common.messaging.IDeliveryHandler;
 import com.exametrika.common.messaging.ILiveNodeProvider;
 import com.exametrika.common.messaging.IMessageFactory;
+import com.exametrika.common.messaging.ISender;
 import com.exametrika.common.messaging.impl.AbstractChannelFactory;
 import com.exametrika.common.messaging.impl.ChannelParameters;
 import com.exametrika.common.messaging.impl.CompositeDeliveryHandler;
@@ -32,6 +35,7 @@ import com.exametrika.common.messaging.impl.protocols.failuredetection.LiveNodeM
 import com.exametrika.common.messaging.impl.transports.ConnectionManager;
 import com.exametrika.common.messaging.impl.transports.tcp.TcpTransport;
 import com.exametrika.common.utils.Assert;
+import com.exametrika.impl.groups.cluster.discovery.CoreCoordinatorClusterDiscoveryProtocol;
 import com.exametrika.impl.groups.cluster.discovery.CoreGroupDiscoveryProtocol;
 import com.exametrika.impl.groups.cluster.discovery.IWorkerNodeDiscoverer;
 import com.exametrika.impl.groups.cluster.exchange.CoreFeedbackProtocol;
@@ -54,6 +58,7 @@ import com.exametrika.impl.groups.cluster.management.CommandManager;
 import com.exametrika.impl.groups.cluster.management.ICommandHandler;
 import com.exametrika.impl.groups.cluster.membership.ClusterMembershipManager;
 import com.exametrika.impl.groups.cluster.membership.ClusterMembershipStateTransferFactory;
+import com.exametrika.impl.groups.cluster.membership.CoreClusterMembershipProtocol;
 import com.exametrika.impl.groups.cluster.membership.CoreCoordinatorClusterMembershipProtocol;
 import com.exametrika.impl.groups.cluster.membership.CoreGroupMembershipManager;
 import com.exametrika.impl.groups.cluster.membership.CoreGroupMembershipTracker;
@@ -73,7 +78,7 @@ import com.exametrika.impl.groups.cluster.multicast.FlowControlProtocol;
 import com.exametrika.impl.groups.cluster.state.CompositeSimpleStateTransferFactory;
 import com.exametrika.impl.groups.cluster.state.SimpleStateTransferClientProtocol;
 import com.exametrika.impl.groups.cluster.state.SimpleStateTransferServerProtocol;
-import com.exametrika.spi.groups.ISimpleStateTransferFactory;
+import com.exametrika.spi.groups.IStateTransferFactory;
 
 /**
  * The {@link CoreGroupSubChannelFactory} is a core group node channel factory.
@@ -94,13 +99,19 @@ public class CoreGroupSubChannelFactory extends AbstractChannelFactory
     private IGroupFailureDetector failureDetector;
     private IWorkerNodeDiscoverer workerNodeDiscoverer;
     private NodesMembershipProvider nodesMembershipProvider;
+    private ISender bridgeSender;
+    private CoreFeedbackProtocol coreToWorkerFeedbackProtocol;
+    private ISender workerSender;
+    private CoreClusterMembershipProtocol clusterMembershipProtocol;
+    private IChannelReconnector channelReconnector;
+    private CoreGroupFailureDetectionProtocol failureDetectionProtocol;
     
     public CoreGroupSubChannelFactory()
     {
-        this(new NodeFactoryParameters());
+        this(new CoreNodeFactoryParameters());
     }
     
-    public CoreGroupSubChannelFactory(NodeFactoryParameters factoryParameters)
+    public CoreGroupSubChannelFactory(CoreNodeFactoryParameters factoryParameters)
     {
         super(factoryParameters);
     }
@@ -120,6 +131,16 @@ public class CoreGroupSubChannelFactory extends AbstractChannelFactory
         this.clusterMembershipManager = clusterMembershipManager;
     }
 
+    public void setWorkerSender(ISender workerSender)
+    {
+        this.workerSender = workerSender;
+    }
+    
+    public void setChannelReconnector(IChannelReconnector channelReconnector)
+    {
+        this.channelReconnector = channelReconnector;
+    }
+    
     public List<IGracefulExitStrategy> getGracefulExitStrategies()
     {
         return gracefulExitStrategies;
@@ -145,11 +166,16 @@ public class CoreGroupSubChannelFactory extends AbstractChannelFactory
         return failureDetector;
     }
 
-    public void setWorkerNodeDiscoverer(IWorkerNodeDiscoverer workerNodeDiscoverer)
+    public ISender getBridgeSender()
     {
-        this.workerNodeDiscoverer = workerNodeDiscoverer;
+        return bridgeSender;
     }
-
+    
+    public CoreFeedbackProtocol getCoreToWorkerFeedbackProtocol()
+    {
+        return coreToWorkerFeedbackProtocol;
+    }
+    
     @Override
     protected INodeTrackingStrategy createNodeTrackingStrategy()
     {
@@ -161,14 +187,14 @@ public class CoreGroupSubChannelFactory extends AbstractChannelFactory
         ISerializationRegistry serializationRegistry, ILiveNodeProvider liveNodeProvider, List<IFailureObserver> failureObservers, 
         List<AbstractProtocol> protocols)
     {
-        NodeParameters nodeParameters = (NodeParameters)parameters;
+        CoreNodeParameters nodeParameters = (CoreNodeParameters)parameters;
         Assert.notNull(nodeParameters.propertyProvider);
         Assert.notNull(nodeParameters.discoveryStrategy);
         Assert.notNull(nodeParameters.stateStore);
         Assert.notNull(nodeParameters.deliveryHandler);
         Assert.notNull(nodeParameters.localFlowController);
         
-        NodeFactoryParameters nodeFactoryParameters = (NodeFactoryParameters)factoryParameters;
+        CoreNodeFactoryParameters nodeFactoryParameters = (CoreNodeFactoryParameters)factoryParameters;
         
         Set<IPreparedGroupMembershipListener> preparedMembershipListeners = new HashSet<IPreparedGroupMembershipListener>();
         Set<IGroupMembershipListener> membershipListeners = new HashSet<IGroupMembershipListener>();
@@ -177,7 +203,7 @@ public class CoreGroupSubChannelFactory extends AbstractChannelFactory
             preparedMembershipListeners, membershipListeners);
 
         Set<IFailureDetectionListener> failureDetectionListeners = new HashSet<IFailureDetectionListener>();
-        CoreGroupFailureDetectionProtocol failureDetectionProtocol = new CoreGroupFailureDetectionProtocol(channelName, messageFactory, membershipManager, 
+        failureDetectionProtocol = new CoreGroupFailureDetectionProtocol(channelName, messageFactory, membershipManager, 
             failureDetectionListeners, nodeFactoryParameters.failureUpdatePeriod, nodeFactoryParameters.failureHistoryPeriod, 
             nodeFactoryParameters.maxShunCount);
         preparedMembershipListeners.add(failureDetectionProtocol);
@@ -201,28 +227,35 @@ public class CoreGroupSubChannelFactory extends AbstractChannelFactory
         flowControlProtocol.setFailureDetector(failureDetectionProtocol);
         
         List<IClusterMembershipProvider> membershipProviders = new ArrayList<IClusterMembershipProvider>();
-        CoreCoordinatorClusterMembershipProtocol clusterMembershipProtocol = new CoreCoordinatorClusterMembershipProtocol(
+        CoreCoordinatorClusterMembershipProtocol coordinatorClusterMembershipProtocol = new CoreCoordinatorClusterMembershipProtocol(
             channelName, messageFactory, clusterMembershipManager, membershipProviders, membershipManager, 
             nodeFactoryParameters.membershipTrackPeriod);
+        protocols.add(coordinatorClusterMembershipProtocol);
+        coordinatorClusterMembershipProtocol.setFailureDetector(failureDetectionProtocol);
+        gracefulExitStrategies.add(coordinatorClusterMembershipProtocol);
+        membershipListeners.add(coordinatorClusterMembershipProtocol);
+        
+        clusterMembershipProtocol = new CoreClusterMembershipProtocol(
+            channelName, messageFactory, clusterMembershipManager, membershipProviders, membershipManager, 
+            coordinatorClusterMembershipProtocol, nodeFactoryParameters.membershipTrackPeriod);
         protocols.add(clusterMembershipProtocol);
         clusterMembershipProtocol.setFailureDetector(failureDetectionProtocol);
-        gracefulExitStrategies.add(clusterMembershipProtocol);
-        membershipListeners.add(clusterMembershipProtocol);
+        failureDetectionListeners.add(clusterMembershipProtocol);
         
-        GroupDefinitionStateTransferFactory groupDefinitionStateTransferFactory =  new GroupDefinitionStateTransferFactory();
-        ISimpleStateTransferFactory stateTransferFactory = new CompositeSimpleStateTransferFactory(Arrays.asList(
-            new ClusterMembershipStateTransferFactory(clusterMembershipManager, membershipProviders), 
+        GroupDefinitionStateTransferFactory groupDefinitionStateTransferFactory =  new GroupDefinitionStateTransferFactory(nodeParameters.stateStore);
+        IStateTransferFactory stateTransferFactory = new CompositeSimpleStateTransferFactory(Arrays.asList(
+            new ClusterMembershipStateTransferFactory(clusterMembershipManager, membershipProviders, nodeParameters.stateStore), 
             groupDefinitionStateTransferFactory));
         
         SimpleStateTransferClientProtocol stateTransferClientProtocol = new SimpleStateTransferClientProtocol(channelName,
-            messageFactory, membershipManager, stateTransferFactory, nodeParameters.stateStore);
+            messageFactory, membershipManager, stateTransferFactory, GroupMemberships.CORE_GROUP_ID);
         protocols.add(stateTransferClientProtocol);
         discoveryProtocol.setGroupJoinStrategy(stateTransferClientProtocol);
         failureDetectionListeners.add(stateTransferClientProtocol);
         
         SimpleStateTransferServerProtocol stateTransferServerProtocol = new SimpleStateTransferServerProtocol(channelName, 
             messageFactory, membershipManager, failureDetectionProtocol, stateTransferFactory, 
-            nodeParameters.stateStore, nodeFactoryParameters.saveSnapshotPeriod);
+            GroupMemberships.CORE_GROUP_ID, nodeFactoryParameters.saveSnapshotPeriod);
         protocols.add(stateTransferServerProtocol);
         
         FailureAtomicMulticastProtocol multicastProtocol = new FailureAtomicMulticastProtocol(channelName, 
@@ -251,6 +284,7 @@ public class CoreGroupSubChannelFactory extends AbstractChannelFactory
             membershipManager, failureDetectionProtocol, nodeFactoryParameters.flushTimeout, flushParticipantProtocol);
         failureDetectionListeners.add(flushCoordinatorProtocol);
         protocols.add(flushCoordinatorProtocol);
+        coordinatorClusterMembershipProtocol.setFlushManager(flushCoordinatorProtocol);
         clusterMembershipProtocol.setFlushManager(flushCoordinatorProtocol);
 
         GroupDataExchangeProtocol dataExchangeProtocol = new GroupDataExchangeProtocol(channelName, messageFactory, membershipManager,
@@ -280,12 +314,27 @@ public class CoreGroupSubChannelFactory extends AbstractChannelFactory
         failureDetectionListeners.add(feedbackProtocol);
         preparedMembershipListeners.add(feedbackProtocol);
         
+        coreToWorkerFeedbackProtocol = new CoreFeedbackProtocol(channelName, messageFactory, clusterMembershipManager, 
+            feedbackProviders, feedbackListeners, nodeFactoryParameters.dataExchangePeriod, failureDetectionProtocol, 
+            membershipManager);
+        clusterMembershipListeners.add(feedbackProtocol);
+        failureDetectionListeners.add(feedbackProtocol);
+        preparedMembershipListeners.add(feedbackProtocol);
+        
         CoreCoordinatorClusterFailureDetectionProtocol clusterFailureDetectionProtocol = new CoreCoordinatorClusterFailureDetectionProtocol(
             channelName, messageFactory, clusterMembershipManager);
         protocols.add(clusterFailureDetectionProtocol);
         
         protocols.add(discoveryProtocol);
         protocols.add(failureDetectionProtocol);
+        
+        CoreCoordinatorClusterDiscoveryProtocol clusterDiscoveryProtocol = new CoreCoordinatorClusterDiscoveryProtocol(channelName, messageFactory);
+        clusterDiscoveryProtocol.setMembershipService(membershipManager);
+        clusterDiscoveryProtocol.setFailureDetector(failureDetectionProtocol);
+        protocols.add(clusterDiscoveryProtocol);
+        workerNodeDiscoverer = clusterDiscoveryProtocol;
+        
+        bridgeSender = failureDetectionProtocol;
         
         membershipTracker = new CoreGroupMembershipTracker(nodeFactoryParameters.membershipTrackPeriod, membershipManager, discoveryProtocol, 
             failureDetectionProtocol, flushCoordinatorProtocol, nodeFactoryParameters.flushCondition);
@@ -311,9 +360,7 @@ public class CoreGroupSubChannelFactory extends AbstractChannelFactory
     @Override
     protected void wireProtocols(IChannel channel, TcpTransport transport, ProtocolStack protocolStack)
     {
-        CoreGroupFailureDetectionProtocol failureDetectionProtocol = protocolStack.find(CoreGroupFailureDetectionProtocol.class);
         failureDetectionProtocol.setFailureObserver(transport);
-        failureDetectionProtocol.setChannelReconnector((IChannelReconnector)channel);
         channel.getCompartment().addTimerProcessor(membershipTracker);
         
         GroupNodeTrackingStrategy strategy = (GroupNodeTrackingStrategy)protocolStack.find(HeartbeatProtocol.class).getNodeTrackingStrategy();
@@ -326,11 +373,15 @@ public class CoreGroupSubChannelFactory extends AbstractChannelFactory
         
         CommandManager commandManager = protocolStack.find(CommandManager.class);
         commandManager.setCompartment(channel.getCompartment());
+        
+        clusterMembershipProtocol.setFailureObserver(transport);
     }
     
     protected void wireSubChannel()
     {
         nodesMembershipProvider.setNodeDiscoverer(workerNodeDiscoverer);
+        clusterMembershipProtocol.setWorkerSender(workerSender);
+        failureDetectionProtocol.setChannelReconnector(channelReconnector);
     }
     
     @Override

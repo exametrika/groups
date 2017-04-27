@@ -20,6 +20,7 @@ import com.exametrika.api.groups.cluster.IDomainMembership;
 import com.exametrika.api.groups.cluster.IDomainMembershipChange;
 import com.exametrika.api.groups.cluster.IGroup;
 import com.exametrika.api.groups.cluster.IGroupChange;
+import com.exametrika.common.compartment.ICompartmentProcessor;
 import com.exametrika.common.io.ISerializationRegistry;
 import com.exametrika.common.l10n.DefaultMessage;
 import com.exametrika.common.l10n.ILocalizedMessage;
@@ -39,19 +40,19 @@ import com.exametrika.common.utils.Assert;
  * @threadsafety This class and its methods are not thread safe.
  * @author Medvedev-A
  */
-public final class WorkerGroupMembershipProtocol extends MessageRouter implements IClusterMembershipListener
+public final class WorkerGroupMembershipProtocol extends MessageRouter implements IClusterMembershipListener, ICompartmentProcessor
 {
     private static final IMessages messages = Messages.get(IMessages.class);
     private final Map<UUID, GroupProtocolSubStack> groupsStacks = new HashMap<UUID, GroupProtocolSubStack>();
     private final IClusterMembershipService membershipService;
     private final IGroupProtocolSubStackFactory protocolSubStackFactory;
     private final long groupSubStackRemoveDelay;
-    private final int maxPendingMessageSize;
+    private final int maxPendingMessageCount;
     private final Map<UUID, List<IMessage>> pendingMessages = new LinkedHashMap<UUID, List<IMessage>>();
     
     public WorkerGroupMembershipProtocol(String channelName, IMessageFactory messageFactory, 
         IClusterMembershipService membershipService, IGroupProtocolSubStackFactory protocolSubStackFactory,
-        long groupSubStackRemoveDelay, int maxPendingMessageSize)
+        long groupSubStackRemoveDelay, int maxPendingMessageCount)
     {
         super(channelName, messageFactory, Collections.<AbstractProtocol>emptyList());
         
@@ -61,7 +62,7 @@ public final class WorkerGroupMembershipProtocol extends MessageRouter implement
         this.membershipService = membershipService;
         this.protocolSubStackFactory = protocolSubStackFactory;
         this.groupSubStackRemoveDelay = groupSubStackRemoveDelay;
-        this.maxPendingMessageSize = maxPendingMessageSize;
+        this.maxPendingMessageCount = maxPendingMessageCount;
     }
 
     @Override
@@ -99,6 +100,13 @@ public final class WorkerGroupMembershipProtocol extends MessageRouter implement
     }
     
     @Override
+    public void process()
+    {
+        for (AbstractProtocol protocol : protocols)
+            ((GroupProtocolSubStack)protocol).process();
+    }
+    
+    @Override
     public void onJoined()
     {
         IClusterMembership membership = membershipService.getMembership();
@@ -118,11 +126,16 @@ public final class WorkerGroupMembershipProtocol extends MessageRouter implement
             
             processPendingMessages(group.getId(), protocolSubStack);
         }
+        
+        for (AbstractProtocol protocol : protocols)
+            ((GroupProtocolSubStack)protocol).onJoined();
     }
 
     @Override
     public void onLeft(LeaveReason reason)
     {
+        for (AbstractProtocol protocol : protocols)
+            ((GroupProtocolSubStack)protocol).onLeft(reason);
     }
 
     @Override
@@ -178,6 +191,9 @@ public final class WorkerGroupMembershipProtocol extends MessageRouter implement
             GroupProtocolSubStack protocol = groupsStacks.get(group.getId());
             protocol.setStartRemoveTime(currentTime);
         }
+        
+        for (AbstractProtocol protocol : protocols)
+            ((GroupProtocolSubStack)protocol).onMembershipChanged(event);
     }
 
     @Override
@@ -202,7 +218,7 @@ public final class WorkerGroupMembershipProtocol extends MessageRouter implement
                     pendingMessages.put(part.getGroupId(), list);
                 }
                 
-                if (list.size() < maxPendingMessageSize)
+                if (list.size() < maxPendingMessageCount)
                     list.add(message);
             }
         }

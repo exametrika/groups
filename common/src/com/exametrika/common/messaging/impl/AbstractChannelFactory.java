@@ -150,9 +150,6 @@ public abstract class AbstractChannelFactory
         transportParameters.receiver = lastProtocol;
         transportParameters.serializationRegistry = serializationRegistry;
         transportParameters.messageFactory = messageFactory;
-        transportParameters.selectionPeriod = factoryParameters.selectionPeriod;
-        transportParameters.channelTimeout = factoryParameters.transportChannelTimeout;
-        transportParameters.maxChannelIdlePeriod = factoryParameters.transportMaxChannelIdlePeriod;
         transportParameters.connectionFilter = parameters.connectionFilter;
         transportParameters.rateController = parameters.rateController;
         transportParameters.adminFilter = parameters.adminFilter;

@@ -41,10 +41,10 @@ import com.exametrika.impl.groups.cluster.channel.CoreNodeChannelFactory.GroupPa
 import com.exametrika.impl.groups.cluster.discovery.WellKnownAddressesDiscoveryStrategy;
 import com.exametrika.impl.groups.cluster.membership.GroupMemberships;
 import com.exametrika.impl.groups.cluster.multicast.RemoteFlowId;
-import com.exametrika.spi.groups.IStateStore;
-import com.exametrika.spi.groups.IStateTransferClient;
+import com.exametrika.spi.groups.IAsyncStateStore;
+import com.exametrika.spi.groups.IAsyncStateTransferClient;
 import com.exametrika.spi.groups.IStateTransferFactory;
-import com.exametrika.spi.groups.IStateTransferServer;
+import com.exametrika.spi.groups.IAsyncStateTransferServer;
 
 /**
  * The {@link SimGroupChannelFactory} is a simulation group channel factory.
@@ -157,7 +157,7 @@ public class SimGroupChannelFactory
         return new ByteArray(buffer);
     }
     
-    private class SimStateTransferServer implements IStateTransferServer
+    private class SimStateTransferServer implements IAsyncStateTransferServer
     {
         SimStateTransferFactory factory;
         
@@ -183,7 +183,7 @@ public class SimGroupChannelFactory
         }
     }
     
-    private class SimStateTransferClient implements IStateTransferClient
+    private class SimStateTransferClient implements IAsyncStateTransferClient
     {
         SimStateTransferFactory factory;
         
@@ -204,19 +204,19 @@ public class SimGroupChannelFactory
         private ByteArray state;
         
         @Override
-        public IStateTransferServer createServer()
+        public IAsyncStateTransferServer createServer()
         {
             return new SimStateTransferServer(this);
         }
 
         @Override
-        public IStateTransferClient createClient()
+        public IAsyncStateTransferClient createClient()
         {
             return new SimStateTransferClient(this);
         }
     }
     
-    private class SimStateStore implements IStateStore
+    private class SimStateStore implements IAsyncStateStore
     {
         private ByteArray buffer = createBuffer(17, 100000);
         

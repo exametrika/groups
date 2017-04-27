@@ -13,11 +13,14 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
+import com.exametrika.api.groups.cluster.ClusterMembershipEvent;
+import com.exametrika.api.groups.cluster.IClusterMembershipListener;
 import com.exametrika.api.groups.cluster.IGroup;
 import com.exametrika.api.groups.cluster.IGroupChange;
 import com.exametrika.api.groups.cluster.IGroupMembership;
 import com.exametrika.api.groups.cluster.IGroupMembershipChange;
 import com.exametrika.api.groups.cluster.INode;
+import com.exametrika.common.compartment.ICompartmentProcessor;
 import com.exametrika.common.messaging.IFeed;
 import com.exametrika.common.messaging.IMessage;
 import com.exametrika.common.messaging.IMessageFactory;
@@ -39,12 +42,15 @@ import com.exametrika.impl.groups.cluster.flush.IFlushManager;
  * @threadsafety This class and its methods are not thread safe.
  * @author Medvedev-A
  */
-public final class GroupProtocolSubStack extends ProtocolSubStack implements IPreparedGroupMembershipListener
+public final class GroupProtocolSubStack extends ProtocolSubStack implements IPreparedGroupMembershipListener, 
+    IClusterMembershipListener, ICompartmentProcessor
 {
     private final UUID groupId;
     private final GroupMembershipManager membershipManager;
     private final IDataLossFeedbackService dataLossFeedbackService;
     private final int maxGroupMembershipHistorySize;
+    private final List<IClusterMembershipListener> clusterMembershipListeners;
+    private final List<ICompartmentProcessor> compartmentProcessors;
     private long startRemoveTime;
     private final Deque<IGroupMembership> membershipHistory = new ArrayDeque<IGroupMembership>();
     private IFlushManager flushManager;
@@ -54,18 +60,23 @@ public final class GroupProtocolSubStack extends ProtocolSubStack implements IPr
 
     public GroupProtocolSubStack(String channelName, IMessageFactory messageFactory, UUID groupId,
         List<? extends AbstractProtocol> protocols, GroupMembershipManager membershipManager, 
-        IDataLossFeedbackService dataLossFeedbackService, int maxGroupMembershipHistorySize)
+        IDataLossFeedbackService dataLossFeedbackService, int maxGroupMembershipHistorySize,
+        List<IClusterMembershipListener> clusterMembershipListeners, List<ICompartmentProcessor> compartmentProcessors)
     {
         super(channelName, messageFactory, protocols);
         
         Assert.notNull(groupId);
         Assert.notNull(membershipManager);
         Assert.notNull(dataLossFeedbackService);
+        Assert.notNull(clusterMembershipListeners);
+        Assert.notNull(compartmentProcessors);
         
         this.groupId = groupId;
         this.membershipManager = membershipManager;
         this.maxGroupMembershipHistorySize = maxGroupMembershipHistorySize;
         this.dataLossFeedbackService = dataLossFeedbackService;
+        this.clusterMembershipListeners = clusterMembershipListeners;
+        this.compartmentProcessors = compartmentProcessors;
     }
 
     public long getStartRemoveTime()
@@ -218,7 +229,38 @@ public final class GroupProtocolSubStack extends ProtocolSubStack implements IPr
         if (membershipHistory.size() > maxGroupMembershipHistorySize)
             membershipHistory.removeLast();
     }
+
+    @Override
+    public void onJoined()
+    {
+        for (IClusterMembershipListener listener : clusterMembershipListeners)
+            listener.onJoined();
+    }
+
+    @Override
+    public void onLeft(LeaveReason reason)
+    {
+        for (IClusterMembershipListener listener : clusterMembershipListeners)
+            listener.onLeft(reason);
+    }
+
+    @Override
+    public void onMembershipChanged(ClusterMembershipEvent event)
+    {
+        for (IClusterMembershipListener listener : clusterMembershipListeners)
+            listener.onMembershipChanged(event);
+    }
     
+    @Override
+    public void process()
+    {
+        if (!compartmentProcessors.isEmpty())
+        {
+            for (ICompartmentProcessor processor : compartmentProcessors)
+                processor.process();
+        }
+    }
+
     @Override
     protected void doSend(ISender sender, IMessage message)
     {

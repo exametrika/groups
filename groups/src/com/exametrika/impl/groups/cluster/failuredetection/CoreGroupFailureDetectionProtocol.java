@@ -74,7 +74,7 @@ public final class CoreGroupFailureDetectionProtocol extends GroupFailureDetecti
                 
                 if (membershipService.getLocalNode().equals(currentCoordinator))
                 {
-                    FailureUpdateMessagePart part = new FailureUpdateMessagePart(failedMemberIds, leftMemberIds);
+                    FailureUpdateMessagePart part = new FailureUpdateMessagePart(failedMemberIds, leftMemberIds, true);
                     for (INode member : membership.getGroup().getMembers())
                     {
                         if (!failedMembers.contains(member) && !leftMembers.contains(member) && 
@@ -85,7 +85,7 @@ public final class CoreGroupFailureDetectionProtocol extends GroupFailureDetecti
                 }
                 else
                     send(messageFactory.create(currentCoordinator.getAddress(), new FailureUpdateMessagePart(
-                        failedMemberIds, leftMemberIds), MessageFlags.HIGH_PRIORITY | MessageFlags.PARALLEL));
+                        failedMemberIds, leftMemberIds, true), MessageFlags.HIGH_PRIORITY | MessageFlags.PARALLEL));
                 
                 lastFailureUpdateTime = timeService.getCurrentTime();
             }
@@ -132,7 +132,7 @@ public final class CoreGroupFailureDetectionProtocol extends GroupFailureDetecti
         }
         else if (message.hasFlags(MessageFlags.SHUN))
             channelReconnector.reconnect();
-        else if (message.getPart() instanceof FailureUpdateMessagePart)
+        else if (message.getPart() instanceof FailureUpdateMessagePart && ((FailureUpdateMessagePart)message.getPart()).isCore())
         {
             FailureUpdateMessagePart part = message.getPart();
             addFailedMembers(part.getFailedMembers());

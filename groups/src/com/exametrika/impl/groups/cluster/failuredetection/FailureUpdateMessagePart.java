@@ -24,14 +24,21 @@ public final class FailureUpdateMessagePart implements IMessagePart
     private static final IMessages messages = Messages.get(IMessages.class);
     private final Set<UUID> failedMembers;
     private final Set<UUID> leftMembers;
+    private final boolean core;
 
-    public FailureUpdateMessagePart(Set<UUID> failedMembers, Set<UUID> leftMembers)
+    public FailureUpdateMessagePart(Set<UUID> failedMembers, Set<UUID> leftMembers, boolean core)
     {
         Assert.notNull(failedMembers);
         Assert.notNull(leftMembers);
         
         this.failedMembers = Immutables.wrap(failedMembers);
         this.leftMembers = Immutables.wrap(leftMembers);
+        this.core = core;
+    }
+    
+    public boolean isCore()
+    {
+        return core;
     }
     
     public Set<UUID> getFailedMembers()
@@ -47,19 +54,19 @@ public final class FailureUpdateMessagePart implements IMessagePart
     @Override
     public int getSize()
     {
-        return failedMembers.size() * 16 + leftMembers.size() * 16;
+        return failedMembers.size() * 16 + leftMembers.size() * 16 + 1;
     }
     
     @Override 
     public String toString()
     {
-        return messages.toString(failedMembers, leftMembers).toString();
+        return messages.toString(failedMembers, leftMembers, core).toString();
     }
     
     private interface IMessages
     {
-        @DefaultMessage("failed members: {0}, left members: {1}")
-        ILocalizedMessage toString(Set<UUID> failedMembers, Set<UUID> leftMembers);
+        @DefaultMessage("failed members: {0}, left members: {1}, core: {2}")
+        ILocalizedMessage toString(Set<UUID> failedMembers, Set<UUID> leftMembers, boolean core);
     }
 }
 

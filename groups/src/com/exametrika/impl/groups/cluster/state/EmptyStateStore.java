@@ -6,7 +6,7 @@ package com.exametrika.impl.groups.cluster.state;
 import java.io.File;
 import java.util.UUID;
 
-import com.exametrika.spi.groups.IStateStore;
+import com.exametrika.spi.groups.IAsyncStateStore;
 
 /**
  * The {@link EmptyStateStore} represents an empty state store.
@@ -14,7 +14,7 @@ import com.exametrika.spi.groups.IStateStore;
  * @threadsafety This class and its methods are thread safe.
  * @author Medvedev-A
  */
-public final class EmptyStateStore implements IStateStore
+public final class EmptyStateStore implements IAsyncStateStore
 {
     @Override
     public boolean load(UUID id, File state)

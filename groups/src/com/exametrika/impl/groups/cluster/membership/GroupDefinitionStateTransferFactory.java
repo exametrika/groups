@@ -4,6 +4,7 @@
 package com.exametrika.impl.groups.cluster.membership;
 
 import java.util.List;
+import java.util.UUID;
 
 import com.exametrika.common.io.ISerialization;
 import com.exametrika.common.io.impl.ByteInputStream;
@@ -14,9 +15,10 @@ import com.exametrika.common.io.impl.SerializationRegistry;
 import com.exametrika.common.messaging.IMessage;
 import com.exametrika.common.utils.Assert;
 import com.exametrika.common.utils.ByteArray;
+import com.exametrika.spi.groups.ISimpleStateStore;
 import com.exametrika.spi.groups.ISimpleStateTransferClient;
-import com.exametrika.spi.groups.ISimpleStateTransferFactory;
 import com.exametrika.spi.groups.ISimpleStateTransferServer;
+import com.exametrika.spi.groups.IStateTransferFactory;
 
 /**
  * The {@link GroupDefinitionStateTransferFactory} is a definition state transfer factory.
@@ -24,10 +26,18 @@ import com.exametrika.spi.groups.ISimpleStateTransferServer;
  * @threadsafety This class and its methods are thread safe.
  * @author Medvedev-A
  */
-public final class GroupDefinitionStateTransferFactory implements ISimpleStateTransferFactory
+public final class GroupDefinitionStateTransferFactory implements IStateTransferFactory
 {
     private SimpleGroupMappingStrategy groupMappingStrategy;
+    private final ISimpleStateStore stateStore;
 
+    public GroupDefinitionStateTransferFactory(ISimpleStateStore stateStore)
+    {
+        Assert.notNull(stateStore);
+        
+        this.stateStore = stateStore;
+    }
+    
     public void setGroupMappingStrategy(SimpleGroupMappingStrategy groupMappingStrategy)
     {
         Assert.notNull(groupMappingStrategy);
@@ -37,14 +47,29 @@ public final class GroupDefinitionStateTransferFactory implements ISimpleStateTr
     }
     
     @Override
-    public ISimpleStateTransferServer createServer()
+    public ISimpleStateStore createStore(UUID groupId)
     {
+        Assert.notNull(groupId);
+        Assert.isTrue(groupId.equals(GroupMemberships.CORE_GROUP_ID));
+        
+        return stateStore;
+    }
+    
+    @Override
+    public ISimpleStateTransferServer createServer(UUID groupId)
+    {
+        Assert.notNull(groupId);
+        Assert.isTrue(groupId.equals(GroupMemberships.CORE_GROUP_ID));
+        
         return new GroupDefinitionStateTransferServer();
     }
 
     @Override
-    public ISimpleStateTransferClient createClient()
+    public ISimpleStateTransferClient createClient(UUID groupId)
     {
+        Assert.notNull(groupId);
+        Assert.isTrue(groupId.equals(GroupMemberships.CORE_GROUP_ID));
+        
         return new GroupDefinitionStateTransferClient();
     }
     

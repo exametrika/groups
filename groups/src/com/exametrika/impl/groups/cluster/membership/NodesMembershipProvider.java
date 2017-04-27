@@ -33,6 +33,11 @@ public final class NodesMembershipProvider implements IClusterMembershipProvider
     private Set<INode> failedNodes;
     private Set<INode> leftNodes;
     
+    public NodesMembershipProvider()
+    {
+        this.failureDetector = null;
+    }
+    
     public NodesMembershipProvider(IClusterFailureDetector failureDetector)
     {
         Assert.notNull(failureDetector);

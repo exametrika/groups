@@ -23,12 +23,19 @@ public final class DiscoveryMessagePart implements IMessagePart
 {
     private static final IMessages messages = Messages.get(IMessages.class);
     private final Set<INode> discoveredNodes;
+    private final boolean core;
 
-    public DiscoveryMessagePart(Set<INode> discoveredNodes)
+    public DiscoveryMessagePart(Set<INode> discoveredNodes, boolean core)
     {
         Assert.notNull(discoveredNodes);
         
         this.discoveredNodes = Immutables.wrap(discoveredNodes);
+        this.core = core;
+    }
+    
+    public boolean isCore()
+    {
+        return core;
     }
     
     public Set<INode> getDiscoveredNodes()
@@ -45,13 +52,13 @@ public final class DiscoveryMessagePart implements IMessagePart
     @Override 
     public String toString()
     {
-        return messages.toString(discoveredNodes).toString();
+        return messages.toString(discoveredNodes, core).toString();
     }
     
     private interface IMessages
     {
-        @DefaultMessage("discovered nodes: {0}")
-        ILocalizedMessage toString(Set<INode> discoveredNodes);
+        @DefaultMessage("discovered nodes: {0}, core: {1}")
+        ILocalizedMessage toString(Set<INode> discoveredNodes, boolean core);
     }
 }
 

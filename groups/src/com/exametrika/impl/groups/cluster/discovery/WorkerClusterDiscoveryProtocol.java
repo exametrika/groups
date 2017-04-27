@@ -95,7 +95,8 @@ public final class WorkerClusterDiscoveryProtocol extends AbstractProtocol imple
             if (entryPointAddress == null)
                 return;
             
-            DiscoveryMessagePart discoveryPart = new DiscoveryMessagePart(java.util.Collections.singleton(membershipService.getLocalNode()));
+            DiscoveryMessagePart discoveryPart = new DiscoveryMessagePart(
+                java.util.Collections.singleton(membershipService.getLocalNode()), false);
             send(messageFactory.create(entryPointAddress, discoveryPart, MessageFlags.HIGH_PRIORITY));
         }
     }

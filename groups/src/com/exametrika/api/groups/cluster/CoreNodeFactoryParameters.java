@@ -1,7 +1,7 @@
 /**
  * Copyright 2017 Andrey Medvedev. All rights reserved.
  */
-package com.exametrika.impl.groups.cluster.channel;
+package com.exametrika.api.groups.cluster;
 
 /**
  * The {@link CoreNodeFactoryParameters} is a core node factory parameters.

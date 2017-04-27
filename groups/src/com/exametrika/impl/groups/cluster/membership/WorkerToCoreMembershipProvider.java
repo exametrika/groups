@@ -33,6 +33,12 @@ public final class WorkerToCoreMembershipProvider implements IClusterMembershipP
     private final IGroupMembershipService membershipService;
     private final IWorkerToCoreMappingStarategy mappingStarategy;
 
+    public WorkerToCoreMembershipProvider()
+    {
+        this.membershipService = null;
+        this.mappingStarategy = null;
+    }
+    
     public WorkerToCoreMembershipProvider(IGroupMembershipService membershipService, IWorkerToCoreMappingStarategy mappingStarategy)
     {
         Assert.notNull(membershipService);
