@@ -8,7 +8,7 @@ import java.util.List;
 import java.util.Set;
 
 import com.exametrika.common.utils.Assert;
-import com.exametrika.spi.groups.IDiscoveryStrategy;
+import com.exametrika.spi.groups.cluster.discovery.IDiscoveryStrategy;
 
 /**
  * The {@link CompositeDiscoveryStrategy} is a composite discovery strategy.

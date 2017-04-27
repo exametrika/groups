@@ -3,7 +3,7 @@
  */
 package com.exametrika.api.groups.cluster;
 
-import com.exametrika.spi.groups.ISimpleStateStore;
+import com.exametrika.spi.groups.cluster.state.ISimpleStateStore;
 
 /**
  * The {@link CoreNodeParameters} is a core node parameters.

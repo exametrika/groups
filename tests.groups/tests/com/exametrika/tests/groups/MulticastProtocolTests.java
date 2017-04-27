@@ -54,10 +54,10 @@ import com.exametrika.impl.groups.cluster.flush.IFlush;
 import com.exametrika.impl.groups.cluster.flush.IFlushParticipant;
 import com.exametrika.impl.groups.cluster.membership.GroupMemberships;
 import com.exametrika.impl.groups.cluster.multicast.RemoteFlowId;
-import com.exametrika.spi.groups.IAsyncStateStore;
-import com.exametrika.spi.groups.IAsyncStateTransferClient;
-import com.exametrika.spi.groups.IStateTransferFactory;
-import com.exametrika.spi.groups.IAsyncStateTransferServer;
+import com.exametrika.spi.groups.cluster.state.IAsyncStateStore;
+import com.exametrika.spi.groups.cluster.state.IAsyncStateTransferClient;
+import com.exametrika.spi.groups.cluster.state.IAsyncStateTransferServer;
+import com.exametrika.spi.groups.cluster.state.IStateTransferFactory;
 
 /**
  * The {@link MulticastProtocolTests} are tests for flush.

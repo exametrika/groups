@@ -32,7 +32,7 @@ import com.exametrika.common.messaging.impl.protocols.failuredetection.ICleanupM
 import com.exametrika.common.utils.Assert;
 import com.exametrika.impl.groups.cluster.failuredetection.IGroupFailureDetector;
 import com.exametrika.impl.groups.cluster.membership.IPreparedGroupMembershipListener;
-import com.exametrika.spi.groups.IDiscoveryStrategy;
+import com.exametrika.spi.groups.cluster.discovery.IDiscoveryStrategy;
 
 /**
  * The {@link CoreGroupDiscoveryProtocol} represents a protocol that discovers core group entry points and initiates group joining

@@ -14,12 +14,12 @@ import com.exametrika.common.io.impl.DataSerialization;
 import com.exametrika.common.messaging.IMessage;
 import com.exametrika.common.utils.Assert;
 import com.exametrika.common.utils.ByteArray;
-import com.exametrika.spi.groups.ISimpleStateTransferClient;
-import com.exametrika.spi.groups.ISimpleStateTransferServer;
-import com.exametrika.spi.groups.IStateStore;
-import com.exametrika.spi.groups.IStateTransferClient;
-import com.exametrika.spi.groups.IStateTransferFactory;
-import com.exametrika.spi.groups.IStateTransferServer;
+import com.exametrika.spi.groups.cluster.state.ISimpleStateTransferClient;
+import com.exametrika.spi.groups.cluster.state.ISimpleStateTransferServer;
+import com.exametrika.spi.groups.cluster.state.IStateStore;
+import com.exametrika.spi.groups.cluster.state.IStateTransferClient;
+import com.exametrika.spi.groups.cluster.state.IStateTransferFactory;
+import com.exametrika.spi.groups.cluster.state.IStateTransferServer;
 
 /**
  * The {@link CompositeSimpleStateTransferFactory} represents a composite simple state transfer factory.

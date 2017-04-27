@@ -21,7 +21,7 @@ import com.exametrika.common.messaging.IMessageFactory;
 import com.exametrika.common.messaging.MessageFlags;
 import com.exametrika.common.messaging.impl.protocols.AbstractProtocol;
 import com.exametrika.common.utils.Assert;
-import com.exametrika.spi.groups.IDiscoveryStrategy;
+import com.exametrika.spi.groups.cluster.discovery.IDiscoveryStrategy;
 
 /**
  * The {@link WorkerClusterDiscoveryProtocol} represents a worker node part of cluster discovery protocol.

@@ -7,7 +7,7 @@ import java.util.Set;
 
 import com.exametrika.common.utils.Assert;
 import com.exametrika.common.utils.Immutables;
-import com.exametrika.spi.groups.IDiscoveryStrategy;
+import com.exametrika.spi.groups.cluster.discovery.IDiscoveryStrategy;
 
 /**
  * The {@link WellKnownAddressesDiscoveryStrategy} is a discovery strategy that uses wellknown addresses as cluster entry points.

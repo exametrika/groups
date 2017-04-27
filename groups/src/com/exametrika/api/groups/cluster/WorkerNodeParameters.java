@@ -5,7 +5,7 @@ package com.exametrika.api.groups.cluster;
 
 import com.exametrika.common.messaging.IDeliveryHandler;
 import com.exametrika.common.messaging.impl.NoDeliveryHandler;
-import com.exametrika.spi.groups.IStateTransferFactory;
+import com.exametrika.spi.groups.cluster.state.IStateTransferFactory;
 
 /**
  * The {@link WorkerNodeParameters} is a worker node parameters.

@@ -1,7 +1,7 @@
 /**
  * Copyright 2007 Andrey Medvedev. All rights reserved.
  */
-package com.exametrika.spi.groups;
+package com.exametrika.spi.groups.cluster.discovery;
 
 import java.util.Set;
 

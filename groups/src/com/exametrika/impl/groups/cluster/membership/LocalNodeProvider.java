@@ -6,7 +6,7 @@ package com.exametrika.impl.groups.cluster.membership;
 import com.exametrika.api.groups.cluster.INode;
 import com.exametrika.common.messaging.ILiveNodeProvider;
 import com.exametrika.common.utils.Assert;
-import com.exametrika.spi.groups.IPropertyProvider;
+import com.exametrika.spi.groups.cluster.channel.IPropertyProvider;
 
 /**
  * The {@link LocalNodeProvider} provides local node.

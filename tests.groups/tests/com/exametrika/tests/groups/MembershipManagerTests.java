@@ -44,12 +44,12 @@ import com.exametrika.impl.groups.cluster.membership.GroupMembershipDelta;
 import com.exametrika.impl.groups.cluster.membership.GroupMemberships;
 import com.exametrika.impl.groups.cluster.membership.GroupMemberships.MembershipChangeInfo;
 import com.exametrika.impl.groups.cluster.membership.GroupMemberships.MembershipDeltaInfo;
+import com.exametrika.spi.groups.cluster.channel.IPropertyProvider;
 import com.exametrika.impl.groups.cluster.membership.IGroupMembershipDelta;
 import com.exametrika.impl.groups.cluster.membership.IGroupMembershipManager;
 import com.exametrika.impl.groups.cluster.membership.IPreparedGroupMembershipListener;
 import com.exametrika.impl.groups.cluster.membership.LocalNodeProvider;
 import com.exametrika.impl.groups.cluster.membership.Node;
-import com.exametrika.spi.groups.IPropertyProvider;
 
 /**
  * The {@link MembershipManagerTests} are tests for {@link CoreGroupMembershipManager}.

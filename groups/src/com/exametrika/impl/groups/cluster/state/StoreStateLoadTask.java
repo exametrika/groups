@@ -18,9 +18,9 @@ import com.exametrika.common.log.Loggers;
 import com.exametrika.common.messaging.ChannelException;
 import com.exametrika.common.utils.Assert;
 import com.exametrika.common.utils.ICompletionHandler;
-import com.exametrika.spi.groups.IAsyncStateStore;
-import com.exametrika.spi.groups.IAsyncStateTransferClient;
-import com.exametrika.spi.groups.IStateTransferFactory;
+import com.exametrika.spi.groups.cluster.state.IAsyncStateStore;
+import com.exametrika.spi.groups.cluster.state.IAsyncStateTransferClient;
+import com.exametrika.spi.groups.cluster.state.IStateTransferFactory;
 
 /**
  * The {@link StoreStateLoadTask} is a task which loads state from external state store.

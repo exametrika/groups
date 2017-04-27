@@ -10,8 +10,8 @@ import com.exametrika.common.compartment.ICompartmentTask;
 import com.exametrika.common.messaging.ChannelException;
 import com.exametrika.common.utils.Assert;
 import com.exametrika.common.utils.ICompletionHandler;
-import com.exametrika.spi.groups.IAsyncStateTransferClient;
-import com.exametrika.spi.groups.IStateTransferFactory;
+import com.exametrika.spi.groups.cluster.state.IAsyncStateTransferClient;
+import com.exametrika.spi.groups.cluster.state.IStateTransferFactory;
 
 /**
  * The {@link SnapshotLoadTask} is task which loads state snapshot from specified file.

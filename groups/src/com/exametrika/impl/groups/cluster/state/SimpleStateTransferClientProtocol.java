@@ -30,9 +30,9 @@ import com.exametrika.impl.groups.cluster.failuredetection.IFailureDetectionList
 import com.exametrika.impl.groups.cluster.flush.IFlush;
 import com.exametrika.impl.groups.cluster.flush.IFlushParticipant;
 import com.exametrika.impl.groups.cluster.membership.IGroupMembershipManager;
-import com.exametrika.spi.groups.ISimpleStateStore;
-import com.exametrika.spi.groups.ISimpleStateTransferClient;
-import com.exametrika.spi.groups.IStateTransferFactory;
+import com.exametrika.spi.groups.cluster.state.ISimpleStateStore;
+import com.exametrika.spi.groups.cluster.state.ISimpleStateTransferClient;
+import com.exametrika.spi.groups.cluster.state.IStateTransferFactory;
 
 /**
  * The {@link SimpleStateTransferClientProtocol} represents a simple state transfer client protocol, which keeps state in memory.

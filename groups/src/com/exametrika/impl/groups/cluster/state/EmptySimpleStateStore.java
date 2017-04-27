@@ -6,7 +6,7 @@ package com.exametrika.impl.groups.cluster.state;
 import java.util.UUID;
 
 import com.exametrika.common.utils.ByteArray;
-import com.exametrika.spi.groups.ISimpleStateStore;
+import com.exametrika.spi.groups.cluster.state.ISimpleStateStore;
 
 /**
  * The {@link EmptySimpleStateStore} represents an empty simple state store.

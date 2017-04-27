@@ -70,15 +70,15 @@ import com.exametrika.impl.groups.cluster.membership.IGroupMembershipManager;
 import com.exametrika.impl.groups.cluster.membership.IPreparedGroupMembershipListener;
 import com.exametrika.impl.groups.cluster.membership.LocalNodeProvider;
 import com.exametrika.impl.groups.cluster.membership.NodesMembershipProvider;
-import com.exametrika.impl.groups.cluster.membership.SimpleGroupMappingStrategy;
-import com.exametrika.impl.groups.cluster.membership.SimpleWorkerToCoreMappingStrategy;
+import com.exametrika.impl.groups.cluster.membership.DefaultGroupMappingStrategy;
+import com.exametrika.impl.groups.cluster.membership.DefaultWorkerToCoreMappingStrategy;
 import com.exametrika.impl.groups.cluster.membership.WorkerToCoreMembershipProvider;
 import com.exametrika.impl.groups.cluster.multicast.FailureAtomicMulticastProtocol;
 import com.exametrika.impl.groups.cluster.multicast.FlowControlProtocol;
 import com.exametrika.impl.groups.cluster.state.CompositeSimpleStateTransferFactory;
 import com.exametrika.impl.groups.cluster.state.SimpleStateTransferClientProtocol;
 import com.exametrika.impl.groups.cluster.state.SimpleStateTransferServerProtocol;
-import com.exametrika.spi.groups.IStateTransferFactory;
+import com.exametrika.spi.groups.cluster.state.IStateTransferFactory;
 
 /**
  * The {@link CoreGroupSubChannelFactory} is a core group node channel factory.
@@ -191,7 +191,6 @@ public class CoreGroupSubChannelFactory extends AbstractChannelFactory
         Assert.notNull(nodeParameters.propertyProvider);
         Assert.notNull(nodeParameters.discoveryStrategy);
         Assert.notNull(nodeParameters.stateStore);
-        Assert.notNull(nodeParameters.deliveryHandler);
         Assert.notNull(nodeParameters.localFlowController);
         
         CoreNodeFactoryParameters nodeFactoryParameters = (CoreNodeFactoryParameters)factoryParameters;
@@ -264,7 +263,7 @@ public class CoreGroupSubChannelFactory extends AbstractChannelFactory
             nodeFactoryParameters.maxBundleSize, nodeFactoryParameters.maxTotalOrderBundlingMessageCount, 
             nodeFactoryParameters.maxUnacknowledgedPeriod, nodeFactoryParameters.maxUnacknowledgedMessageCount, 
             nodeFactoryParameters.maxIdleReceiveQueuePeriod, new CompositeDeliveryHandler(
-                Arrays.<IDeliveryHandler>asList(commandManager, nodeParameters.deliveryHandler)), true, true, 
+                Arrays.<IDeliveryHandler>asList(commandManager)), true, true, 
             nodeFactoryParameters.maxUnlockQueueCapacity, nodeFactoryParameters.minLockQueueCapacity, 
             serializationRegistry, GroupMemberships.CORE_GROUP_ADDRESS, GroupMemberships.CORE_GROUP_ID);
         protocols.add(multicastProtocol);
@@ -337,7 +336,7 @@ public class CoreGroupSubChannelFactory extends AbstractChannelFactory
         bridgeSender = failureDetectionProtocol;
         
         membershipTracker = new CoreGroupMembershipTracker(nodeFactoryParameters.membershipTrackPeriod, membershipManager, discoveryProtocol, 
-            failureDetectionProtocol, flushCoordinatorProtocol, nodeFactoryParameters.flushCondition);
+            failureDetectionProtocol, flushCoordinatorProtocol, null);
         
         gracefulExitStrategies.add(flushCoordinatorProtocol);
         gracefulExitStrategies.add(flushParticipantProtocol);
@@ -347,10 +346,10 @@ public class CoreGroupSubChannelFactory extends AbstractChannelFactory
         membershipProviders.add(nodesMembershipProvider);
         
         WorkerToCoreMembershipProvider workerToCoreMembershipProvider = new WorkerToCoreMembershipProvider(membershipManager, 
-            new SimpleWorkerToCoreMappingStrategy());
+            new DefaultWorkerToCoreMappingStrategy());
         membershipProviders.add(workerToCoreMembershipProvider);
         
-        SimpleGroupMappingStrategy groupMappingStrategy = new SimpleGroupMappingStrategy(groupFeedbackProvider, nodeFeedbackProvider);
+        DefaultGroupMappingStrategy groupMappingStrategy = new DefaultGroupMappingStrategy(groupFeedbackProvider, nodeFeedbackProvider);
         commandHandlers.add(groupMappingStrategy);
         GroupsMembershipProvider groupsMembershipProvider = new GroupsMembershipProvider(groupMappingStrategy);
         membershipProviders.add(groupsMembershipProvider);

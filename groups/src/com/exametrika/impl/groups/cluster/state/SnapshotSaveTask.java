@@ -9,7 +9,7 @@ import com.exametrika.common.compartment.ICompartmentTask;
 import com.exametrika.common.messaging.ChannelException;
 import com.exametrika.common.utils.Assert;
 import com.exametrika.common.utils.ICompletionHandler;
-import com.exametrika.spi.groups.IAsyncStateTransferServer;
+import com.exametrika.spi.groups.cluster.state.IAsyncStateTransferServer;
 
 /**
  * The {@link SnapshotSaveTask} represents a task which saves state to temporal file.

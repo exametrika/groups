@@ -4,7 +4,6 @@
 package com.exametrika.api.groups.cluster;
 
 import com.exametrika.common.messaging.impl.ChannelFactoryParameters;
-import com.exametrika.impl.groups.cluster.flush.IFlushCondition;
 
 /**
  * The {@link NodeFactoryParameters} is a node factory parameters.
@@ -37,7 +36,6 @@ public class NodeFactoryParameters extends ChannelFactoryParameters
     public long maxUnacknowledgedPeriod = 100;
     public int maxUnacknowledgedMessageCount = 100;
     public long maxIdleReceiveQueuePeriod = 600000;
-    public IFlushCondition flushCondition;
     
     public NodeFactoryParameters()
     {

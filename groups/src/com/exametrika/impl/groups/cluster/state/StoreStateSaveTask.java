@@ -11,8 +11,8 @@ import com.exametrika.common.compartment.ICompartmentTask;
 import com.exametrika.common.messaging.ChannelException;
 import com.exametrika.common.utils.Assert;
 import com.exametrika.common.utils.ICompletionHandler;
-import com.exametrika.spi.groups.IAsyncStateStore;
-import com.exametrika.spi.groups.IAsyncStateTransferServer;
+import com.exametrika.spi.groups.cluster.state.IAsyncStateStore;
+import com.exametrika.spi.groups.cluster.state.IAsyncStateTransferServer;
 
 /**
  * The {@link StoreStateSaveTask} represents a task which saves state to external state store.

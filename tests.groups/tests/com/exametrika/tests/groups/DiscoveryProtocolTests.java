@@ -46,7 +46,7 @@ import com.exametrika.impl.groups.cluster.membership.GroupAddress;
 import com.exametrika.impl.groups.cluster.membership.GroupMembership;
 import com.exametrika.impl.groups.cluster.membership.GroupMembershipSerializationRegistrar;
 import com.exametrika.impl.groups.cluster.membership.Node;
-import com.exametrika.spi.groups.IDiscoveryStrategy;
+import com.exametrika.spi.groups.cluster.discovery.IDiscoveryStrategy;
 import com.exametrika.tests.common.messaging.ReceiverMock;
 
 /**

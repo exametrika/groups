@@ -34,9 +34,9 @@ import com.exametrika.impl.groups.cluster.membership.GroupAddress;
 import com.exametrika.impl.groups.cluster.membership.IGroupMembershipManager;
 import com.exametrika.impl.groups.cluster.multicast.QueueCapacityController;
 import com.exametrika.impl.groups.cluster.multicast.RemoteFlowId;
-import com.exametrika.spi.groups.IAsyncStateStore;
-import com.exametrika.spi.groups.IAsyncStateTransferServer;
-import com.exametrika.spi.groups.IStateTransferFactory;
+import com.exametrika.spi.groups.cluster.state.IAsyncStateStore;
+import com.exametrika.spi.groups.cluster.state.IAsyncStateTransferServer;
+import com.exametrika.spi.groups.cluster.state.IStateTransferFactory;
 
 /**
  * The {@link AsyncStateTransferServerProtocol} represents a state transfer server protocol.

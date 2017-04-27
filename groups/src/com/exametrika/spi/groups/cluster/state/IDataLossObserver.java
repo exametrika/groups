@@ -1,7 +1,7 @@
 /**
  * Copyright 2010 Andrey Medvedev. All rights reserved.
  */
-package com.exametrika.impl.groups.cluster.feedback;
+package com.exametrika.spi.groups.cluster.state;
 
 import com.exametrika.api.groups.cluster.IGroup;
 

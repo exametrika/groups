@@ -35,8 +35,8 @@ import com.exametrika.impl.groups.cluster.failuredetection.IFailureDetectionList
 import com.exametrika.impl.groups.cluster.flush.IFlush;
 import com.exametrika.impl.groups.cluster.flush.IFlushParticipant;
 import com.exametrika.impl.groups.cluster.membership.IGroupMembershipManager;
-import com.exametrika.spi.groups.IAsyncStateStore;
-import com.exametrika.spi.groups.IStateTransferFactory;
+import com.exametrika.spi.groups.cluster.state.IAsyncStateStore;
+import com.exametrika.spi.groups.cluster.state.IStateTransferFactory;
 
 /**
  * The {@link AsyncStateTransferClientProtocol} represents a state transfer client protocol.

@@ -1,14 +1,14 @@
 /**
  * Copyright 2007 Andrey Medvedev. All rights reserved.
  */
-package com.exametrika.spi.groups;
+package com.exametrika.spi.groups.cluster.state;
 
 /**
- * The {@link IStateStore} defines base external state store interface which is used for backing up group state.
+ * The {@link IStateTransferClient} is a base client used in state transfer process.
  * 
  * @threadsafety Implementations of this interface and its methods are thread safe.
  * @author Medvedev-A
  */
-public interface IStateStore
+public interface IStateTransferClient
 {
 }

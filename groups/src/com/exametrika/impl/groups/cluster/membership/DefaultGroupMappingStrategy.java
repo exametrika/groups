@@ -26,18 +26,19 @@ import com.exametrika.impl.groups.cluster.management.ICommand;
 import com.exametrika.impl.groups.cluster.management.ICommandHandler;
 
 /**
- * The {@link SimpleGroupMappingStrategy} is implementation of {@link IGroupMappingStrategy}.
+ * The {@link DefaultGroupMappingStrategy} is a default implementation of {@link IGroupMappingStrategy}.
  * 
  * @threadsafety This class and its methods are thread safe.
  * @author Medvedev-A
  */
-public final class SimpleGroupMappingStrategy implements IGroupMappingStrategy, ICommandHandler
+public final class DefaultGroupMappingStrategy implements IGroupMappingStrategy, ICommandHandler
 {
+    // TODO: провалидировать опции группы
     private final IGroupFeedbackService groupFeedbackService;
     private final INodeFeedbackService nodeFeedbackService;
     private final Map<String, DomainInfo> domains = new LinkedHashMap<String, DomainInfo>();
     
-    public SimpleGroupMappingStrategy(IGroupFeedbackService groupFeedbackService, INodeFeedbackService nodeFeedbackService)
+    public DefaultGroupMappingStrategy(IGroupFeedbackService groupFeedbackService, INodeFeedbackService nodeFeedbackService)
     {
         Assert.notNull(groupFeedbackService);
         Assert.notNull(nodeFeedbackService);

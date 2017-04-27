@@ -1,7 +1,7 @@
 /**
  * Copyright 2010 Andrey Medvedev. All rights reserved.
  */
-package com.exametrika.spi.groups;
+package com.exametrika.spi.groups.cluster.channel;
 
 import java.util.LinkedHashMap;
 import java.util.List;

@@ -15,10 +15,10 @@ import com.exametrika.common.io.impl.SerializationRegistry;
 import com.exametrika.common.messaging.IMessage;
 import com.exametrika.common.utils.Assert;
 import com.exametrika.common.utils.ByteArray;
-import com.exametrika.spi.groups.ISimpleStateStore;
-import com.exametrika.spi.groups.ISimpleStateTransferClient;
-import com.exametrika.spi.groups.ISimpleStateTransferServer;
-import com.exametrika.spi.groups.IStateTransferFactory;
+import com.exametrika.spi.groups.cluster.state.ISimpleStateStore;
+import com.exametrika.spi.groups.cluster.state.ISimpleStateTransferClient;
+import com.exametrika.spi.groups.cluster.state.ISimpleStateTransferServer;
+import com.exametrika.spi.groups.cluster.state.IStateTransferFactory;
 
 /**
  * The {@link GroupDefinitionStateTransferFactory} is a definition state transfer factory.
@@ -28,7 +28,7 @@ import com.exametrika.spi.groups.IStateTransferFactory;
  */
 public final class GroupDefinitionStateTransferFactory implements IStateTransferFactory
 {
-    private SimpleGroupMappingStrategy groupMappingStrategy;
+    private DefaultGroupMappingStrategy groupMappingStrategy;
     private final ISimpleStateStore stateStore;
 
     public GroupDefinitionStateTransferFactory(ISimpleStateStore stateStore)
@@ -38,7 +38,7 @@ public final class GroupDefinitionStateTransferFactory implements IStateTransfer
         this.stateStore = stateStore;
     }
     
-    public void setGroupMappingStrategy(SimpleGroupMappingStrategy groupMappingStrategy)
+    public void setGroupMappingStrategy(DefaultGroupMappingStrategy groupMappingStrategy)
     {
         Assert.notNull(groupMappingStrategy);
         Assert.isNull(this.groupMappingStrategy);

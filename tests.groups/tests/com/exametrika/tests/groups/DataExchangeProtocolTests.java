@@ -72,7 +72,7 @@ import com.exametrika.impl.groups.cluster.membership.GroupMemberships;
 import com.exametrika.impl.groups.cluster.membership.IGroupMembershipManager;
 import com.exametrika.impl.groups.cluster.membership.IPreparedGroupMembershipListener;
 import com.exametrika.impl.groups.cluster.membership.LocalNodeProvider;
-import com.exametrika.spi.groups.IDiscoveryStrategy;
+import com.exametrika.spi.groups.cluster.discovery.IDiscoveryStrategy;
 import com.exametrika.tests.common.messaging.ReceiverMock;
 import com.exametrika.tests.groups.DiscoveryProtocolTests.GroupJoinStrategyMock;
 import com.exametrika.tests.groups.MembershipManagerTests.PropertyProviderMock;

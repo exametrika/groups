@@ -6,7 +6,7 @@ package com.exametrika.impl.groups.cluster.state;
 import java.io.File;
 import java.util.UUID;
 
-import com.exametrika.spi.groups.IAsyncStateStore;
+import com.exametrika.spi.groups.cluster.state.IAsyncStateStore;
 
 /**
  * The {@link EmptyStateStore} represents an empty state store.

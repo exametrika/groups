@@ -20,6 +20,7 @@ import com.exametrika.impl.groups.cluster.exchange.IExchangeData;
 import com.exametrika.impl.groups.cluster.exchange.IFeedbackProvider;
 import com.exametrika.impl.groups.cluster.feedback.IGroupState.State;
 import com.exametrika.impl.groups.cluster.membership.GroupsMembership;
+import com.exametrika.spi.groups.cluster.state.IDataLossObserver;
 
 /**
  * The {@link DataLossFeedbackProvider} is a data loss feedback provider.
