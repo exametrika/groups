@@ -33,6 +33,7 @@ import com.exametrika.impl.groups.cluster.membership.LocalNodeProvider;
 public class CoreNodeChannelFactory extends CompositeChannelFactory
 {
     private ClusterMembershipManager membershipManager;
+    private CoreNodeParameters nodeParameters;
     
     public CoreNodeChannelFactory()
     {
@@ -48,6 +49,7 @@ public class CoreNodeChannelFactory extends CompositeChannelFactory
     {
         Assert.notNull(parameters);
         
+        nodeParameters = parameters;
         return createChannel(parameters.channelName, Arrays.asList(parameters, parameters));
     }
     
@@ -56,7 +58,6 @@ public class CoreNodeChannelFactory extends CompositeChannelFactory
         ChannelObserver channelObserver, LiveNodeManager liveNodeManager, TcpNioDispatcher dispatcher,
         ICompartment compartment)
     {
-        CoreNodeParameters nodeParameters = (CoreNodeParameters)parameters.get(0);
         LocalNodeProvider localNodeProvider = new LocalNodeProvider(liveNodeManager, nodeParameters.propertyProvider, 
             GroupMemberships.CORE_DOMAIN);
         
@@ -110,6 +111,6 @@ public class CoreNodeChannelFactory extends CompositeChannelFactory
         CoreNodeFactoryParameters nodeFactoryParameters = (CoreNodeFactoryParameters)factoryParameters;
         return new CoreNodeChannel(channelName, liveNodeManager, channelObserver, subChannels, 
             subChannels.get(mainSubChannelIndex), compartment, membershipManager, gracefulExitStrategies,
-            nodeFactoryParameters.gracefulExitTimeout);
+            nodeFactoryParameters.gracefulExitTimeout, nodeParameters.channelReconnector);
     }
 }

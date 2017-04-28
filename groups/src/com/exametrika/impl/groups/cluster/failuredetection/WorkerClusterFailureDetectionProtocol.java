@@ -21,9 +21,9 @@ import com.exametrika.common.messaging.impl.protocols.AbstractProtocol;
 import com.exametrika.common.messaging.impl.protocols.failuredetection.IFailureObserver;
 import com.exametrika.common.utils.Assert;
 import com.exametrika.impl.groups.MessageFlags;
-import com.exametrika.impl.groups.cluster.channel.IChannelReconnector;
 import com.exametrika.impl.groups.cluster.membership.IWorkerControllerObserver;
 import com.exametrika.impl.groups.cluster.membership.NodesMembershipChange;
+import com.exametrika.spi.groups.cluster.channel.IChannelReconnector;
 
 /**
  * The {@link WorkerClusterFailureDetectionProtocol} represents a worker node part of cluster failure detection protocol.

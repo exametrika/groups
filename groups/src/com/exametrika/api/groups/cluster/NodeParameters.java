@@ -7,6 +7,7 @@ import com.exametrika.common.messaging.impl.ChannelParameters;
 import com.exametrika.common.tasks.IFlowController;
 import com.exametrika.common.tasks.impl.NoFlowController;
 import com.exametrika.impl.groups.cluster.multicast.RemoteFlowId;
+import com.exametrika.spi.groups.cluster.channel.IChannelReconnector;
 import com.exametrika.spi.groups.cluster.channel.IPropertyProvider;
 import com.exametrika.spi.groups.cluster.channel.SystemPropertyProvider;
 import com.exametrika.spi.groups.cluster.discovery.IDiscoveryStrategy;
@@ -24,4 +25,5 @@ public class NodeParameters extends ChannelParameters
     public IDiscoveryStrategy discoveryStrategy;
     public IFlowController<RemoteFlowId> localFlowController = new NoFlowController<RemoteFlowId>();
     public IDataLossObserver dataLossObserver;
+    public IChannelReconnector channelReconnector;
 }

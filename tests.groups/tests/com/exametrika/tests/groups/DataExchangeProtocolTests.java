@@ -30,7 +30,6 @@ import com.exametrika.common.io.ISerializationRegistry;
 import com.exametrika.common.messaging.IChannel;
 import com.exametrika.common.messaging.ILiveNodeProvider;
 import com.exametrika.common.messaging.IMessageFactory;
-import com.exametrika.common.messaging.impl.Channel;
 import com.exametrika.common.messaging.impl.ChannelFactory;
 import com.exametrika.common.messaging.impl.ChannelFactoryParameters;
 import com.exametrika.common.messaging.impl.ChannelParameters;
@@ -51,9 +50,6 @@ import com.exametrika.common.utils.Debug;
 import com.exametrika.common.utils.IOs;
 import com.exametrika.common.utils.Threads;
 import com.exametrika.common.utils.Times;
-import com.exametrika.impl.groups.cluster.channel.CoreNodeChannel;
-import com.exametrika.impl.groups.cluster.channel.IChannelReconnector;
-import com.exametrika.impl.groups.cluster.channel.IGracefulExitStrategy;
 import com.exametrika.impl.groups.cluster.discovery.CoreGroupDiscoveryProtocol;
 import com.exametrika.impl.groups.cluster.discovery.WellKnownAddressesDiscoveryStrategy;
 import com.exametrika.impl.groups.cluster.exchange.GroupDataExchangeProtocol;
@@ -72,10 +68,12 @@ import com.exametrika.impl.groups.cluster.membership.GroupMemberships;
 import com.exametrika.impl.groups.cluster.membership.IGroupMembershipManager;
 import com.exametrika.impl.groups.cluster.membership.IPreparedGroupMembershipListener;
 import com.exametrika.impl.groups.cluster.membership.LocalNodeProvider;
+import com.exametrika.spi.groups.cluster.channel.IChannelReconnector;
 import com.exametrika.spi.groups.cluster.discovery.IDiscoveryStrategy;
 import com.exametrika.tests.common.messaging.ReceiverMock;
-import com.exametrika.tests.groups.DiscoveryProtocolTests.GroupJoinStrategyMock;
-import com.exametrika.tests.groups.MembershipManagerTests.PropertyProviderMock;
+import com.exametrika.tests.groups.CoreGroupDiscoveryProtocolTests.GroupJoinStrategyMock;
+import com.exametrika.tests.groups.GroupMembershipManagerTests.PropertyProviderMock;
+import com.exametrika.tests.groups.channel.TestGroupChannel;
 
 /**
  * The {@link DataExchangeProtocolTests} are tests for flush.
@@ -85,7 +83,7 @@ import com.exametrika.tests.groups.MembershipManagerTests.PropertyProviderMock;
 public class DataExchangeProtocolTests
 {
     private static final int COUNT = 10;
-    private CoreNodeChannel[] channels = new CoreNodeChannel[COUNT];
+    private TestGroupChannel[] channels = new TestGroupChannel[COUNT];
     private Sequencer sequencer = new Sequencer();
     
     @After
@@ -112,7 +110,7 @@ public class DataExchangeProtocolTests
         
         Threads.sleep(3000);
         
-        FailureDetectionProtocolTests.failChannel(channels[COUNT - 1]);
+        CoreGroupFailureDetectionProtocolTests.failChannel(channels[COUNT - 1]);
         IOs.close(channels[COUNT - 2]);
         
         Threads.sleep(10000);
@@ -141,12 +139,12 @@ public class DataExchangeProtocolTests
         
         Threads.sleep(3000);
         
-        FailureDetectionProtocolTests.failChannel(channels[nodes[0]]);
+        CoreGroupFailureDetectionProtocolTests.failChannel(channels[nodes[0]]);
         IOs.close(channels[nodes[1]]);
         
         sequencer.waitAll(COUNT - 6, 5000, 0);
         
-        FailureDetectionProtocolTests.failChannel(channels[nodes[2]]);
+        CoreGroupFailureDetectionProtocolTests.failChannel(channels[nodes[2]]);
         IOs.close(channels[nodes[3]]);
         
         Threads.sleep(10000);
@@ -175,11 +173,11 @@ public class DataExchangeProtocolTests
         
         Threads.sleep(3000);
         
-        FailureDetectionProtocolTests.failChannel(channels[nodes[0]]);
+        CoreGroupFailureDetectionProtocolTests.failChannel(channels[nodes[0]]);
         IOs.close(channels[nodes[1]]);
         
         sequencer.waitAll(COUNT - 3, 5000, 0);
-        FailureDetectionProtocolTests.failChannel(channels[coordinatorNodeIndex]);
+        CoreGroupFailureDetectionProtocolTests.failChannel(channels[coordinatorNodeIndex]);
         
         Threads.sleep(10000);
         
@@ -201,7 +199,7 @@ public class DataExchangeProtocolTests
                 channel.start();
                 wellKnownAddresses.add(channel.getLiveNodeProvider().getLocalNode().getConnection(0));
             }
-            channels[i] = (CoreNodeChannel)channel;
+            channels[i] = (TestGroupChannel)channel;
         }
     }
 
@@ -452,12 +450,10 @@ public class DataExchangeProtocolTests
         private long failureHistoryPeriod = 10000;
         private int maxShunCount = 3;
         private long flushTimeout = 10000;
-        private long gracefulExitTimeout = 10000;
         private long dataExchangePeriod = 200;
         private List<FlushParticipantMock> flushParticipants = new ArrayList<FlushParticipantMock>();
         private CoreGroupMembershipTracker membershipTracker;
         private CoreGroupMembershipManager membershipManager;
-        private List<IGracefulExitStrategy> gracefulExitStrategies = new ArrayList<IGracefulExitStrategy>();
         private boolean failOnFlush;
         private List<TestDataExchangeProvider> exchangeProviders = new ArrayList<TestDataExchangeProvider>();
         
@@ -469,7 +465,6 @@ public class DataExchangeProtocolTests
             boolean debug = Debug.isDebug();
             int timeMultiplier = !debug ? 1 : 1000;
             flushTimeout *= timeMultiplier;
-            gracefulExitTimeout *= timeMultiplier;
         }
 
         @Override
@@ -533,14 +528,10 @@ public class DataExchangeProtocolTests
 
             membershipTracker = new CoreGroupMembershipTracker(1000, membershipManager, discoveryProtocol, 
                 failureDetectionProtocol, flushCoordinatorProtocol, null);
-            
-            gracefulExitStrategies.add(flushCoordinatorProtocol);
-            gracefulExitStrategies.add(flushParticipantProtocol);
-            gracefulExitStrategies.add(membershipTracker);
         }
         
         @Override
-        protected void wireProtocols(Channel channel, TcpTransport transport, ProtocolStack protocolStack)
+        protected void wireProtocols(IChannel channel, TcpTransport transport, ProtocolStack protocolStack)
         {
             CoreGroupFailureDetectionProtocol failureDetectionProtocol = protocolStack.find(CoreGroupFailureDetectionProtocol.class);
             failureDetectionProtocol.setFailureObserver(transport);
@@ -555,12 +546,12 @@ public class DataExchangeProtocolTests
         }
         
         @Override
-        protected Channel createChannel(String channelName, ChannelObserver channelObserver, LiveNodeManager liveNodeManager,
+        protected IChannel createChannel(String channelName, ChannelObserver channelObserver, LiveNodeManager liveNodeManager,
             MessageFactory messageFactory, ProtocolStack protocolStack, TcpTransport transport,
             ConnectionManager connectionManager, ICompartment compartment)
         {
-            return new CoreNodeChannel(channelName, liveNodeManager, channelObserver, protocolStack, transport, messageFactory, 
-                connectionManager, compartment, membershipManager, gracefulExitStrategies, gracefulExitTimeout);
+            return new TestGroupChannel(channelName, liveNodeManager, channelObserver, protocolStack, transport, messageFactory, 
+                connectionManager, compartment, membershipManager, null);
         }
     }
 }

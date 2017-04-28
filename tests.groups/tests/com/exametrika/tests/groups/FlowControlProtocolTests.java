@@ -14,11 +14,12 @@ import java.util.UUID;
 import org.junit.After;
 import org.junit.Test;
 
+import com.exametrika.api.groups.cluster.GroupOption;
 import com.exametrika.api.groups.cluster.IGroupMembership;
 import com.exametrika.api.groups.cluster.IGroupMembershipChange;
 import com.exametrika.api.groups.cluster.IGroupMembershipListener;
-import com.exametrika.api.groups.cluster.INode;
 import com.exametrika.api.groups.cluster.IMembershipListener.LeaveReason;
+import com.exametrika.api.groups.cluster.INode;
 import com.exametrika.common.io.ISerializationRegistry;
 import com.exametrika.common.messaging.IAddress;
 import com.exametrika.common.messaging.IChannel;
@@ -38,9 +39,9 @@ import com.exametrika.common.net.nio.TcpNioDispatcher;
 import com.exametrika.common.tasks.IFlowController;
 import com.exametrika.common.tests.Tests;
 import com.exametrika.common.utils.Debug;
+import com.exametrika.common.utils.Enums;
 import com.exametrika.common.utils.IOs;
 import com.exametrika.common.utils.Threads;
-import com.exametrika.impl.groups.cluster.channel.IChannelReconnector;
 import com.exametrika.impl.groups.cluster.failuredetection.CoreGroupFailureDetectionProtocol;
 import com.exametrika.impl.groups.cluster.failuredetection.GroupNodeTrackingStrategy;
 import com.exametrika.impl.groups.cluster.failuredetection.IFailureDetectionListener;
@@ -54,6 +55,7 @@ import com.exametrika.impl.groups.cluster.membership.Node;
 import com.exametrika.impl.groups.cluster.multicast.FlowControlProtocol;
 import com.exametrika.impl.groups.cluster.multicast.QueueCapacityController;
 import com.exametrika.impl.groups.cluster.multicast.RemoteFlowId;
+import com.exametrika.spi.groups.cluster.channel.IChannelReconnector;
 import com.exametrika.tests.common.messaging.ReceiverMock;
 import com.exametrika.tests.common.messaging.TestAddress;
 
@@ -93,7 +95,8 @@ public class FlowControlProtocolTests
             nodes.add(channelFactory.membershipServices.get(i).getLocalNode());
         }
         
-        GroupMembership membership = new GroupMembership(1, new Group(new GroupAddress(UUID.randomUUID(), "test"), true, nodes));
+        GroupMembership membership = new GroupMembership(1, new Group(new GroupAddress(UUID.randomUUID(), "test"), true, nodes,
+            Enums.noneOf(GroupOption.class)));
         for (int i = 0; i < COUNT; i++)
         {
             channelFactory.protocols.get(i).onPreparedMembershipChanged(null, membership, null);
@@ -188,7 +191,8 @@ public class FlowControlProtocolTests
             nodes.add(channelFactory.membershipServices.get(i).getLocalNode());
         }
         
-        GroupMembership membership = new GroupMembership(1, new Group(new GroupAddress(UUID.randomUUID(), "test"), true, nodes));
+        GroupMembership membership = new GroupMembership(1, new Group(new GroupAddress(UUID.randomUUID(), "test"), true, nodes,
+            Enums.noneOf(GroupOption.class)));
         for (int i = 0; i < COUNT; i++)
         {
             channelFactory.protocols.get(i).onPreparedMembershipChanged(null, membership, null);
@@ -469,7 +473,7 @@ public class FlowControlProtocolTests
         }
         
         @Override
-        protected void wireProtocols(Channel channel, TcpTransport transport, ProtocolStack protocolStack)
+        protected void wireProtocols(IChannel channel, TcpTransport transport, ProtocolStack protocolStack)
         {
             GroupNodeTrackingStrategy strategy = (GroupNodeTrackingStrategy)protocolStack.find(HeartbeatProtocol.class).getNodeTrackingStrategy();
             CoreGroupFailureDetectionProtocol failureDetectionProtocol = protocolStack.find(CoreGroupFailureDetectionProtocol.class);

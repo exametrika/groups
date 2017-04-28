@@ -10,58 +10,50 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
-import com.exametrika.api.groups.cluster.ICoreNodeChannel;
 import com.exametrika.common.compartment.ICompartmentTimerProcessor;
 import com.exametrika.common.io.IDeserialization;
 import com.exametrika.common.io.ISerialization;
-import com.exametrika.common.io.ISerializationRegistry;
 import com.exametrika.common.io.impl.AbstractSerializer;
 import com.exametrika.common.messaging.IDeliveryHandler;
 import com.exametrika.common.messaging.IFeed;
-import com.exametrika.common.messaging.ILiveNodeProvider;
 import com.exametrika.common.messaging.IMessage;
-import com.exametrika.common.messaging.IMessageFactory;
 import com.exametrika.common.messaging.IMessagePart;
 import com.exametrika.common.messaging.IReceiver;
 import com.exametrika.common.messaging.ISink;
-import com.exametrika.common.messaging.impl.Channel;
-import com.exametrika.common.messaging.impl.ChannelParameters;
-import com.exametrika.common.messaging.impl.protocols.AbstractProtocol;
-import com.exametrika.common.messaging.impl.protocols.ProtocolStack;
-import com.exametrika.common.messaging.impl.protocols.failuredetection.IFailureObserver;
-import com.exametrika.common.messaging.impl.transports.tcp.TcpTransport;
 import com.exametrika.common.tasks.IFlowController;
 import com.exametrika.common.utils.Assert;
 import com.exametrika.common.utils.ByteArray;
 import com.exametrika.common.utils.Bytes;
 import com.exametrika.common.utils.Files;
-import com.exametrika.impl.groups.cluster.channel.CoreNodeChannelFactory;
-import com.exametrika.impl.groups.cluster.channel.CoreNodeChannelFactory.GroupFactoryParameters;
-import com.exametrika.impl.groups.cluster.channel.CoreNodeChannelFactory.GroupParameters;
 import com.exametrika.impl.groups.cluster.discovery.WellKnownAddressesDiscoveryStrategy;
 import com.exametrika.impl.groups.cluster.membership.GroupMemberships;
 import com.exametrika.impl.groups.cluster.multicast.RemoteFlowId;
+import com.exametrika.impl.groups.simulator.channel.SimGroupChannel;
+import com.exametrika.impl.groups.simulator.channel.SimGroupChannelFactory;
+import com.exametrika.impl.groups.simulator.channel.SimGroupFactoryParameters;
+import com.exametrika.impl.groups.simulator.channel.SimGroupParameters;
 import com.exametrika.spi.groups.cluster.state.IAsyncStateStore;
 import com.exametrika.spi.groups.cluster.state.IAsyncStateTransferClient;
 import com.exametrika.spi.groups.cluster.state.IAsyncStateTransferServer;
+import com.exametrika.spi.groups.cluster.state.IStateStore;
 import com.exametrika.spi.groups.cluster.state.IStateTransferFactory;
 
 /**
- * The {@link SimGroupChannelFactory} is a simulation group channel factory.
+ * The {@link SimTestFactory} is a simulation group test channel factory.
  * 
  * @author Medvedev-A
  */
 @SuppressWarnings("unused")
-public class SimGroupChannelFactory
+public class SimTestFactory
 {
     private static final long SEND_COUNT = Long.MAX_VALUE;
     private SimExecutor executor;
     private int count;
     private Set<String> wellKnownAddresses = new HashSet<String>();
-    private GroupFactoryParameters factoryParameters;
-    private List<GroupParameters> parameters = new ArrayList<GroupParameters>();
+    private SimGroupFactoryParameters factoryParameters;
+    private List<SimGroupParameters> parameters = new ArrayList<SimGroupParameters>();
     private SimStateStore stateStore = new SimStateStore();
-    private List<ICoreNodeChannel> channels = new ArrayList<ICoreNodeChannel>();
+    private List<SimGroupChannel> channels = new ArrayList<SimGroupChannel>();
     private List<SimStateTransferFactory> stateTransferFactories = new ArrayList<SimStateTransferFactory>();
     private List<SimMessageSender> messageSenders = new ArrayList<SimMessageSender>();
    
@@ -71,11 +63,11 @@ public class SimGroupChannelFactory
         createParameters();
     }
     
-    public ICoreNodeChannel createChannel(SimExecutor executor, int index)
+    public SimGroupChannel createChannel(SimExecutor executor, int index)
     {
         this.executor = executor;
-        SimChannelFactory channelFactory = new SimChannelFactory(factoryParameters);
-        ICoreNodeChannel channel = channelFactory.createChannel(parameters.get(index));
+        SimGroupChannelFactory channelFactory = new SimGroupChannelFactory(executor, factoryParameters);
+        SimGroupChannel channel = channelFactory.createChannel(parameters.get(index));
         executor.setGroupChannel(channel);
         channel.start();
         wellKnownAddresses.add(channel.getLiveNodeProvider().getLocalNode().getConnection(0));
@@ -88,7 +80,7 @@ public class SimGroupChannelFactory
     private void createFactoryParameters()
     {
         boolean debug = false;//Debug.isDebug();
-        factoryParameters = new GroupFactoryParameters(debug);
+        factoryParameters = new SimGroupFactoryParameters(debug);
         if (!debug)
         {
             factoryParameters.heartbeatTrackPeriod = 100;
@@ -129,16 +121,15 @@ public class SimGroupChannelFactory
             SimMessageSender sender = new SimMessageSender(i);
             messageSenders.add(sender);
             
-            SimStateTransferFactory stateTransferFactory = new SimStateTransferFactory();
+            SimStateTransferFactory stateTransferFactory = new SimStateTransferFactory(stateStore);
             stateTransferFactories.add(stateTransferFactory);
             
-            GroupParameters parameters = new GroupParameters();
+            SimGroupParameters parameters = new SimGroupParameters();
             parameters.channelName = "node" + i;
             parameters.clientPart = true;
             parameters.serverPart = true;
             parameters.receiver = sender;
             parameters.discoveryStrategy = new WellKnownAddressesDiscoveryStrategy(wellKnownAddresses);
-            parameters.stateStore = stateStore;
             parameters.stateTransferFactory = stateTransferFactory;
             parameters.deliveryHandler = sender;
             parameters.localFlowController = sender;
@@ -202,17 +193,29 @@ public class SimGroupChannelFactory
     private class SimStateTransferFactory implements IStateTransferFactory
     {
         private ByteArray state;
+        private IAsyncStateStore stateStore;
+        
+        public SimStateTransferFactory(IAsyncStateStore stateStore)
+        {
+            this.stateStore = stateStore;
+        }
         
         @Override
-        public IAsyncStateTransferServer createServer()
+        public IAsyncStateTransferServer createServer(UUID groupId)
         {
             return new SimStateTransferServer(this);
         }
 
         @Override
-        public IAsyncStateTransferClient createClient()
+        public IAsyncStateTransferClient createClient(UUID groupId)
         {
             return new SimStateTransferClient(this);
+        }
+
+        @Override
+        public IStateStore createStore(UUID groupId)
+        {
+            return stateStore;
         }
     }
     
@@ -310,7 +313,7 @@ public class SimGroupChannelFactory
             if (!send)
                 return;
             
-            ICoreNodeChannel channel = channels.get(index);
+            SimGroupChannel channel = channels.get(index);
             if (sendBeforeGroup)
             {
                 if (!flowLocked && count < SEND_COUNT)
@@ -367,23 +370,6 @@ public class SimGroupChannelFactory
                 if (!sink.send(message))
                     break;
             }
-        }
-    }
-    
-    private class SimChannelFactory extends CoreNodeChannelFactory
-    {
-        public SimChannelFactory(GroupFactoryParameters factoryParameters)
-        {
-            super(factoryParameters);
-        }
-        
-        @Override
-        protected void createProtocols(ChannelParameters parameters, String channelName, IMessageFactory messageFactory, 
-            ISerializationRegistry serializationRegistry, ILiveNodeProvider liveNodeProvider, List<IFailureObserver> failureObservers, 
-            List<AbstractProtocol> protocols)
-        {
-            super.createProtocols(parameters, channelName, messageFactory, serializationRegistry, liveNodeProvider, failureObservers, protocols);
-            protocols.add(new SimInterceptorProtocol(channelName, messageFactory, executor));
         }
     }
 }

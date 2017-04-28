@@ -16,6 +16,7 @@ import com.exametrika.impl.groups.cluster.feedback.INodeFeedbackService;
 import com.exametrika.impl.groups.cluster.feedback.INodeState;
 import com.exametrika.impl.groups.cluster.feedback.NodeState;
 import com.exametrika.impl.groups.cluster.membership.ClusterMembershipManager;
+import com.exametrika.spi.groups.cluster.channel.IChannelReconnector;
 
 /**
  * The {@link WorkerNodeChannel} is a worker node channel.
@@ -29,10 +30,11 @@ public class WorkerNodeChannel extends NodeChannel implements IWorkerNodeChannel
 
     public WorkerNodeChannel(String channelName, LiveNodeManager liveNodeManager, ChannelObserver channelObserver, 
         List<IChannel> subChannels, IChannel mainSubChannel, ICompartment compartment, ClusterMembershipManager membershipManager, 
-        List<IGracefulExitStrategy> gracefulExitStrategies, long gracefulExitTimeout, INodeFeedbackService feedbackService)
+        List<IGracefulExitStrategy> gracefulExitStrategies, long gracefulExitTimeout, INodeFeedbackService feedbackService,
+        IChannelReconnector channelReconnector)
     {
         super(channelName, liveNodeManager, channelObserver, subChannels, mainSubChannel, compartment, membershipManager, 
-            gracefulExitStrategies, gracefulExitTimeout);
+            gracefulExitStrategies, gracefulExitTimeout, channelReconnector);
         
         Assert.notNull(feedbackService);
         

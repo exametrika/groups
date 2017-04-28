@@ -35,6 +35,7 @@ import com.exametrika.impl.groups.cluster.membership.ClusterMembershipManager;
 import com.exametrika.impl.groups.cluster.membership.IWorkerControllerObserver;
 import com.exametrika.impl.groups.cluster.membership.LocalNodeProvider;
 import com.exametrika.impl.groups.cluster.membership.WorkerGroupMembershipProtocol;
+import com.exametrika.spi.groups.cluster.channel.IChannelReconnector;
 
 /**
  * The {@link WorkerGroupSubChannelFactory} is a worker group node sub-channel factory.

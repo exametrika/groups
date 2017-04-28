@@ -1,7 +1,7 @@
 /**
  * Copyright 2007 Andrey Medvedev. All rights reserved.
  */
-package com.exametrika.impl.groups.cluster.channel;
+package com.exametrika.spi.groups.cluster.channel;
 
 
 

@@ -21,6 +21,7 @@ import com.exametrika.common.messaging.IMessage;
 import com.exametrika.common.messaging.MessageFlags;
 import com.exametrika.common.messaging.impl.Channel;
 import com.exametrika.common.messaging.impl.ChannelFactory;
+import com.exametrika.common.messaging.impl.ChannelParameters;
 import com.exametrika.common.net.nio.TcpNioDispatcher;
 import com.exametrika.common.tests.Sequencer;
 import com.exametrika.common.tests.Tests;
@@ -70,7 +71,7 @@ public class SpecialChannelTests
     public void setUp() throws Throwable
     {
         ChannelFactory factory = new ChannelFactory();
-        Parameters parameters = new Parameters();
+        ChannelParameters parameters = new ChannelParameters();
         
         parameters.channelName = "server";
         parameters.receiver = serverReceiver;

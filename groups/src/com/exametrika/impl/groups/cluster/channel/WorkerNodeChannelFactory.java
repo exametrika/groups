@@ -36,6 +36,7 @@ import com.exametrika.impl.groups.cluster.membership.LocalNodeProvider;
 public class WorkerNodeChannelFactory extends CompositeChannelFactory
 {
     private ClusterMembershipManager membershipManager;
+    private WorkerNodeParameters nodeParameters;
     
     public WorkerNodeChannelFactory()
     {
@@ -53,6 +54,7 @@ public class WorkerNodeChannelFactory extends CompositeChannelFactory
         Assert.notNull(parameters.stateTransferFactory);
         Assert.notNull(parameters.deliveryHandler);
         
+        nodeParameters = parameters;
         return createChannel(parameters.channelName, Arrays.asList(parameters, parameters));
     }
     
@@ -119,6 +121,6 @@ public class WorkerNodeChannelFactory extends CompositeChannelFactory
        
         return new WorkerNodeChannel(channelName, liveNodeManager, channelObserver, subChannels, 
             subChannels.get(mainSubChannelIndex), compartment, membershipManager, gracefulExitStrategies,
-            nodeFactoryParameters.gracefulExitTimeout, feedbackService);
+            nodeFactoryParameters.gracefulExitTimeout, feedbackService, nodeParameters.channelReconnector);
     }
 }

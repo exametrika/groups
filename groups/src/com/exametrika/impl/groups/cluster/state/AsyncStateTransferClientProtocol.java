@@ -28,13 +28,13 @@ import com.exametrika.common.messaging.impl.protocols.failuredetection.ICleanupM
 import com.exametrika.common.utils.Assert;
 import com.exametrika.common.utils.ICompletionHandler;
 import com.exametrika.impl.groups.MessageFlags;
-import com.exametrika.impl.groups.cluster.channel.IChannelReconnector;
 import com.exametrika.impl.groups.cluster.discovery.GroupJoinMessagePart;
 import com.exametrika.impl.groups.cluster.discovery.IGroupJoinStrategy;
 import com.exametrika.impl.groups.cluster.failuredetection.IFailureDetectionListener;
 import com.exametrika.impl.groups.cluster.flush.IFlush;
 import com.exametrika.impl.groups.cluster.flush.IFlushParticipant;
 import com.exametrika.impl.groups.cluster.membership.IGroupMembershipManager;
+import com.exametrika.spi.groups.cluster.channel.IChannelReconnector;
 import com.exametrika.spi.groups.cluster.state.IAsyncStateStore;
 import com.exametrika.spi.groups.cluster.state.IStateTransferFactory;
 

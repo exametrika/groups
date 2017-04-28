@@ -20,6 +20,7 @@ import java.util.UUID;
 import org.junit.Test;
 
 import com.exametrika.api.groups.cluster.GroupMembershipEvent;
+import com.exametrika.api.groups.cluster.GroupOption;
 import com.exametrika.api.groups.cluster.IGroupMembership;
 import com.exametrika.api.groups.cluster.IGroupMembershipChange;
 import com.exametrika.api.groups.cluster.IGroupMembershipListener;
@@ -28,6 +29,7 @@ import com.exametrika.api.groups.cluster.INode;
 import com.exametrika.common.messaging.IAddress;
 import com.exametrika.common.messaging.ILiveNodeProvider;
 import com.exametrika.common.messaging.impl.transports.UnicastAddress;
+import com.exametrika.common.utils.Enums;
 import com.exametrika.common.utils.MapBuilder;
 import com.exametrika.impl.groups.cluster.discovery.ICoreNodeDiscoverer;
 import com.exametrika.impl.groups.cluster.failuredetection.IGroupFailureDetector;
@@ -52,12 +54,12 @@ import com.exametrika.impl.groups.cluster.membership.LocalNodeProvider;
 import com.exametrika.impl.groups.cluster.membership.Node;
 
 /**
- * The {@link MembershipManagerTests} are tests for {@link CoreGroupMembershipManager}.
+ * The {@link GroupMembershipManagerTests} are tests for {@link CoreGroupMembershipManager}.
  * 
  * @see CoreGroupMembershipManager
  * @author Medvedev-A
  */
-public class MembershipManagerTests
+public class GroupMembershipManagerTests
 {
     @Test
     public void testNode()
@@ -80,8 +82,10 @@ public class MembershipManagerTests
         Node node1 = new Node(address1, Collections.<String, Object>singletonMap("key", "value"), "core");
         Node node2 = new Node(address2, Collections.<String, Object>singletonMap("key", "value"), "core");
         
-        Group group = new Group(new GroupAddress(new UUID(1, 1), "test"), true, Arrays.<INode>asList(node1, node2));
-        Group group2 = new Group(new GroupAddress(new UUID(0, 0), "test"), true, Arrays.<INode>asList(node1, node2));
+        Group group = new Group(new GroupAddress(new UUID(1, 1), "test"), true, Arrays.<INode>asList(node1, node2),
+            Enums.noneOf(GroupOption.class));
+        Group group2 = new Group(new GroupAddress(new UUID(0, 0), "test"), true, Arrays.<INode>asList(node1, node2),
+            Enums.noneOf(GroupOption.class));
         assertThat(group.getCoordinator(), is((INode)node1));
         assertThat(group.getMembers(), is(Arrays.<INode>asList(node1, node2)));
         assertThat(group.findMember(address2), is((INode)node2));
@@ -100,7 +104,8 @@ public class MembershipManagerTests
         Node node1 = new Node(address1, Collections.<String, Object>singletonMap("key", "value"), "core");
         Node node2 = new Node(address2, Collections.<String, Object>singletonMap("key", "value"), "core");
         
-        Group group = new Group(new GroupAddress(UUID.randomUUID(), "test"), true, Arrays.<INode>asList(node1, node2));
+        Group group = new Group(new GroupAddress(UUID.randomUUID(), "test"), true, Arrays.<INode>asList(node1, node2),
+            Enums.noneOf(GroupOption.class));
         
         GroupMembership membership = new GroupMembership(1, group);
         GroupMembership membership2 = new GroupMembership(2, group);
@@ -122,7 +127,7 @@ public class MembershipManagerTests
         Node node4 = new Node(address4, Collections.<String, Object>singletonMap("key", "value"), "core");
         Node node5 = new Node(address5, Collections.<String, Object>singletonMap("key", "value"), "core");
         
-        IGroupMembership membership = GroupMemberships.createCoreMembership(GroupMemberships.CORE_GROUP_ADDRESS, node1, com.exametrika.common.utils.Collections.<INode>asSet(node2, node3));
+        IGroupMembership membership = GroupMemberships.createCoreMembership(node1, com.exametrika.common.utils.Collections.<INode>asSet(node2, node3));
         assertThat(membership.getId(), is(1l));
         assertThat(membership.getGroup().getCoordinator(), is((INode)node1));
         assertThat(membership.getGroup().getMembers().size(), is(3));
@@ -249,7 +254,8 @@ public class MembershipManagerTests
         Node node1 = new Node(address1, Collections.<String, Object>singletonMap("key", "value"), "core");
         IAddress address2 = new UnicastAddress(UUID.randomUUID(), "test2");
         Node node2 = new Node(address2, Collections.<String, Object>singletonMap("key", "value"), "core");
-        Group group = new Group(new GroupAddress(UUID.randomUUID(), "test"), true, Arrays.<INode>asList(manager.getLocalNode(), node1));
+        Group group = new Group(new GroupAddress(UUID.randomUUID(), "test"), true, Arrays.<INode>asList(manager.getLocalNode(), node1),
+            Enums.noneOf(GroupOption.class));
         GroupMembership membership = new GroupMembership(1, group);
         
         manager.prepareInstallMembership(membership);
@@ -263,7 +269,8 @@ public class MembershipManagerTests
         assertThat(manager.getMembership(), is((IGroupMembership)membership));
         assertTrue(listener.onJoined);
         
-        Group group2 = new Group(new GroupAddress(UUID.randomUUID(), "test"), true, Arrays.<INode>asList(manager.getLocalNode(), node1, node2));
+        Group group2 = new Group(new GroupAddress(UUID.randomUUID(), "test"), true, Arrays.<INode>asList(manager.getLocalNode(), node1, node2),
+            Enums.noneOf(GroupOption.class));
         GroupMembership membership2 = new GroupMembership(2, group2);
         GroupMembershipChange membershipChange = new GroupMembershipChange(new GroupChange(group2, group, Collections.<INode>singletonList(node2), 
             Collections.<INode>emptySet(), Collections.<INode>emptySet()));

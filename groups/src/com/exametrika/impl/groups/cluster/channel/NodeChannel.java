@@ -18,6 +18,7 @@ import com.exametrika.common.tasks.ThreadInterruptedException;
 import com.exametrika.common.utils.Assert;
 import com.exametrika.common.utils.Times;
 import com.exametrika.impl.groups.cluster.membership.ClusterMembershipManager;
+import com.exametrika.spi.groups.cluster.channel.IChannelReconnector;
 
 /**
  * The {@link NodeChannel} is a node node channel.
@@ -30,13 +31,14 @@ public class NodeChannel extends CompositeChannel implements INodeChannel, IChan
     protected final ClusterMembershipManager membershipManager;
     private final List<IGracefulExitStrategy> gracefulExitStrategies;
     private final long gracefulExitTimeout;
+    private final  IChannelReconnector channelReconnector;
     private final Object condition = new Object();
     private boolean canClose;
     private boolean startWait;
     
     public NodeChannel(String channelName, LiveNodeManager liveNodeManager, ChannelObserver channelObserver, 
         List<IChannel> subChannels, IChannel mainSubChannel, ICompartment compartment, ClusterMembershipManager membershipManager, 
-        List<IGracefulExitStrategy> gracefulExitStrategies, long gracefulExitTimeout)
+        List<IGracefulExitStrategy> gracefulExitStrategies, long gracefulExitTimeout, IChannelReconnector channelReconnector)
     {
         super(channelName, liveNodeManager, channelObserver, subChannels, mainSubChannel, compartment);;
         
@@ -46,6 +48,7 @@ public class NodeChannel extends CompositeChannel implements INodeChannel, IChan
         this.membershipManager = membershipManager;
         this.gracefulExitStrategies = gracefulExitStrategies;
         this.gracefulExitTimeout = gracefulExitTimeout > 0 ? gracefulExitTimeout : Integer.MAX_VALUE;
+        this.channelReconnector = channelReconnector;
     }
 
     @Override
@@ -77,6 +80,8 @@ public class NodeChannel extends CompositeChannel implements INodeChannel, IChan
             public void run()
             {
                 stop();
+                if (channelReconnector != null)
+                    channelReconnector.reconnect();
             }
         }).start();
     }

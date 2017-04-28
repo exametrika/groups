@@ -35,6 +35,7 @@ import com.exametrika.common.messaging.ISink;
 import com.exametrika.common.messaging.MessageFlags;
 import com.exametrika.common.messaging.impl.Channel;
 import com.exametrika.common.messaging.impl.ChannelFactory;
+import com.exametrika.common.messaging.impl.ChannelParameters;
 import com.exametrika.common.tests.Sequencer;
 import com.exametrika.common.utils.Classes;
 import com.exametrika.tests.common.messaging.StreamingProtocolTests.TestStreamReceiveMessagePart;
@@ -82,7 +83,7 @@ public class ClientServerChannelTests
     public void setUp() throws Throwable
     {
         ChannelFactory factory = new ChannelFactory();
-        Parameters parameters = new Parameters();
+        ChannelParameters parameters = new ChannelParameters();
         
         parameters.channelName = "server";
         parameters.receiver = serverReceiver;

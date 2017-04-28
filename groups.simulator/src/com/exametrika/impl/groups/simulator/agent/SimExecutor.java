@@ -6,7 +6,6 @@ package com.exametrika.impl.groups.simulator.agent;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-import com.exametrika.api.groups.cluster.ICoreNodeChannel;
 import com.exametrika.common.expression.CompileContext;
 import com.exametrika.common.expression.Expressions;
 import com.exametrika.common.expression.IExpression;
@@ -18,6 +17,7 @@ import com.exametrika.common.utils.ICondition;
 import com.exametrika.common.utils.Threads;
 import com.exametrika.common.utils.Times;
 import com.exametrika.common.utils.TrueCondition;
+import com.exametrika.impl.groups.simulator.channel.SimGroupChannel;
 import com.exametrika.impl.groups.simulator.messages.SimActionMessage;
 import com.exametrika.impl.groups.simulator.messages.SimActionResponseMessage;
 
@@ -31,7 +31,7 @@ public final class SimExecutor
 {
     private final SimAgentChannel agentChannel;
     private final CompileContext compileContext;
-    private ICoreNodeChannel groupChannel;
+    private SimGroupChannel groupChannel;
     private long delayPeriod;
     private boolean oneTimeDelay;
     private Map<String, ICondition<IMessage>> suspendConditions = new LinkedHashMap<String, ICondition<IMessage>>();
@@ -47,7 +47,7 @@ public final class SimExecutor
         Times.setTest(Times.getCurrentTime());
     }
     
-    public void setGroupChannel(ICoreNodeChannel groupChannel)
+    public void setGroupChannel(SimGroupChannel groupChannel)
     {
         Assert.notNull(groupChannel);
         Assert.isNull(this.groupChannel);

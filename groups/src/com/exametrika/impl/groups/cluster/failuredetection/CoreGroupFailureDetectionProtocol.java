@@ -19,7 +19,7 @@ import com.exametrika.common.messaging.IMessageFactory;
 import com.exametrika.common.messaging.IReceiver;
 import com.exametrika.common.utils.Assert;
 import com.exametrika.impl.groups.MessageFlags;
-import com.exametrika.impl.groups.cluster.channel.IChannelReconnector;
+import com.exametrika.spi.groups.cluster.channel.IChannelReconnector;
 
 /**
  * The {@link CoreGroupFailureDetectionProtocol} represents a core group failure detection protocol.

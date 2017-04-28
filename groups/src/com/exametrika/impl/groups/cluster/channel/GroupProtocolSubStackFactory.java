@@ -44,6 +44,7 @@ import com.exametrika.impl.groups.cluster.state.AsyncStateTransferClientProtocol
 import com.exametrika.impl.groups.cluster.state.AsyncStateTransferServerProtocol;
 import com.exametrika.impl.groups.cluster.state.SimpleStateTransferClientProtocol;
 import com.exametrika.impl.groups.cluster.state.SimpleStateTransferServerProtocol;
+import com.exametrika.spi.groups.cluster.channel.IChannelReconnector;
 
 /**
  * The {@link GroupProtocolSubStackFactory} is a worker group protocol sub-stack factory.

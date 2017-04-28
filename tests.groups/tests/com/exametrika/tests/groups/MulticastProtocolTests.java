@@ -18,7 +18,6 @@ import org.junit.After;
 import org.junit.Test;
 
 import com.exametrika.api.groups.cluster.IGroup;
-import com.exametrika.api.groups.cluster.ICoreNodeChannel;
 import com.exametrika.api.groups.cluster.IGroupMembership;
 import com.exametrika.common.compartment.ICompartmentTimerProcessor;
 import com.exametrika.common.io.IDeserialization;
@@ -31,7 +30,6 @@ import com.exametrika.common.messaging.IMessage;
 import com.exametrika.common.messaging.IMessagePart;
 import com.exametrika.common.messaging.IReceiver;
 import com.exametrika.common.messaging.ISink;
-import com.exametrika.common.messaging.impl.Channel;
 import com.exametrika.common.messaging.impl.protocols.ProtocolStack;
 import com.exametrika.common.messaging.impl.transports.tcp.TcpTransport;
 import com.exametrika.common.tasks.IFlowController;
@@ -44,10 +42,6 @@ import com.exametrika.common.utils.Debug;
 import com.exametrika.common.utils.Files;
 import com.exametrika.common.utils.IOs;
 import com.exametrika.common.utils.Threads;
-import com.exametrika.impl.groups.cluster.channel.CoreNodeChannel;
-import com.exametrika.impl.groups.cluster.channel.CoreNodeChannelFactory;
-import com.exametrika.impl.groups.cluster.channel.CoreNodeChannelFactory.GroupFactoryParameters;
-import com.exametrika.impl.groups.cluster.channel.CoreNodeChannelFactory.GroupParameters;
 import com.exametrika.impl.groups.cluster.discovery.WellKnownAddressesDiscoveryStrategy;
 import com.exametrika.impl.groups.cluster.flush.FlushParticipantProtocol;
 import com.exametrika.impl.groups.cluster.flush.IFlush;
@@ -57,7 +51,12 @@ import com.exametrika.impl.groups.cluster.multicast.RemoteFlowId;
 import com.exametrika.spi.groups.cluster.state.IAsyncStateStore;
 import com.exametrika.spi.groups.cluster.state.IAsyncStateTransferClient;
 import com.exametrika.spi.groups.cluster.state.IAsyncStateTransferServer;
+import com.exametrika.spi.groups.cluster.state.IStateStore;
 import com.exametrika.spi.groups.cluster.state.IStateTransferFactory;
+import com.exametrika.tests.groups.channel.TestGroupChannel;
+import com.exametrika.tests.groups.channel.TestGroupChannelFactory;
+import com.exametrika.tests.groups.channel.TestGroupFactoryParameters;
+import com.exametrika.tests.groups.channel.TestGroupParameters;
 
 /**
  * The {@link MulticastProtocolTests} are tests for flush.
@@ -69,9 +68,9 @@ public class MulticastProtocolTests
     private static final int COUNT = 2;// TODO:10;
     private static final long SEND_COUNT = Long.MAX_VALUE;
     private Set<String> wellKnownAddresses = new HashSet<String>();
-    private GroupFactoryParameters factoryParameters;
-    private List<GroupParameters> parameters = new ArrayList<GroupParameters>();
-    private ICoreNodeChannel[] channels = new CoreNodeChannel[COUNT];
+    private TestGroupFactoryParameters factoryParameters;
+    private List<TestGroupParameters> parameters = new ArrayList<TestGroupParameters>();
+    private TestGroupChannel[] channels = new TestGroupChannel[COUNT];
     private TestStateStore stateStore = new TestStateStore();
     private List<TestStateTransferFactory> stateTransferFactories = new ArrayList<TestStateTransferFactory>();
     private List<TestMessageSender> messageSenders = new ArrayList<TestMessageSender>();
@@ -251,8 +250,8 @@ public class MulticastProtocolTests
     {
         for (int i = 0; i < COUNT; i++)
         {
-            TestGroupChannelFactory channelFactory = new TestGroupChannelFactory(factoryParameters);
-            ICoreNodeChannel channel = channelFactory.createChannel(parameters.get(i));
+            TestMulticastGroupChannelFactory channelFactory = new TestMulticastGroupChannelFactory(factoryParameters);
+            TestGroupChannel channel = channelFactory.createChannel(parameters.get(i));
             if (!skipIndexes.contains(i))
             {
                 channel.start();
@@ -307,7 +306,7 @@ public class MulticastProtocolTests
     private void createFactoryParameters()
     {
         boolean debug = Debug.isDebug();
-        factoryParameters = new GroupFactoryParameters(debug);
+        factoryParameters = new TestGroupFactoryParameters(debug);
         if (!debug)
         {
             factoryParameters.heartbeatTrackPeriod = 100;
@@ -348,16 +347,15 @@ public class MulticastProtocolTests
             TestMessageSender sender = new TestMessageSender(i);
             messageSenders.add(sender);
             
-            TestStateTransferFactory stateTransferFactory = new TestStateTransferFactory();
+            TestStateTransferFactory stateTransferFactory = new TestStateTransferFactory(stateStore);
             stateTransferFactories.add(stateTransferFactory);
             
-            GroupParameters parameters = new GroupParameters();
+            TestGroupParameters parameters = new TestGroupParameters();
             parameters.channelName = "test" + i;
             parameters.clientPart = true;
             parameters.serverPart = true;
             parameters.receiver = sender;
             parameters.discoveryStrategy = new WellKnownAddressesDiscoveryStrategy(wellKnownAddresses);
-            parameters.stateStore = stateStore;
             parameters.stateTransferFactory = stateTransferFactory;
             parameters.deliveryHandler = sender;
             parameters.localFlowController = sender;
@@ -427,17 +425,29 @@ public class MulticastProtocolTests
     private class TestStateTransferFactory implements IStateTransferFactory
     {
         private ByteArray state;
+        private IAsyncStateStore stateStore;
+        
+        public TestStateTransferFactory(IAsyncStateStore stateStore)
+        {
+            this.stateStore = stateStore;
+        }
         
         @Override
-        public IAsyncStateTransferServer createServer()
+        public IAsyncStateTransferServer createServer(UUID groupId)
         {
             return new TestStateTransferServer(this);
         }
 
         @Override
-        public IAsyncStateTransferClient createClient()
+        public IAsyncStateTransferClient createClient(UUID groupId)
         {
             return new TestStateTransferClient(this);
+        }
+
+        @Override
+        public IStateStore createStore(UUID groupId)
+        {
+            return stateStore;
         }
     }
     
@@ -576,7 +586,7 @@ public class MulticastProtocolTests
             if (!send)
                 return;
             
-            ICoreNodeChannel channel = channels[index];
+            TestGroupChannel channel = channels[index];
             if (sendBeforeGroup)
             {
                 if (!flowLocked && count < SEND_COUNT)
@@ -636,15 +646,15 @@ public class MulticastProtocolTests
         }
     }
     
-    private class TestGroupChannelFactory extends CoreNodeChannelFactory
+    private class TestMulticastGroupChannelFactory extends TestGroupChannelFactory
     {
-        public TestGroupChannelFactory(GroupFactoryParameters factoryParameters)
+        public TestMulticastGroupChannelFactory(TestGroupFactoryParameters factoryParameters)
         {
             super(factoryParameters);
         }
         
         @Override
-        protected void wireProtocols(Channel channel, TcpTransport transport, ProtocolStack protocolStack)
+        protected void wireProtocols(IChannel channel, TcpTransport transport, ProtocolStack protocolStack)
         {
             super.wireProtocols(channel, transport, protocolStack);
             

@@ -78,6 +78,7 @@ import com.exametrika.impl.groups.cluster.multicast.FlowControlProtocol;
 import com.exametrika.impl.groups.cluster.state.CompositeSimpleStateTransferFactory;
 import com.exametrika.impl.groups.cluster.state.SimpleStateTransferClientProtocol;
 import com.exametrika.impl.groups.cluster.state.SimpleStateTransferServerProtocol;
+import com.exametrika.spi.groups.cluster.channel.IChannelReconnector;
 import com.exametrika.spi.groups.cluster.state.IStateTransferFactory;
 
 /**

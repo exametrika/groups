@@ -8,13 +8,13 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import com.exametrika.api.groups.cluster.ICoreNodeChannel;
 import com.exametrika.common.shell.IShell;
 import com.exametrika.common.shell.IShellCommand;
 import com.exametrika.common.shell.impl.ShellBuilder;
 import com.exametrika.common.shell.impl.ShellCommandBuilder;
 import com.exametrika.common.shell.impl.converters.IntegerConverter;
 import com.exametrika.common.utils.Pair;
+import com.exametrika.impl.groups.simulator.channel.SimGroupChannel;
 
 
 
@@ -48,8 +48,8 @@ public final class SimAgentMain
         
         int nodeCount = (int)parameters.get("nodeCount");
         List<SimAgentChannel> agentChannels = new ArrayList<SimAgentChannel>();
-        List<ICoreNodeChannel> groupChannels = new ArrayList<ICoreNodeChannel>();
-        SimGroupChannelFactory groupFactory = new SimGroupChannelFactory();
+        List<SimGroupChannel> groupChannels = new ArrayList<SimGroupChannel>();
+        SimTestFactory groupFactory = new SimTestFactory();
         groupFactory.init(nodeCount);
         
         for (int i = 0; i < nodeCount; i++)
@@ -60,7 +60,7 @@ public final class SimAgentMain
             agentChannels.add(agentChannel);
             agentChannel.start();
             
-            ICoreNodeChannel groupChannel = groupFactory.createChannel(agentChannel.getExecutor(), i);
+            SimGroupChannel groupChannel = groupFactory.createChannel(agentChannel.getExecutor(), i);
             groupChannels.add(groupChannel);
         }
         
