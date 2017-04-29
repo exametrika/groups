@@ -390,6 +390,6 @@ public class CoreGroupSubChannelFactory extends AbstractChannelFactory
         ConnectionManager connectionManager, ICompartment compartment)
     {
         return new CoreGroupSubChannel(channelName, liveNodeManager, channelObserver, protocolStack, transport, messageFactory, 
-            connectionManager, compartment, membershipManager);
+            connectionManager, compartment, membershipManager, membershipTracker);
     }
 }

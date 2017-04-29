@@ -266,7 +266,7 @@ public final class CoreGroupDiscoveryProtocol extends AbstractProtocol implement
     @Override
     protected void doReceive(IReceiver receiver, IMessage message)
     {
-        if (message.getPart() instanceof DiscoveryMessagePart && !((DiscoveryMessagePart)message.getPart()).isCore())
+        if (message.getPart() instanceof DiscoveryMessagePart && ((DiscoveryMessagePart)message.getPart()).isCore())
         {
             DiscoveryMessagePart part = message.getPart();
 

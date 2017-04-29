@@ -15,6 +15,7 @@ import com.exametrika.common.messaging.impl.protocols.failuredetection.LiveNodeM
 import com.exametrika.common.messaging.impl.transports.ITransport;
 import com.exametrika.common.utils.Assert;
 import com.exametrika.impl.groups.cluster.membership.CoreGroupMembershipManager;
+import com.exametrika.impl.groups.cluster.membership.CoreGroupMembershipTracker;
 import com.exametrika.spi.groups.cluster.channel.IChannelReconnector;
 
 /**
@@ -27,18 +28,21 @@ public class TestGroupChannel extends Channel implements IChannelReconnector
 {
     private final CoreGroupMembershipManager membershipManager;
     private final IChannelReconnector channelReconnector;
+    private final CoreGroupMembershipTracker groupMembershipTracker;
     
     public TestGroupChannel(String channelName, LiveNodeManager liveNodeManager, ChannelObserver channelObserver, 
         ProtocolStack protocolStack, ITransport transport, IMessageFactory messageFactory, 
         IConnectionProvider connectionProvider, ICompartment compartment, CoreGroupMembershipManager membershipManager, 
-        IChannelReconnector channelReconnector)
+        IChannelReconnector channelReconnector, CoreGroupMembershipTracker groupMembershipTracker)
     {
         super(channelName, liveNodeManager, channelObserver, protocolStack, transport, messageFactory, connectionProvider, compartment);
    
         Assert.notNull(membershipManager);
+        Assert.notNull(groupMembershipTracker);
         
         this.membershipManager = membershipManager;
         this.channelReconnector = channelReconnector;
+        this.groupMembershipTracker = groupMembershipTracker;
     }
     
     public IGroupMembershipService getMembershipService()
@@ -52,12 +56,15 @@ public class TestGroupChannel extends Channel implements IChannelReconnector
         super.start();
         
         membershipManager.start();
+        groupMembershipTracker.start();
     }
     
     @Override
     public void stop()
     {
-        super.start();
+        groupMembershipTracker.stop();
+        
+        super.stop();
         
         membershipManager.stop();
     }

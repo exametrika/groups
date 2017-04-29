@@ -40,7 +40,6 @@ import com.exametrika.impl.groups.cluster.failuredetection.IFailureDetectionList
 import com.exametrika.impl.groups.cluster.flush.FlushCoordinatorProtocol;
 import com.exametrika.impl.groups.cluster.flush.FlushParticipantProtocol;
 import com.exametrika.impl.groups.cluster.flush.IFlushParticipant;
-import com.exametrika.impl.groups.cluster.management.CommandManager;
 import com.exametrika.impl.groups.cluster.membership.CoreGroupMembershipManager;
 import com.exametrika.impl.groups.cluster.membership.CoreGroupMembershipTracker;
 import com.exametrika.impl.groups.cluster.membership.GroupMemberships;
@@ -49,6 +48,8 @@ import com.exametrika.impl.groups.cluster.membership.IPreparedGroupMembershipLis
 import com.exametrika.impl.groups.cluster.membership.LocalNodeProvider;
 import com.exametrika.impl.groups.cluster.multicast.FailureAtomicMulticastProtocol;
 import com.exametrika.impl.groups.cluster.multicast.FlowControlProtocol;
+import com.exametrika.impl.groups.cluster.state.AsyncStateTransferClientProtocol;
+import com.exametrika.impl.groups.cluster.state.AsyncStateTransferServerProtocol;
 import com.exametrika.impl.groups.cluster.state.SimpleStateTransferClientProtocol;
 import com.exametrika.impl.groups.cluster.state.SimpleStateTransferServerProtocol;
 import com.exametrika.spi.groups.cluster.channel.IChannelReconnector;
@@ -66,6 +67,9 @@ public class TestGroupChannelFactory extends ChannelFactory
     
     private CoreGroupFailureDetectionProtocol failureDetectionProtocol;
     private TestGroupParameters nodeParameters;
+    
+    private AsyncStateTransferClientProtocol stateTransferClientProtocol;
+    private AsyncStateTransferServerProtocol stateTransferServerProtocol;
     
     public TestGroupChannelFactory()
     {
@@ -128,16 +132,40 @@ public class TestGroupChannelFactory extends ChannelFactory
         failureDetectionListeners.add(flowControlProtocol);
         flowControlProtocol.setFailureDetector(failureDetectionProtocol);
         
-        SimpleStateTransferClientProtocol stateTransferClientProtocol = new SimpleStateTransferClientProtocol(channelName,
-            messageFactory, membershipManager, nodeParameters.stateTransferFactory, GroupMemberships.CORE_GROUP_ID);
-        protocols.add(stateTransferClientProtocol);
-        discoveryProtocol.setGroupJoinStrategy(stateTransferClientProtocol);
-        failureDetectionListeners.add(stateTransferClientProtocol);
-        
-        SimpleStateTransferServerProtocol stateTransferServerProtocol = new SimpleStateTransferServerProtocol(channelName, 
-            messageFactory, membershipManager, failureDetectionProtocol, nodeParameters.stateTransferFactory, 
-            GroupMemberships.CORE_GROUP_ID, nodeFactoryParameters.saveSnapshotPeriod);
-        protocols.add(stateTransferServerProtocol);
+        List<IFlushParticipant> flushParticipants = new ArrayList<IFlushParticipant>();
+        if (!nodeParameters.asyncStateTransfer)
+        {
+            SimpleStateTransferClientProtocol stateTransferClientProtocol = new SimpleStateTransferClientProtocol(channelName,
+                messageFactory, membershipManager, nodeParameters.stateTransferFactory, GroupMemberships.CORE_GROUP_ID);
+            protocols.add(stateTransferClientProtocol);
+            discoveryProtocol.setGroupJoinStrategy(stateTransferClientProtocol);
+            failureDetectionListeners.add(stateTransferClientProtocol);
+            
+            SimpleStateTransferServerProtocol stateTransferServerProtocol = new SimpleStateTransferServerProtocol(channelName, 
+                messageFactory, membershipManager, failureDetectionProtocol, nodeParameters.stateTransferFactory, 
+                GroupMemberships.CORE_GROUP_ID, nodeFactoryParameters.saveSnapshotPeriod);
+            protocols.add(stateTransferServerProtocol);
+            flushParticipants.add(stateTransferClientProtocol);
+            flushParticipants.add(stateTransferServerProtocol);
+        }
+        else
+        {
+            stateTransferClientProtocol = new AsyncStateTransferClientProtocol(channelName,
+                messageFactory, membershipManager, nodeParameters.stateTransferFactory,  GroupMemberships.CORE_GROUP_ID, serializationRegistry,
+                nodeFactoryParameters.maxStateTransferPeriod, nodeFactoryParameters.stateSizeThreshold);
+            protocols.add(stateTransferClientProtocol);
+            discoveryProtocol.setGroupJoinStrategy(stateTransferClientProtocol);
+            failureDetectionListeners.add(stateTransferClientProtocol);
+            flushParticipants.add(stateTransferClientProtocol);
+            
+            stateTransferServerProtocol = new AsyncStateTransferServerProtocol(channelName, 
+                messageFactory, membershipManager, failureDetectionProtocol, nodeParameters.stateTransferFactory, serializationRegistry,
+                nodeFactoryParameters.saveSnapshotPeriod, nodeFactoryParameters.transferLogRecordPeriod, nodeFactoryParameters.transferLogMessagesCount,
+                nodeFactoryParameters.minLockQueueCapacity,  GroupMemberships.CORE_GROUP_ADDRESS,  GroupMemberships.CORE_GROUP_ID);
+            protocols.add(stateTransferServerProtocol);
+            flushParticipants.add(stateTransferServerProtocol);
+            stateTransferServerProtocol.setFlowController(flowControlProtocol);
+        }
         
         FailureAtomicMulticastProtocol multicastProtocol = new FailureAtomicMulticastProtocol(channelName, 
             messageFactory, membershipManager, failureDetectionProtocol, nodeFactoryParameters.maxBundlingMessageSize, 
@@ -154,9 +182,6 @@ public class TestGroupChannelFactory extends ChannelFactory
         multicastProtocol.setLocalFlowController(nodeParameters.localFlowController);
         flowControlProtocol.setFlowController(multicastProtocol);
         
-        List<IFlushParticipant> flushParticipants = new ArrayList<IFlushParticipant>();
-        flushParticipants.add(stateTransferClientProtocol);
-        flushParticipants.add(stateTransferServerProtocol);
         flushParticipants.add(multicastProtocol);
         FlushParticipantProtocol flushParticipantProtocol = new FlushParticipantProtocol(channelName, messageFactory, 
            flushParticipants, membershipManager, failureDetectionProtocol);
@@ -194,8 +219,13 @@ public class TestGroupChannelFactory extends ChannelFactory
         multicastProtocol.setCompartment(channel.getCompartment());
         channel.getCompartment().addProcessor(multicastProtocol);
         
-        CommandManager commandManager = protocolStack.find(CommandManager.class);
-        commandManager.setCompartment(channel.getCompartment());
+        if (stateTransferClientProtocol != null)
+        {
+            stateTransferClientProtocol.setCompartment(channel.getCompartment());
+            stateTransferClientProtocol.setChannelReconnector((IChannelReconnector)channel);
+            
+            stateTransferServerProtocol.setCompartment(channel.getCompartment());
+        }
     }
     
     @Override
@@ -204,6 +234,6 @@ public class TestGroupChannelFactory extends ChannelFactory
         ConnectionManager connectionManager, ICompartment compartment)
     {
         return new TestGroupChannel(channelName, liveNodeManager, channelObserver, protocolStack, transport, messageFactory, 
-            connectionManager, compartment, membershipManager, nodeParameters.channelReconnector);
+            connectionManager, compartment, membershipManager, nodeParameters.channelReconnector, membershipTracker);
     }
 }

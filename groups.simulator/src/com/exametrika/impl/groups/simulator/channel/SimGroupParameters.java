@@ -17,6 +17,7 @@ import com.exametrika.spi.groups.cluster.state.IStateTransferFactory;
  */
 public class SimGroupParameters extends NodeParameters
 {
+    public boolean asyncStateTransfer = true;
     public IStateTransferFactory stateTransferFactory;
     public IDeliveryHandler deliveryHandler = new NoDeliveryHandler();
     public IChannelReconnector channelReconnector;

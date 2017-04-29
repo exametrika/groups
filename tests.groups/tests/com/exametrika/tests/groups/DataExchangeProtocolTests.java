@@ -551,7 +551,7 @@ public class DataExchangeProtocolTests
             ConnectionManager connectionManager, ICompartment compartment)
         {
             return new TestGroupChannel(channelName, liveNodeManager, channelObserver, protocolStack, transport, messageFactory, 
-                connectionManager, compartment, membershipManager, null);
+                connectionManager, compartment, membershipManager, null, membershipTracker);
         }
     }
 }

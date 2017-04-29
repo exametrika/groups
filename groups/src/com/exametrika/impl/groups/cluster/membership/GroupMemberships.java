@@ -167,6 +167,7 @@ public final class GroupMemberships
         }
         
         List<INode> joinedMembers = membershipDelta.getGroup().getJoinedMembers();
+        members.addAll(joinedMembers);
         
         boolean primaryGroup;
         if (oldMembership.getGroup().isPrimary())

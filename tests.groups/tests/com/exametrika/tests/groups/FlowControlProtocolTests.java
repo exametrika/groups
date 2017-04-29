@@ -8,7 +8,9 @@ import static org.junit.Assert.assertThat;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import org.junit.After;
@@ -252,22 +254,34 @@ public class FlowControlProtocolTests
         Threads.sleep(3000);
         
         assertThat(controller1.unlockedFlows.size(), is(2));
-        assertThat(controller1.unlockedFlows.get(0).getFlowId(), is(flowId1));
-        assertThat(controller1.unlockedFlows.get(0).getReceiver(), is(channels[0].getLiveNodeProvider().getLocalNode()));
-        assertThat(controller1.unlockedFlows.get(0).getSender(), is(channels[COUNT - 2].getLiveNodeProvider().getLocalNode()));
+        Map<UUID, RemoteFlowId> unlockedMap = new HashMap<UUID, RemoteFlowId>();
+        for (RemoteFlowId flowId : controller1.unlockedFlows)
+            unlockedMap.put(flowId.getFlowId(), flowId);
+       
+        RemoteFlowId remoteFlowId1 = unlockedMap.get(flowId1);
+        assertThat(remoteFlowId1.getFlowId(), is(flowId1));
+        assertThat(remoteFlowId1.getReceiver(), is(channels[0].getLiveNodeProvider().getLocalNode()));
+        assertThat(remoteFlowId1.getSender(), is(channels[COUNT - 2].getLiveNodeProvider().getLocalNode()));
         
-        assertThat(controller1.unlockedFlows.get(1).getFlowId(), is(flowId2));
-        assertThat(controller1.unlockedFlows.get(1).getReceiver(), is(channels[1].getLiveNodeProvider().getLocalNode()));
-        assertThat(controller1.unlockedFlows.get(1).getSender(), is(channels[COUNT - 2].getLiveNodeProvider().getLocalNode()));
+        RemoteFlowId remoteFlowId2 = unlockedMap.get(flowId2);
+        assertThat(remoteFlowId2.getFlowId(), is(flowId2));
+        assertThat(remoteFlowId2.getReceiver(), is(channels[1].getLiveNodeProvider().getLocalNode()));
+        assertThat(remoteFlowId2.getSender(), is(channels[COUNT - 2].getLiveNodeProvider().getLocalNode()));
         
         assertThat(controller2.unlockedFlows.size(), is(2));
-        assertThat(controller2.unlockedFlows.get(0).getFlowId(), is(flowId1));
-        assertThat(controller2.unlockedFlows.get(0).getReceiver(), is(channels[0].getLiveNodeProvider().getLocalNode()));
-        assertThat(controller2.unlockedFlows.get(0).getSender(), is(channels[COUNT - 1].getLiveNodeProvider().getLocalNode()));
+        unlockedMap = new HashMap<UUID, RemoteFlowId>();
+        for (RemoteFlowId flowId : controller2.unlockedFlows)
+            unlockedMap.put(flowId.getFlowId(), flowId);
+       
+        remoteFlowId1 = unlockedMap.get(flowId1);
+        assertThat(remoteFlowId1.getFlowId(), is(flowId1));
+        assertThat(remoteFlowId1.getReceiver(), is(channels[0].getLiveNodeProvider().getLocalNode()));
+        assertThat(remoteFlowId1.getSender(), is(channels[COUNT - 1].getLiveNodeProvider().getLocalNode()));
         
-        assertThat(controller2.unlockedFlows.get(1).getFlowId(), is(flowId2));
-        assertThat(controller2.unlockedFlows.get(1).getReceiver(), is(channels[1].getLiveNodeProvider().getLocalNode()));
-        assertThat(controller2.unlockedFlows.get(1).getSender(), is(channels[COUNT - 1].getLiveNodeProvider().getLocalNode()));
+        remoteFlowId2 = unlockedMap.get(flowId2);
+        assertThat(remoteFlowId2.getFlowId(), is(flowId2));
+        assertThat(remoteFlowId2.getReceiver(), is(channels[1].getLiveNodeProvider().getLocalNode()));
+        assertThat(remoteFlowId2.getSender(), is(channels[COUNT - 1].getLiveNodeProvider().getLocalNode()));
     }
     
     @Test
