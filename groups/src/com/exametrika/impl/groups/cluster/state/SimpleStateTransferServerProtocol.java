@@ -98,6 +98,7 @@ public final class SimpleStateTransferServerProtocol extends AbstractProtocol im
     public void startFlush(IFlush flush)
     {
         this.flush = flush;
+        flush.grantFlush(this);
     }
 
     @Override
@@ -108,6 +109,7 @@ public final class SimpleStateTransferServerProtocol extends AbstractProtocol im
     @Override
     public void processFlush()
     {
+        flush.grantFlush(this);
     }
 
     @Override

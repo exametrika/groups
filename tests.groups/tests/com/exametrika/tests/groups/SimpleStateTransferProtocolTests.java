@@ -27,7 +27,6 @@ import com.exametrika.common.io.IDeserialization;
 import com.exametrika.common.io.ISerialization;
 import com.exametrika.common.io.ISerializationRegistry;
 import com.exametrika.common.io.impl.AbstractSerializer;
-import com.exametrika.common.messaging.IAddress;
 import com.exametrika.common.messaging.IChannel;
 import com.exametrika.common.messaging.ILiveNodeProvider;
 import com.exametrika.common.messaging.IMessage;
@@ -49,7 +48,6 @@ import com.exametrika.common.messaging.impl.transports.ConnectionManager;
 import com.exametrika.common.messaging.impl.transports.tcp.TcpTransport;
 import com.exametrika.common.tasks.IFlowController;
 import com.exametrika.common.tests.Sequencer;
-import com.exametrika.common.tests.Tests;
 import com.exametrika.common.utils.Assert;
 import com.exametrika.common.utils.ByteArray;
 import com.exametrika.common.utils.Bytes;
@@ -96,7 +94,7 @@ import com.exametrika.tests.groups.channel.TestGroupChannel;
  */
 public class SimpleStateTransferProtocolTests
 {
-    private static final int COUNT = 2;//TODO:10;
+    private static final int COUNT = 10;
     private TestGroupChannel[] channels = new TestGroupChannel[COUNT];
     private Sequencer flushSequencer = new Sequencer();
     private Sequencer snapshotSequencer = new Sequencer();
@@ -223,58 +221,6 @@ public class SimpleStateTransferProtocolTests
         Threads.sleep(10000);
         
         checkMembership(channelFactory, Collections.<Integer>asSet(0));
-    }
-    
-    @Test
-    public void testServerFailureBeforeFlush() throws Exception
-    {
-        Set<String> wellKnownAddresses = new ConcurrentHashMap<String, String>().keySet("");
-        TestChannelFactory channelFactory = new TestChannelFactory(new WellKnownAddressesDiscoveryStrategy(wellKnownAddresses));
-        createGroup(wellKnownAddresses, channelFactory, Collections.<Integer>asSet(0, 1));
-         
-        Threads.sleep(10000);
-         
-        checkMembership(channelFactory, Collections.<Integer>asSet(0, 1));
-
-        trackSnapshot(channelFactory);
-        channels[0].start();
-        channels[1].start();
-        
-        snapshotSequencer.waitAll(2, 5000, 0);
-        int index = getStateTransferServer(0, channelFactory);
-        
-        Threads.sleep(1000);
-        IOs.close(channels[index]);
-        
-        Threads.sleep(10000);
-        
-        checkMembership(channelFactory, Collections.<Integer>asSet(index));
-    }
-    
-    @Test
-    public void testServerFailureAfterFlush() throws Exception
-    {
-        Set<String> wellKnownAddresses = new ConcurrentHashMap<String, String>().keySet("");
-        TestChannelFactory channelFactory = new TestChannelFactory(new WellKnownAddressesDiscoveryStrategy(wellKnownAddresses));
-        createGroup(wellKnownAddresses, channelFactory, Collections.<Integer>asSet(0, 1));
-         
-        Threads.sleep(10000);
-         
-        checkMembership(channelFactory, Collections.<Integer>asSet(0, 1));
-
-        failOnFlush(channelFactory);
-        
-        channels[0].start();
-        channels[1].start();
-        
-        flushSequencer.waitAll(COUNT - 2, 5000, 0);
-        int index = getStateTransferServer(0, channelFactory);
-        
-        IOs.close(channels[index]);
-        
-        Threads.sleep(10000);
-        
-        checkMembership(channelFactory, Collections.<Integer>asSet(index));
     }
     
     @Test
@@ -514,26 +460,6 @@ public class SimpleStateTransferProtocolTests
             factory.trackSnapshot = true;    
     }
     
-    private int getStateTransferServer(int clientIndex, TestChannelFactory channelFactory)
-    {
-        try
-        {
-            IAddress server = Tests.get(Tests.get(channelFactory.clientProtocols.get(clientIndex), "stateTransfer"), "server");
-            for (int i = 0; i < COUNT; i++)
-            {
-                IChannel channel = channels[i];
-                if (channel.getLiveNodeProvider().getLocalNode().equals(server))
-                    return i;
-            }
-            
-            return -1;
-        }
-        catch (Exception e)
-        {
-            throw new RuntimeException(e);
-        }
-    }
-
     private class TestStateTransferServer implements ISimpleStateTransferServer
     {
         TestStateTransferFactory factory;
