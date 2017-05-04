@@ -10,9 +10,11 @@ import static org.junit.Assert.assertTrue;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -54,6 +56,7 @@ import com.exametrika.impl.groups.cluster.membership.NodesMembershipChange;
 import com.exametrika.impl.groups.cluster.membership.NodesMembershipDelta;
 import com.exametrika.impl.groups.cluster.membership.NodesMembershipProvider;
 import com.exametrika.impl.groups.cluster.membership.WorkerToCoreMembership;
+import com.exametrika.impl.groups.cluster.membership.WorkerToCoreMembershipChange;
 import com.exametrika.impl.groups.cluster.membership.WorkerToCoreMembershipDelta;
 import com.exametrika.impl.groups.cluster.membership.WorkerToCoreMembershipProvider;
 import com.exametrika.tests.groups.GroupMembershipManagerTests.LiveNodeProviderMock;
@@ -305,6 +308,7 @@ public class ClusterMembershipProviderTests
             Collections.<IGroupMembershipListener>emptySet());
         
         WorkerToCoreMembershipProvider provider = new WorkerToCoreMembershipProvider(membershipManager, new DefaultWorkerToCoreMappingStrategy());
+        WorkerToCoreMembershipProvider provider2 = new WorkerToCoreMembershipProvider();
         assertThat(provider.getDomains(), is(Collections.singleton(GroupMemberships.CORE_DOMAIN)));
         List<INode> coreNodes = new ArrayList<INode>();
         for (int i = 0; i < 5; i++)
@@ -335,6 +339,18 @@ public class ClusterMembershipProviderTests
         assertTrue(delta.getFailedCoreNodes().isEmpty());
         assertTrue(delta.getLeftCoreNodes().isEmpty());
         assertTrue(delta.getNewCoreByWorkerMap().size() == workerNodes.size());
+        
+        WorkerToCoreMembership newMembership = (WorkerToCoreMembership)provider2.createMembership(domainMembership, delta, null);
+        WorkerToCoreMembershipChange mappingChange = (WorkerToCoreMembershipChange)provider2.createChange(domainMembership, delta, null);
+        assertThat(newMembership.getCoreNodes(), is(coreNodes));
+        assertThat(mappingChange.getJoinedCoreNodes(), is(coreNodes));
+        assertTrue(mappingChange.getFailedCoreNodes().isEmpty());
+        assertTrue(mappingChange.getLeftCoreNodes().isEmpty());
+        assertThat(mappingChange.getNewCoreByWorkerMap(), is(newMembership.getCoreByWorkerMap()));
+        Map<UUID, UUID> map = new HashMap<UUID, UUID>();
+        for (Map.Entry<INode, INode> entry : newMembership.getCoreByWorkerMap().entrySet())
+            map.put(entry.getKey().getId(), entry.getValue().getId());
+        assertThat(map, is(delta.getNewCoreByWorkerMap()));
         
         assertTrue(provider.getDelta(1, domainMembership, domainMembershipDelta, null, membership).getValue() == null);
         
@@ -369,15 +385,32 @@ public class ClusterMembershipProviderTests
         assertTrue(delta.getLeftCoreNodes().isEmpty());
         assertTrue(!delta.getNewCoreByWorkerMap().isEmpty());
         
-        provider = new WorkerToCoreMembershipProvider();
-        delta = (WorkerToCoreMembershipDelta)provider.createEmptyDelta();
+        newMembership = (WorkerToCoreMembership)provider2.createMembership(domainMembership, delta, newMembership);
+        mappingChange = (WorkerToCoreMembershipChange)provider2.createChange(domainMembership, newMembership, membership);
+        assertThat(newMembership.getCoreNodes(), is(coreNodes));
+        assertThat(newMembership.getCoreByWorkerMap(), is(membership.getCoreByWorkerMap()));
+        assertThat(mappingChange.getJoinedCoreNodes(), is(is(coreNodes.subList(coreNodes.size() - 1, coreNodes.size()))));
+        assertThat(mappingChange.getFailedCoreNodes(), is(Collections.singleton(removedCore)));
+        assertTrue(mappingChange.getLeftCoreNodes().isEmpty());
+        assertTrue(mappingChange.getNewCoreByWorkerMap().size() == delta.getNewCoreByWorkerMap().size());
+        
+        delta = (WorkerToCoreMembershipDelta)provider2.createEmptyDelta();
         assertTrue(delta.getJoinedCoreNodes().isEmpty());
         assertTrue(delta.getFailedCoreNodes().isEmpty());
         assertTrue(delta.getLeftCoreNodes().isEmpty());
         assertTrue(delta.getNewCoreByWorkerMap().isEmpty());
         
-        membership = new WorkerToCoreMembership(Collections.<INode>emptyList(), Collections.<INode, INode>emptyMap());
-        assertTrue(provider.isEmptyMembership(membership));
+        WorkerToCoreMembership emptyMembership = new WorkerToCoreMembership(Collections.<INode>emptyList(), Collections.<INode, INode>emptyMap());
+        assertTrue(provider2.isEmptyMembership(emptyMembership));
+        
+        delta = (WorkerToCoreMembershipDelta)provider2.createCoreFullDelta(membership);
+        assertThat(delta.getJoinedCoreNodes(), is(membership.getCoreNodes()));
+        assertTrue(delta.getFailedCoreNodes().isEmpty());
+        assertTrue(delta.getLeftCoreNodes().isEmpty());
+        map = new HashMap<UUID, UUID>();
+        for (Map.Entry<INode, INode> entry : membership.getCoreByWorkerMap().entrySet())
+            map.put(entry.getKey().getId(), entry.getValue().getId());
+        assertThat(delta.getNewCoreByWorkerMap(), is(map));
     }
     
     private INode createNode(String name, String domain)
