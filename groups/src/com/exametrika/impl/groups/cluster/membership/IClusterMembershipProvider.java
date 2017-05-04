@@ -37,6 +37,7 @@ public interface IClusterMembershipProvider
     /**
      * Returns membership delta by given old membership and internal provider state.
      *
+     * @param membershipId new membership identifier
      * @param newDomainMembership new domain membership (partially built)
      * @param domainMembershipDelta domain membership delta
      * @param oldDomainMembership old domain membership or null if old domain membership is not set
@@ -45,7 +46,7 @@ public interface IClusterMembershipProvider
      * @return pair of new membership and membership delta, new membership can be null if delta is null and old membership is null,
      *         delta can be null if nothing changed in provider
      */
-    Pair<IClusterMembershipElement, IClusterMembershipElementDelta> getDelta(IDomainMembership newDomainMembership,
+    Pair<IClusterMembershipElement, IClusterMembershipElementDelta> getDelta(long membershipId, IDomainMembership newDomainMembership,
         IDomainMembershipDelta domainMembershipDelta, IDomainMembership oldDomainMembership, IClusterMembershipElement oldMembership);
 
     /**

@@ -29,7 +29,7 @@ public final class ClusterMembership implements IClusterMembership
     private final List<IDomainMembership> domains;
     private final Map<String, IDomainMembership> domainsMap;
 
-    public ClusterMembership(long id, List<IDomainMembership> domains)
+    public ClusterMembership(long id, List<? extends IDomainMembership> domains)
     {
         Assert.isTrue(id > 0);
         Assert.notNull(domains);

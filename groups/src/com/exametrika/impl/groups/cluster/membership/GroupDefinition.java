@@ -31,7 +31,6 @@ public final class GroupDefinition
         Assert.notNull(domain);
         Assert.notNull(id);
         Assert.notNull(name);
-        Assert.notNull(type);
         Assert.notNull(options);
         
         this.domain = domain;

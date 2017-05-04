@@ -25,7 +25,7 @@ public final class ClusterMembershipDelta implements IClusterMembershipDelta
     private final boolean full;
     private final List<IDomainMembershipDelta> domains;
 
-    public ClusterMembershipDelta(long id, boolean full, List<IDomainMembershipDelta> domains)
+    public ClusterMembershipDelta(long id, boolean full, List<? extends IDomainMembershipDelta> domains)
     {
         Assert.isTrue(id > 0);
         Assert.notNull(domains);

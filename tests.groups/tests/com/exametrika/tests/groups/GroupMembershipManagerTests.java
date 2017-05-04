@@ -350,7 +350,7 @@ public class GroupMembershipManagerTests
         }
     }
     
-    private static class LiveNodeProviderMock implements ILiveNodeProvider
+    public static class LiveNodeProviderMock implements ILiveNodeProvider
     {
         private IAddress localNode = new UnicastAddress(UUID.randomUUID(), "test");
         

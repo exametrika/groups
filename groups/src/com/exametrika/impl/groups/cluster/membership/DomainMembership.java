@@ -26,7 +26,7 @@ public final class DomainMembership implements IDomainMembership
     private final String name;
     private final List<IClusterMembershipElement> elements;
 
-    public DomainMembership(String name, List<IClusterMembershipElement> elements)
+    public DomainMembership(String name, List<? extends IClusterMembershipElement> elements)
     {
         Assert.notNull(name);
         Assert.notNull(elements);

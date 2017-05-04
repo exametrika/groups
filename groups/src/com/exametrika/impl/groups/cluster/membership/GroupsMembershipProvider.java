@@ -56,7 +56,7 @@ public final class GroupsMembershipProvider implements IClusterMembershipProvide
     }
 
     @Override
-    public Pair<IClusterMembershipElement, IClusterMembershipElementDelta> getDelta(
+    public Pair<IClusterMembershipElement, IClusterMembershipElementDelta> getDelta(long membershipId,
         IDomainMembership newDomainMembership, IDomainMembershipDelta domainMembershipDelta,
         IDomainMembership oldDomainMembership, IClusterMembershipElement oldMembership)
     {
@@ -72,7 +72,7 @@ public final class GroupsMembershipProvider implements IClusterMembershipProvide
         NodesMembershipDelta nodeMembershipDelta = domainMembershipDelta.findDelta(NodesMembershipDelta.class);
         Assert.notNull(nodeMembershipDelta);
         
-        List<Pair<IGroup, IGroupDelta>> list = groupMappingStrategy.mapGroups(newDomainMembership.getName(),
+        List<Pair<IGroup, IGroupDelta>> list = groupMappingStrategy.mapGroups(membershipId, newDomainMembership.getName(),
             nodeMembership, nodeMembershipDelta, oldGroupMembership);
         if (list == null)
             return new Pair<IClusterMembershipElement, IClusterMembershipElementDelta>(oldMembership, null);

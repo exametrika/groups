@@ -31,7 +31,7 @@ import com.exametrika.impl.groups.cluster.management.ICommandHandler;
  * @threadsafety This class and its methods are thread safe.
  * @author Medvedev-A
  */
-public final class DefaultGroupMappingStrategy implements IGroupMappingStrategy, ICommandHandler
+public final class DefaultGroupMappingStrategy implements IGroupMappingStrategy, ICommandHandler, IGroupManagementService
 {
     // TODO: провалидировать опции группы
     private final IGroupFeedbackService groupFeedbackService;
@@ -47,6 +47,7 @@ public final class DefaultGroupMappingStrategy implements IGroupMappingStrategy,
         this.nodeFeedbackService = nodeFeedbackService;
     }
     
+    @Override
     public List<GroupDefinition> getGroupDefinitions()
     {
         List<GroupDefinition> groups = new ArrayList<GroupDefinition>();
@@ -58,7 +59,8 @@ public final class DefaultGroupMappingStrategy implements IGroupMappingStrategy,
         return groups;
     }
     
-    public void addGroup(GroupDefinition group)
+    @Override
+    public void addGroupDefinition(GroupDefinition group)
     {
         Assert.notNull(group);
         
@@ -72,7 +74,8 @@ public final class DefaultGroupMappingStrategy implements IGroupMappingStrategy,
         domain.changedGroups.add(group.getId());
     }
     
-    public void removeGroup(String domainName, UUID groupId)
+    @Override
+    public void removeGroupDefinition(String domainName, UUID groupId)
     {
         Assert.notNull(groupId);
         

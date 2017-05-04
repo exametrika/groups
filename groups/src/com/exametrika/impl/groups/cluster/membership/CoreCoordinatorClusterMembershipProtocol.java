@@ -196,6 +196,12 @@ public final class CoreCoordinatorClusterMembershipProtocol extends AbstractClus
         else
             domainNames.add(GroupMemberships.CORE_DOMAIN);
         
+        long membershipId;
+        if (oldMembership != null)
+            membershipId = oldMembership.getId() + (coreGroupOnly ? 0 : 1);
+        else
+            membershipId = 1;
+        
         List<IDomainMembershipDelta> domainDeltas = new ArrayList<IDomainMembershipDelta>();
         for (String domainName : domainNames)
         {
@@ -215,7 +221,8 @@ public final class CoreCoordinatorClusterMembershipProtocol extends AbstractClus
                 if (!coreGroupOnly || membershipProviders.get(i).isCoreGroupOnly())
                 {
                     Pair<IClusterMembershipElement, IClusterMembershipElementDelta> pair = membershipProviders.get(i).getDelta(
-                        newDomainMembership, domainMembershipDelta, oldDomainMembership, oldDomainMembership != null ? oldDomainMembership.getElements().get(i) : null);
+                        membershipId, newDomainMembership, domainMembershipDelta, oldDomainMembership,
+                        oldDomainMembership != null ? oldDomainMembership.getElements().get(i) : null);
                     
                     elements.add(pair.getKey());
                     
@@ -241,9 +248,9 @@ public final class CoreCoordinatorClusterMembershipProtocol extends AbstractClus
         
         ClusterMembershipDelta delta;
         if (oldMembership == null)
-            delta = new ClusterMembershipDelta(1, true, domainDeltas);
+            delta = new ClusterMembershipDelta(membershipId, true, domainDeltas);
         else
-            delta = new ClusterMembershipDelta(oldMembership.getId() + (coreGroupOnly ? 0 : 1), false, domainDeltas);
+            delta = new ClusterMembershipDelta(membershipId, false, domainDeltas);
         return delta;
     }
     

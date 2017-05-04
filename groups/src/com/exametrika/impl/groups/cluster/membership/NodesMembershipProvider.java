@@ -78,7 +78,7 @@ public final class NodesMembershipProvider implements IClusterMembershipProvider
     }
     
     @Override
-    public Pair<IClusterMembershipElement, IClusterMembershipElementDelta> getDelta(IDomainMembership newDomainMembership,
+    public Pair<IClusterMembershipElement, IClusterMembershipElementDelta> getDelta(long membershipId, IDomainMembership newDomainMembership,
         IDomainMembershipDelta domainMembershipDelta, IDomainMembership oldDomainMembership, IClusterMembershipElement oldMembership)
     {
         if (discoveredNodes.isEmpty() && failedNodes.isEmpty() && leftNodes.isEmpty())
@@ -88,6 +88,8 @@ public final class NodesMembershipProvider implements IClusterMembershipProvider
         List<INode> joinedNodes = new ArrayList<INode>();
         for (INode node : discoveredNodes)
         {
+            if (!node.getDomain().equals(newDomainMembership.getName()))
+                continue;
             if (oldNodeMembership != null && oldNodeMembership.findNode(node.getId()) != null)
                 continue;
             
@@ -97,6 +99,8 @@ public final class NodesMembershipProvider implements IClusterMembershipProvider
         Set<UUID> failedNodeIds = new LinkedHashSet<UUID>();
         for (INode node : failedNodes)
         {
+            if (!node.getDomain().equals(newDomainMembership.getName()))
+                continue;
             if (oldNodeMembership == null || oldNodeMembership.findNode(node.getId()) == null)
                 continue;
             
@@ -106,6 +110,8 @@ public final class NodesMembershipProvider implements IClusterMembershipProvider
         Set<UUID> leftNodeIds = new LinkedHashSet<UUID>();
         for (INode node : leftNodes)
         {
+            if (!node.getDomain().equals(newDomainMembership.getName()))
+                continue;
             if (oldNodeMembership == null || oldNodeMembership.findNode(node.getId()) == null)
                 continue;
             

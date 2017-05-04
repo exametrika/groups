@@ -61,7 +61,7 @@ public final class WorkerToCoreMembershipProvider implements IClusterMembershipP
     }
 
     @Override
-    public Pair<IClusterMembershipElement, IClusterMembershipElementDelta> getDelta(
+    public Pair<IClusterMembershipElement, IClusterMembershipElementDelta> getDelta(long membershipId,
         IDomainMembership newDomainMembership, IDomainMembershipDelta domainMembershipDelta, IDomainMembership oldDomainMembership,
         IClusterMembershipElement oldMembership)
     {

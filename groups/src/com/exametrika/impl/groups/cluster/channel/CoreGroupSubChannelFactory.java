@@ -354,7 +354,7 @@ public class CoreGroupSubChannelFactory extends AbstractChannelFactory
         commandHandlers.add(groupMappingStrategy);
         GroupsMembershipProvider groupsMembershipProvider = new GroupsMembershipProvider(groupMappingStrategy);
         membershipProviders.add(groupsMembershipProvider);
-        groupDefinitionStateTransferFactory.setGroupMappingStrategy(groupMappingStrategy);
+        groupDefinitionStateTransferFactory.setGroupManagementService(groupMappingStrategy);
     }
     
     @Override

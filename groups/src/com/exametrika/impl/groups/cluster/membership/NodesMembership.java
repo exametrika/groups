@@ -27,10 +27,9 @@ public final class NodesMembership implements INodesMembership
     private final Map<UUID, INode> nodesByIdMap;
     private final Map<IAddress, INode> nodesByAddressMap;
 
-    public NodesMembership(List<INode> nodes)
+    public NodesMembership(List<? extends INode> nodes)
     {
         Assert.notNull(nodes);
-        Assert.isTrue(!nodes.isEmpty());
 
         this.nodes = Immutables.wrap(nodes);
         

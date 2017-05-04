@@ -7,14 +7,15 @@ import java.util.List;
 import java.util.UUID;
 
 import com.exametrika.common.io.ISerialization;
+import com.exametrika.common.io.ISerializationRegistry;
 import com.exametrika.common.io.impl.ByteInputStream;
 import com.exametrika.common.io.impl.ByteOutputStream;
 import com.exametrika.common.io.impl.Deserialization;
 import com.exametrika.common.io.impl.Serialization;
-import com.exametrika.common.io.impl.SerializationRegistry;
 import com.exametrika.common.messaging.IMessage;
 import com.exametrika.common.utils.Assert;
 import com.exametrika.common.utils.ByteArray;
+import com.exametrika.common.utils.Serializers;
 import com.exametrika.spi.groups.cluster.state.ISimpleStateStore;
 import com.exametrika.spi.groups.cluster.state.ISimpleStateTransferClient;
 import com.exametrika.spi.groups.cluster.state.ISimpleStateTransferServer;
@@ -28,22 +29,25 @@ import com.exametrika.spi.groups.cluster.state.IStateTransferFactory;
  */
 public final class GroupDefinitionStateTransferFactory implements IStateTransferFactory
 {
-    private DefaultGroupMappingStrategy groupMappingStrategy;
+    private IGroupManagementService groupManagementService;
     private final ISimpleStateStore stateStore;
+    private final ISerializationRegistry serializationRegistry;
 
     public GroupDefinitionStateTransferFactory(ISimpleStateStore stateStore)
     {
         Assert.notNull(stateStore);
         
         this.stateStore = stateStore;
+        serializationRegistry = Serializers.createRegistry();
+        serializationRegistry.register(new GroupDefinitionSerializer());
     }
     
-    public void setGroupMappingStrategy(DefaultGroupMappingStrategy groupMappingStrategy)
+    public void setGroupManagementService(IGroupManagementService groupManagementService)
     {
-        Assert.notNull(groupMappingStrategy);
-        Assert.isNull(this.groupMappingStrategy);
+        Assert.notNull(groupManagementService);
+        Assert.isNull(this.groupManagementService);
         
-        this.groupMappingStrategy = groupMappingStrategy;
+        this.groupManagementService = groupManagementService;
     }
     
     @Override
@@ -87,13 +91,10 @@ public final class GroupDefinitionStateTransferFactory implements IStateTransfer
         @Override
         public ByteArray saveSnapshot(boolean full)
         {
-            List<GroupDefinition> groupDefinitions = groupMappingStrategy.getGroupDefinitions();
-            
-            SerializationRegistry registry = new SerializationRegistry();
-            registry.register(new GroupDefinitionSerializer());
+            List<GroupDefinition> groupDefinitions = groupManagementService.getGroupDefinitions();
             
             ByteOutputStream stream = new ByteOutputStream();
-            ISerialization serialization = new Serialization(registry, true, stream);
+            ISerialization serialization = new Serialization(serializationRegistry, true, stream);
             serialization.writeInt(groupDefinitions.size());
             for (GroupDefinition groupDefinition : groupDefinitions)
                 serialization.writeTypedObject(groupDefinition);
@@ -107,16 +108,13 @@ public final class GroupDefinitionStateTransferFactory implements IStateTransfer
         @Override
         public void loadSnapshot(boolean full, ByteArray buffer)
         {
-            SerializationRegistry registry = new SerializationRegistry();
-            registry.register(new GroupDefinitionSerializer());
-            
             ByteInputStream stream = new ByteInputStream(buffer.getBuffer(), buffer.getOffset(), buffer.getLength());
-            Deserialization deserialization = new Deserialization(registry, stream);
+            Deserialization deserialization = new Deserialization(serializationRegistry, stream);
             int count = deserialization.readInt();
             for (int i = 0; i < count; i++)
             {
                 GroupDefinition groupDefinition = deserialization.readTypedObject(GroupDefinition.class);
-                groupMappingStrategy.addGroup(groupDefinition);
+                groupManagementService.addGroupDefinition(groupDefinition);
             }
         }
     }

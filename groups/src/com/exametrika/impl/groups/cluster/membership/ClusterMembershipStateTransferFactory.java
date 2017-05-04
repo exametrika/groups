@@ -11,14 +11,16 @@ import com.exametrika.api.groups.cluster.IClusterMembership;
 import com.exametrika.api.groups.cluster.IClusterMembershipElement;
 import com.exametrika.api.groups.cluster.IDomainMembership;
 import com.exametrika.common.io.ISerialization;
+import com.exametrika.common.io.ISerializationRegistry;
 import com.exametrika.common.io.impl.ByteInputStream;
 import com.exametrika.common.io.impl.ByteOutputStream;
 import com.exametrika.common.io.impl.Deserialization;
 import com.exametrika.common.io.impl.Serialization;
-import com.exametrika.common.io.impl.SerializationRegistry;
 import com.exametrika.common.messaging.IMessage;
+import com.exametrika.common.messaging.impl.transports.UnicastAddressSerializer;
 import com.exametrika.common.utils.Assert;
 import com.exametrika.common.utils.ByteArray;
+import com.exametrika.common.utils.Serializers;
 import com.exametrika.spi.groups.cluster.state.ISimpleStateStore;
 import com.exametrika.spi.groups.cluster.state.ISimpleStateTransferClient;
 import com.exametrika.spi.groups.cluster.state.ISimpleStateTransferServer;
@@ -35,6 +37,7 @@ public final class ClusterMembershipStateTransferFactory implements IStateTransf
     private final IClusterMembershipManager membershipManager;
     private final List<IClusterMembershipProvider> membershipProviders;
     private final ISimpleStateStore stateStore;
+    private final ISerializationRegistry serializationRegistry;
 
     public ClusterMembershipStateTransferFactory(IClusterMembershipManager membershipManager,
         List<IClusterMembershipProvider> membershipProviders, ISimpleStateStore stateStore)
@@ -46,6 +49,9 @@ public final class ClusterMembershipStateTransferFactory implements IStateTransf
         this.membershipManager = membershipManager;
         this.membershipProviders = membershipProviders;
         this.stateStore = stateStore;
+        serializationRegistry = Serializers.createRegistry();
+        serializationRegistry.register(new ClusterMembershipSerializationRegistrar());
+        serializationRegistry.register(new UnicastAddressSerializer());
     }
     
     @Override
@@ -107,11 +113,8 @@ public final class ClusterMembershipStateTransferFactory implements IStateTransf
                 delta = new ClusterMembershipDelta(membership.getId(), true, domains);
             }
             
-            SerializationRegistry registry = new SerializationRegistry();
-            registry.register(new ClusterMembershipSerializationRegistrar());
-            
             ByteOutputStream stream = new ByteOutputStream(0x1000);
-            ISerialization serialization = new Serialization(registry, true, stream);
+            ISerialization serialization = new Serialization(serializationRegistry, true, stream);
             serialization.writeTypedObject(delta);
             
             return new ByteArray(stream.getBuffer(), 0, stream.getLength());
@@ -126,11 +129,8 @@ public final class ClusterMembershipStateTransferFactory implements IStateTransf
             if (!full)
                 return;
             
-            SerializationRegistry registry = new SerializationRegistry();
-            registry.register(new ClusterMembershipSerializationRegistrar());
-            
             ByteInputStream stream = new ByteInputStream(buffer.getBuffer(), buffer.getOffset(), buffer.getLength());
-            Deserialization deserialization = new Deserialization(registry, stream);
+            Deserialization deserialization = new Deserialization(serializationRegistry, stream);
             ClusterMembershipDelta delta = deserialization.readTypedObject(ClusterMembershipDelta.class);
             if (delta == null)
                 return;
@@ -145,7 +145,7 @@ public final class ClusterMembershipStateTransferFactory implements IStateTransf
                 IDomainMembership domain = new DomainMembership(domainDelta.getName(), elements);
                 domains.add(domain);
                 
-                for (int i= 0; i < membershipProviders.size(); i++)
+                for (int i = 0; i < membershipProviders.size(); i++)
                 {
                     IClusterMembershipElement element = membershipProviders.get(i).createMembership(domain,
                         domainDelta.getDeltas().get(i), null);

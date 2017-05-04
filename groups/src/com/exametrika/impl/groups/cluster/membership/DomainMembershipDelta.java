@@ -24,7 +24,7 @@ public final class DomainMembershipDelta implements IDomainMembershipDelta
     private final String name;
     private final List<IClusterMembershipElementDelta> deltas;
 
-    public DomainMembershipDelta(String name, List<IClusterMembershipElementDelta> deltas)
+    public DomainMembershipDelta(String name, List<? extends IClusterMembershipElementDelta> deltas)
     {
         Assert.notNull(name);
         Assert.notNull(deltas);
