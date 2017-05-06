@@ -14,11 +14,10 @@ import java.util.UUID;
 
 import org.junit.Test;
 
-import com.exametrika.common.compartment.ICompartmentFactory;
-import com.exametrika.common.compartment.impl.Compartment;
 import com.exametrika.common.io.ISerializationRegistry;
 import com.exametrika.common.io.impl.SerializationRegistry;
 import com.exametrika.common.messaging.IAddress;
+import com.exametrika.common.messaging.IConnectionProvider;
 import com.exametrika.common.messaging.IFeed;
 import com.exametrika.common.messaging.ILiveNodeProvider;
 import com.exametrika.common.messaging.IMessage;
@@ -37,7 +36,8 @@ import com.exametrika.common.messaging.impl.protocols.failuredetection.ChannelOb
 import com.exametrika.common.messaging.impl.protocols.failuredetection.ICleanupManager;
 import com.exametrika.common.messaging.impl.protocols.failuredetection.IFailureObserver;
 import com.exametrika.common.messaging.impl.protocols.failuredetection.LiveNodeManager;
-import com.exametrika.common.messaging.impl.protocols.optimize.LocalSendOptimizationProtocol;
+import com.exametrika.common.messaging.impl.transports.ConnectionManager;
+import com.exametrika.common.tests.Tests;
 import com.exametrika.common.time.impl.SystemTimeService;
 
 
@@ -51,10 +51,8 @@ import com.exametrika.common.time.impl.SystemTimeService;
 public class CompositeProtocolTests
 {
     @Test
-    public void testProtocol()
+    public void testProtocol() throws Exception
     {
-        ICompartmentFactory.Parameters parameters = new ICompartmentFactory.Parameters();
-        Compartment compartment = new Compartment(parameters);
         IAddress member2 = new TestAddress(UUID.randomUUID(), "member2");
         
         ChannelObserver channelObserver = new ChannelObserver("test");
@@ -71,8 +69,6 @@ public class CompositeProtocolTests
         TestLeafProtocol leaf2 = new TestLeafProtocol("test", messageFactory);
         TestProtocol parent2 = new TestProtocol("test", messageFactory);
         TestRootProtocol root = new TestRootProtocol("test", messageFactory);
-        LocalSendOptimizationProtocol local = new LocalSendOptimizationProtocol("test", null, messageFactory, liveNodeManager);
-        local.setCompartment(compartment);
         UnhandledMessageProtocol error = new UnhandledMessageProtocol("test", messageFactory);
         
         TestProtocol[] protocols = new TestProtocol[]{leaf1, leaf2, parent1, parent2, root};
@@ -82,31 +78,24 @@ public class CompositeProtocolTests
         
         MessageRouter router = new TestMessageRouter("test", messageFactory, subStack1, subStack2);
         
-        ProtocolStack stack = new ProtocolStack("test", Arrays.asList(error, router, local, root), liveNodeManager, 100, 1000);
+        ProtocolStack stack = new ProtocolStack("test", Arrays.asList(error, router, root), liveNodeManager, 100, 1000);
         stack.setTimeService(new SystemTimeService());
+        ConnectionManager connectionManager = new ConnectionManager(0, Collections.<String, IConnectionProvider>emptyMap());
+        stack.setConnectionProvider(connectionManager);
         
         stack.register(registry);
         stack.unregister(registry);
         
         stack.start();
-        
+
         stack.onTimer(100);
-        local.process();
-        
-        leaf1.send(messageFactory.create(member2, MessageFlags.LOW_PRIORITY));
-        leaf1.send(messageFactory.create(member1, MessageFlags.LOW_PRIORITY));
-        leaf1.receive(messageFactory.create(member1, MessageFlags.HIGH_PRIORITY));
-        leaf1.receive(messageFactory.create(member1, MessageFlags.LOW_PRIORITY));
-        leaf1.receive(messageFactory.create(member1, MessageFlags.PARALLEL));
         
         root.receive(messageFactory.create(member1, MessageFlags.HIGH_PRIORITY));
         root.receive(messageFactory.create(member1, MessageFlags.LOW_PRIORITY));
         root.receive(messageFactory.create(member1, MessageFlags.PARALLEL));
-        root.send(messageFactory.create(member1, MessageFlags.HIGH_PRIORITY));
-        root.send(messageFactory.create(member1, MessageFlags.LOW_PRIORITY));
-        root.send(messageFactory.create(member1, MessageFlags.PARALLEL));
-        
-        local.process();
+        router.send(messageFactory.create(member1, MessageFlags.HIGH_PRIORITY));
+        router.send(messageFactory.create(member1, MessageFlags.LOW_PRIORITY));
+        router.send(messageFactory.create(member1, MessageFlags.PARALLEL));
         
         stack.stop();
         
@@ -114,34 +103,40 @@ public class CompositeProtocolTests
         {
             assertTrue(protocol.started);
             assertTrue(protocol.stopped);
-            assertTrue(protocol.registered);
-            assertTrue(protocol.unregistered);
             assertTrue(protocol.timered);
             assertTrue(protocol.cleanedup);
             assertTrue(protocol.getTimeService() != null);
+            assertTrue(Tests.get(protocol, "connectionProvider") != null);
         }
+        
+        assertTrue(leaf1.registered);
+        assertTrue(parent1.registered);
+        assertTrue(!leaf2.registered);
+        assertTrue(!parent2.registered);
+        assertTrue(root.registered);
         
         assertTrue(leaf1.receiveMessages.size() == 1);
         assertEquals(leaf1.receiveMessages.get(0).getDestination(), member1);
         assertEquals(leaf1.receiveMessages.get(0).getFlags(), MessageFlags.HIGH_PRIORITY);
         
-        assertTrue(leaf2.receiveMessages.size() == 2);
+        assertTrue(leaf2.receiveMessages.size() == 1);
         assertEquals(leaf2.receiveMessages.get(0).getDestination(), member1);
         assertEquals(leaf2.receiveMessages.get(0).getFlags(), MessageFlags.LOW_PRIORITY);
-        assertEquals(leaf2.receiveMessages.get(1).getDestination(), member1);
-        assertEquals(leaf2.receiveMessages.get(1).getFlags(), MessageFlags.LOW_PRIORITY);
         
-        assertTrue(root.sendMessages.size() == 1);
-        assertEquals(root.sendMessages.get(0).getDestination(), member2);
-        assertEquals(root.sendMessages.get(0).getFlags(), MessageFlags.LOW_PRIORITY);
+        assertTrue(root.sendMessages.size() == 3);
+        assertEquals(root.sendMessages.get(0).getDestination(), member1);
+        assertEquals(root.sendMessages.get(0).getFlags(), MessageFlags.HIGH_PRIORITY);
+        assertEquals(root.sendMessages.get(1).getDestination(), member1);
+        assertEquals(root.sendMessages.get(1).getFlags(), MessageFlags.LOW_PRIORITY);
+        assertEquals(root.sendMessages.get(2).getDestination(), member1);
+        assertEquals(root.sendMessages.get(2).getFlags(), MessageFlags.PARALLEL);
     }
     
     private static class TestProtocol extends AbstractProtocol
     {
         private boolean started;
         private boolean stopped;
-        private boolean registered;
-        private boolean unregistered;
+        public boolean registered;
         private boolean timered;
         private boolean cleanedup;
 
@@ -173,7 +168,6 @@ public class CompositeProtocolTests
         @Override
         public void unregister(ISerializationRegistry registry)
         {
-            unregistered = true;
         }
         
         @Override
@@ -216,12 +210,12 @@ public class CompositeProtocolTests
         protected void doSend(ISender sender, IMessage message)
         {
             sendMessages.add(message);
+            super.doSend(sender, message);
         }
     }
     
     private static class TestRootProtocol extends TestProtocol
     {
-        private List<IMessage> receiveMessages = new ArrayList<IMessage>();
         private List<IMessage> sendMessages = new ArrayList<IMessage>();
         
         public TestRootProtocol(String channelName, IMessageFactory messageFactory)
@@ -234,12 +228,6 @@ public class CompositeProtocolTests
         {
             blankOffSender();
             super.start();
-        }
-        
-        @Override
-        protected void doReceive(IReceiver receiver, IMessage message)
-        {
-            receiveMessages.add(message);
         }
         
         @Override
