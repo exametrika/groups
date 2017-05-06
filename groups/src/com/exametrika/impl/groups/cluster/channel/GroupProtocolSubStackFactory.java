@@ -37,6 +37,7 @@ import com.exametrika.impl.groups.cluster.membership.GroupMembershipManager;
 import com.exametrika.impl.groups.cluster.membership.GroupProtocolSubStack;
 import com.exametrika.impl.groups.cluster.membership.IGroupProtocolSubStackFactory;
 import com.exametrika.impl.groups.cluster.membership.IPreparedGroupMembershipListener;
+import com.exametrika.impl.groups.cluster.membership.LastGroupProtocol;
 import com.exametrika.impl.groups.cluster.membership.LocalNodeProvider;
 import com.exametrika.impl.groups.cluster.multicast.FailureAtomicMulticastProtocol;
 import com.exametrika.impl.groups.cluster.multicast.FlowControlProtocol;
@@ -216,6 +217,7 @@ public class GroupProtocolSubStackFactory implements IGroupProtocolSubStackFacto
         
         protocols.add(discoveryProtocol);
         protocols.add(failureDetectionProtocol);
+        protocols.add(new LastGroupProtocol(channelName, messageFactory, group.getId()));
 
         GroupProtocolSubStack groupProtocolSubStack = new GroupProtocolSubStack(channelName, messageFactory, group.getId(), protocols, membershipManager, 
             dataLossFeedbackProvider, factoryParameters.maxGroupMembershipHistorySize, clusterMembershipListeners, compartmentProcessors);

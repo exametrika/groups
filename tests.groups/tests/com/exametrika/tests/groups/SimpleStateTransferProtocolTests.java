@@ -84,8 +84,8 @@ import com.exametrika.spi.groups.cluster.state.IStateTransferClient;
 import com.exametrika.spi.groups.cluster.state.IStateTransferFactory;
 import com.exametrika.spi.groups.cluster.state.IStateTransferServer;
 import com.exametrika.tests.common.messaging.ReceiverMock;
-import com.exametrika.tests.groups.GroupMembershipManagerTests.PropertyProviderMock;
 import com.exametrika.tests.groups.channel.TestGroupChannel;
+import com.exametrika.tests.groups.mocks.PropertyProviderMock;
 
 /**
  * The {@link SimpleStateTransferProtocolTests} are tests for simple state transfer.

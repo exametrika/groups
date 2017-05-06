@@ -161,6 +161,8 @@ public final class CoreCoordinatorClusterMembershipProtocol extends AbstractClus
             if (respondingNodes != null && part.getRoundId() == roundId && respondingNodes.contains(message.getSource()))
             {
                 respondingNodes.remove(message.getSource());
+                if (respondingNodes.isEmpty())
+                    respondingNodes = null;
                 
                 if (logger.isLogEnabled(LogLevel.DEBUG))
                     logger.log(LogLevel.DEBUG, marker, messages.nodeResponded(roundId, message.getSource()));

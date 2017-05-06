@@ -10,30 +10,19 @@ import static org.junit.Assert.assertTrue;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeSet;
 import java.util.UUID;
 
 import org.junit.Test;
 
-import com.exametrika.api.groups.cluster.GroupMembershipEvent;
 import com.exametrika.api.groups.cluster.GroupOption;
 import com.exametrika.api.groups.cluster.IGroupMembership;
-import com.exametrika.api.groups.cluster.IGroupMembershipChange;
 import com.exametrika.api.groups.cluster.IGroupMembershipListener;
 import com.exametrika.api.groups.cluster.IMembershipListener.LeaveReason;
 import com.exametrika.api.groups.cluster.INode;
 import com.exametrika.common.messaging.IAddress;
-import com.exametrika.common.messaging.ILiveNodeProvider;
 import com.exametrika.common.messaging.impl.transports.UnicastAddress;
 import com.exametrika.common.utils.Enums;
-import com.exametrika.common.utils.MapBuilder;
-import com.exametrika.impl.groups.cluster.discovery.ICoreNodeDiscoverer;
-import com.exametrika.impl.groups.cluster.failuredetection.IGroupFailureDetector;
-import com.exametrika.impl.groups.cluster.flush.IFlushManager;
 import com.exametrika.impl.groups.cluster.membership.CoreGroupMembershipManager;
 import com.exametrika.impl.groups.cluster.membership.CoreGroupMembershipTracker;
 import com.exametrika.impl.groups.cluster.membership.Group;
@@ -46,9 +35,14 @@ import com.exametrika.impl.groups.cluster.membership.GroupMembershipDelta;
 import com.exametrika.impl.groups.cluster.membership.GroupMemberships;
 import com.exametrika.impl.groups.cluster.membership.GroupMemberships.MembershipChangeInfo;
 import com.exametrika.impl.groups.cluster.membership.GroupMemberships.MembershipDeltaInfo;
-import com.exametrika.spi.groups.cluster.channel.IPropertyProvider;
-import com.exametrika.impl.groups.cluster.membership.IGroupMembershipDelta;
-import com.exametrika.impl.groups.cluster.membership.IGroupMembershipManager;
+import com.exametrika.tests.groups.mocks.FailureDetectorMock;
+import com.exametrika.tests.groups.mocks.FlushManagerMock;
+import com.exametrika.tests.groups.mocks.GroupMembershipListenerMock;
+import com.exametrika.tests.groups.mocks.LiveNodeProviderMock;
+import com.exametrika.tests.groups.mocks.MembershipManagerMock;
+import com.exametrika.tests.groups.mocks.NodeDiscovererMock;
+import com.exametrika.tests.groups.mocks.PreparedGroupMembershipListenerMock;
+import com.exametrika.tests.groups.mocks.PropertyProviderMock;
 import com.exametrika.impl.groups.cluster.membership.IPreparedGroupMembershipListener;
 import com.exametrika.impl.groups.cluster.membership.LocalNodeProvider;
 import com.exametrika.impl.groups.cluster.membership.Node;
@@ -233,8 +227,8 @@ public class GroupMembershipManagerTests
     {
         LiveNodeProviderMock liveNodeProvider = new LiveNodeProviderMock();
         PropertyProviderMock propertyProvider = new PropertyProviderMock();
-        PreparedMembershipListenerMock preparedListener = new PreparedMembershipListenerMock();
-        MembershipListenerMock listener = new MembershipListenerMock();
+        PreparedGroupMembershipListenerMock preparedListener = new PreparedGroupMembershipListenerMock();
+        GroupMembershipListenerMock listener = new GroupMembershipListenerMock();
         NodeDiscovererMock nodeDiscoverer = new NodeDiscovererMock();
         LocalNodeProvider localNodeProvider = new LocalNodeProvider(liveNodeProvider, propertyProvider, 
             GroupMemberships.CORE_DOMAIN);
@@ -296,257 +290,5 @@ public class GroupMembershipManagerTests
         assertThat(listener.leaveReason, is(LeaveReason.GRACEFUL_EXIT));
         
         manager.stop();
-    }
-    
-    private static class PreparedMembershipListenerMock implements IPreparedGroupMembershipListener
-    {
-        private IGroupMembership oldMembership;
-        private IGroupMembership newMembership;
-        private IGroupMembershipChange change;
-
-        @Override
-        public void onPreparedMembershipChanged(IGroupMembership oldMembership, IGroupMembership newMembership,
-            IGroupMembershipChange change)
-        {
-            this.oldMembership = oldMembership;
-            this.newMembership = newMembership;
-            this.change = change;
-        }
-    }
-    
-    private static class MembershipListenerMock implements IGroupMembershipListener
-    {
-        private LeaveReason leaveReason;
-        private GroupMembershipEvent onMembershipChangedEvent;
-        private boolean onJoined;
-
-        @Override
-        public void onJoined()
-        {
-            onJoined = true;
-        }
-
-        @Override
-        public void onLeft(LeaveReason reason)
-        {
-            this.leaveReason = reason;
-        }
-
-        @Override
-        public void onMembershipChanged(GroupMembershipEvent event)
-        {
-            this.onMembershipChangedEvent = event;
-        }
-    }
-    
-    public static class PropertyProviderMock implements IPropertyProvider
-    {
-        private Map<String, Object> properties = new MapBuilder<String, Object>().put("key", "value").toMap();
-        
-        @Override
-        public Map<String, Object> getProperties()
-        {
-            return properties;
-        }
-    }
-    
-    public static class LiveNodeProviderMock implements ILiveNodeProvider
-    {
-        private IAddress localNode = new UnicastAddress(UUID.randomUUID(), "test");
-        
-        @Override
-        public long getId()
-        {
-            return 0;
-        }
-
-        @Override
-        public IAddress getLocalNode()
-        {
-            return localNode;
-        }
-
-        @Override
-        public List<IAddress> getLiveNodes()
-        {
-            return null;
-        }
-
-        @Override
-        public boolean isLive(IAddress node)
-        {
-            return false;
-        }
-
-        @Override
-        public IAddress findById(UUID id)
-        {
-            return null;
-        }
-
-        @Override
-        public IAddress findByName(String name)
-        {
-            return null;
-        }
-
-        @Override
-        public IAddress findByConnection(String connection)
-        {
-            return null;
-        }
-    }
-    
-    private static class MembershipManagerMock implements IGroupMembershipManager
-    {
-        private INode localNode = new Node(new UnicastAddress(UUID.randomUUID(), 
-            "test"), Collections.<String, Object>emptyMap(), "core");
-        private IGroupMembership membership;
-        private IGroupMembership preparedMembership;
-            
-        @Override
-        public INode getLocalNode()
-        {
-            return localNode;
-        }
-
-        @Override
-        public IGroupMembership getMembership()
-        {
-            return membership;
-        }
-
-        @Override
-        public IGroupMembership getPreparedMembership()
-        {
-            return preparedMembership;
-        }
-
-        @Override
-        public void prepareInstallMembership(IGroupMembership membership)
-        {
-        }
-
-        @Override
-        public void prepareChangeMembership(IGroupMembership membership, IGroupMembershipChange membershipChange)
-        {
-        }
-
-        @Override
-        public void commitMembership()
-        {
-        }
-
-        @Override
-        public void uninstallMembership(LeaveReason reason)
-        {
-        }
-
-        @Override
-        public void addMembershipListener(IGroupMembershipListener listener)
-        {
-        }
-
-        @Override
-        public void removeMembershipListener(IGroupMembershipListener listener)
-        {
-        }
-
-        @Override
-        public void removeAllMembershipListeners()
-        {
-        }
-    }
-    
-    private static class NodeDiscovererMock implements ICoreNodeDiscoverer
-    {
-        private boolean canFormGroup;
-        private Set<INode> discoveredNodes = new TreeSet<INode>();
-        private boolean startDiscovery;
-        
-        @Override
-        public void startDiscovery()
-        {
-            startDiscovery = true;
-        }
-
-        @Override
-        public boolean canFormGroup()
-        {
-            return canFormGroup;
-        }
-
-        @Override
-        public Set<INode> getDiscoveredNodes()
-        {
-            return discoveredNodes;
-        }
-    }
-    
-    private static class FailureDetectorMock implements IGroupFailureDetector
-    {
-        private INode currentCoordinator;
-        private Set<INode> failedNodes = new HashSet<INode>();
-        private Set<INode> leftNodes = new HashSet<INode>();
-        
-        @Override
-        public INode getCurrentCoordinator()
-        {
-            return currentCoordinator;
-        }
-
-        @Override
-        public List<INode> getHealthyMembers()
-        {
-            return null;
-        }
-
-        @Override
-        public Set<INode> getFailedMembers()
-        {
-            return failedNodes;
-        }
-
-        @Override
-        public Set<INode> getLeftMembers()
-        {
-            return leftNodes;
-        }
-
-        @Override
-        public void addFailedMembers(Set<UUID> memberIds)
-        {
-        }
-
-        @Override
-        public void addLeftMembers(Set<UUID> memberIds)
-        {
-        }
-
-        @Override
-        public boolean isHealthyMember(UUID memberId)
-        {
-            return false;
-        }
-    }
-    
-    private static class FlushManagerMock implements IFlushManager
-    {
-        private IGroupMembership membership;
-        private IGroupMembershipDelta membershipDelta;
-        private boolean flushInProgress;
-
-        @Override
-        public boolean isFlushInProgress()
-        {
-            return flushInProgress;
-        }
-
-        @Override
-        public void install(IGroupMembership membership, IGroupMembershipDelta membershipDelta)
-        {
-            this.membership = membership;
-            this.membershipDelta = membershipDelta;
-        }
     }
 }

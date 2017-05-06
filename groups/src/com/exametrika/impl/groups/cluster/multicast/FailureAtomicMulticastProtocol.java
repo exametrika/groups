@@ -317,6 +317,14 @@ public final class FailureAtomicMulticastProtocol extends AbstractProtocol imple
         return timeService.getCurrentTime();
     }
     
+    @Override
+    public void stop()
+    {
+        sendQueue.stop();
+        
+        super.stop();
+    }
+    
     public ReceiveQueue ensureReceiveQueue(IAddress sender, long startMessageId)
     {
         ReceiveQueue receiveQueue = receiveQueues.get(sender);

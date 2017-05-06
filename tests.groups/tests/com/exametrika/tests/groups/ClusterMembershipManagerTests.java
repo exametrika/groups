@@ -9,16 +9,13 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
 import org.junit.Test;
 
-import com.exametrika.api.groups.cluster.ClusterMembershipEvent;
 import com.exametrika.api.groups.cluster.GroupOption;
 import com.exametrika.api.groups.cluster.IClusterMembership;
 import com.exametrika.api.groups.cluster.IClusterMembershipElement;
@@ -62,7 +59,6 @@ import com.exametrika.impl.groups.cluster.membership.GroupsMembership;
 import com.exametrika.impl.groups.cluster.membership.GroupsMembershipDelta;
 import com.exametrika.impl.groups.cluster.membership.GroupsMembershipProvider;
 import com.exametrika.impl.groups.cluster.membership.IGroupDelta;
-import com.exametrika.impl.groups.cluster.membership.IGroupManagementService;
 import com.exametrika.impl.groups.cluster.membership.LocalNodeProvider;
 import com.exametrika.impl.groups.cluster.membership.Node;
 import com.exametrika.impl.groups.cluster.membership.NodesMembership;
@@ -71,11 +67,13 @@ import com.exametrika.impl.groups.cluster.membership.NodesMembershipProvider;
 import com.exametrika.impl.groups.cluster.membership.WorkerToCoreMembership;
 import com.exametrika.impl.groups.cluster.membership.WorkerToCoreMembershipDelta;
 import com.exametrika.impl.groups.cluster.membership.WorkerToCoreMembershipProvider;
-import com.exametrika.spi.groups.cluster.state.ISimpleStateStore;
 import com.exametrika.spi.groups.cluster.state.ISimpleStateTransferClient;
 import com.exametrika.spi.groups.cluster.state.ISimpleStateTransferServer;
-import com.exametrika.tests.groups.GroupMembershipManagerTests.LiveNodeProviderMock;
-import com.exametrika.tests.groups.GroupMembershipManagerTests.PropertyProviderMock;
+import com.exametrika.tests.groups.mocks.ClusterMembershipListenerMock;
+import com.exametrika.tests.groups.mocks.GroupManagementServiceMock;
+import com.exametrika.tests.groups.mocks.LiveNodeProviderMock;
+import com.exametrika.tests.groups.mocks.PropertyProviderMock;
+import com.exametrika.tests.groups.mocks.SimpleStateStoreMock;
 
 /**
  * The {@link ClusterMembershipManagerTests} are tests for cluster membership manager.
@@ -344,68 +342,5 @@ public class ClusterMembershipManagerTests
         DomainMembership domainMembership2 = new DomainMembership("domain2", Arrays.<IClusterMembershipElement>asList(
             nodesMembership, groupsMembership, workerToCoreMembership));
         return new ClusterMembership(1, Arrays.asList(domainMembership1, domainMembership2));
-    }
-    
-    private static class ClusterMembershipListenerMock implements IClusterMembershipListener
-    {
-        private LeaveReason leaveReason;
-        private ClusterMembershipEvent onMembershipChangedEvent;
-        private boolean onJoined;
-
-        @Override
-        public void onJoined()
-        {
-            onJoined = true;
-        }
-
-        @Override
-        public void onLeft(LeaveReason reason)
-        {
-            this.leaveReason = reason;
-        }
-
-        @Override
-        public void onMembershipChanged(ClusterMembershipEvent event)
-        {
-            this.onMembershipChangedEvent = event;
-        }
-    }
-    
-    public static class SimpleStateStoreMock implements ISimpleStateStore
-    {
-        public ByteArray state;
-        
-        @Override
-        public ByteArray load(UUID id)
-        {
-            return state;
-        }
-
-        @Override
-        public void save(UUID id, ByteArray state)
-        {
-            this.state = state;
-        }
-    }
-    
-    private static class GroupManagementServiceMock implements IGroupManagementService
-    {
-        private List<GroupDefinition> groupDefinitions = new ArrayList<GroupDefinition>();
-        @Override
-        public List<GroupDefinition> getGroupDefinitions()
-        {
-            return groupDefinitions;
-        }
-
-        @Override
-        public void addGroupDefinition(GroupDefinition group)
-        {
-            groupDefinitions.add(group);
-        }
-
-        @Override
-        public void removeGroupDefinition(String domainName, UUID groupId)
-        {
-        }
     }
 }

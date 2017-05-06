@@ -11,11 +11,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 
 import org.junit.Test;
@@ -29,8 +26,6 @@ import com.exametrika.api.groups.cluster.INode;
 import com.exametrika.common.messaging.impl.transports.UnicastAddress;
 import com.exametrika.common.utils.Enums;
 import com.exametrika.common.utils.Pair;
-import com.exametrika.impl.groups.cluster.discovery.IWorkerNodeDiscoverer;
-import com.exametrika.impl.groups.cluster.failuredetection.IClusterFailureDetector;
 import com.exametrika.impl.groups.cluster.membership.DefaultWorkerToCoreMappingStrategy;
 import com.exametrika.impl.groups.cluster.membership.DomainMembership;
 import com.exametrika.impl.groups.cluster.membership.DomainMembershipDelta;
@@ -47,7 +42,6 @@ import com.exametrika.impl.groups.cluster.membership.GroupsMembershipChange;
 import com.exametrika.impl.groups.cluster.membership.GroupsMembershipDelta;
 import com.exametrika.impl.groups.cluster.membership.GroupsMembershipProvider;
 import com.exametrika.impl.groups.cluster.membership.IGroupDelta;
-import com.exametrika.impl.groups.cluster.membership.IGroupMappingStrategy;
 import com.exametrika.impl.groups.cluster.membership.IPreparedGroupMembershipListener;
 import com.exametrika.impl.groups.cluster.membership.LocalNodeProvider;
 import com.exametrika.impl.groups.cluster.membership.Node;
@@ -59,8 +53,11 @@ import com.exametrika.impl.groups.cluster.membership.WorkerToCoreMembership;
 import com.exametrika.impl.groups.cluster.membership.WorkerToCoreMembershipChange;
 import com.exametrika.impl.groups.cluster.membership.WorkerToCoreMembershipDelta;
 import com.exametrika.impl.groups.cluster.membership.WorkerToCoreMembershipProvider;
-import com.exametrika.tests.groups.GroupMembershipManagerTests.LiveNodeProviderMock;
-import com.exametrika.tests.groups.GroupMembershipManagerTests.PropertyProviderMock;
+import com.exametrika.tests.groups.mocks.ClusterFailureDetectorMock;
+import com.exametrika.tests.groups.mocks.LiveNodeProviderMock;
+import com.exametrika.tests.groups.mocks.PropertyProviderMock;
+import com.exametrika.tests.groups.mocks.TestGroupMappingStrategy;
+import com.exametrika.tests.groups.mocks.WorkerNodeDiscovererMock;
 
 /**
  * The {@link ClusterMembershipProviderTests} are tests for cluster membership provider.
@@ -416,52 +413,5 @@ public class ClusterMembershipProviderTests
     private INode createNode(String name, String domain)
     {
         return new Node(new UnicastAddress(UUID.randomUUID(), name), Collections.<String, Object>emptyMap(), domain);
-    }
-    
-    private static class ClusterFailureDetectorMock implements IClusterFailureDetector
-    {
-        private Set<INode> failedNodes = new HashSet<INode>();
-        private Set<INode> leftNodes = new HashSet<INode>();
-        
-        @Override
-        public Set<INode> takeFailedNodes()
-        {
-            Set<INode> result = failedNodes;
-            failedNodes = new LinkedHashSet<INode>();
-            return result;
-        }
-
-        @Override
-        public Set<INode> takeLeftNodes()
-        {
-            Set<INode> result = leftNodes;
-            leftNodes = new LinkedHashSet<INode>();
-            return result;
-        }
-    }
-    
-    private static class WorkerNodeDiscovererMock implements IWorkerNodeDiscoverer
-    {
-        private Set<INode> discoveredNodes = new LinkedHashSet<INode>();
-        
-        @Override
-        public Set<INode> takeDiscoveredNodes()
-        {
-            Set<INode> result = discoveredNodes;
-            discoveredNodes = new LinkedHashSet<INode>();
-            return result;
-        }
-    }
-    
-    private static class TestGroupMappingStrategy implements IGroupMappingStrategy
-    {
-        private List<Pair<IGroup, IGroupDelta>> result;
-        @Override
-        public List<Pair<IGroup, IGroupDelta>> mapGroups(long membershipId, String domain,
-            NodesMembership nodeMembership, NodesMembershipDelta nodesMembershipDelta,
-            GroupsMembership oldGroupMembership)
-        {
-            return result;
-        }
     }
 }

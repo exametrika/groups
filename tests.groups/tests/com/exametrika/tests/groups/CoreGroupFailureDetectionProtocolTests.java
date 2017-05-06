@@ -9,10 +9,8 @@ import static org.junit.Assert.assertTrue;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 
 import org.junit.After;
@@ -55,8 +53,9 @@ import com.exametrika.impl.groups.cluster.membership.GroupMembership;
 import com.exametrika.impl.groups.cluster.membership.GroupMembershipSerializationRegistrar;
 import com.exametrika.impl.groups.cluster.membership.IGroupMembershipManager;
 import com.exametrika.impl.groups.cluster.membership.Node;
-import com.exametrika.spi.groups.cluster.channel.IChannelReconnector;
 import com.exametrika.tests.common.messaging.ReceiverMock;
+import com.exametrika.tests.groups.mocks.ChannelReconnectorMock;
+import com.exametrika.tests.groups.mocks.FailureDetectionListenerMock;
 
 /**
  * The {@link CoreGroupFailureDetectionProtocolTests} are tests for {@link CoreGroupFailureDetectionProtocol}.
@@ -409,35 +408,6 @@ public class CoreGroupFailureDetectionProtocolTests
         @Override
         public void uninstallMembership(LeaveReason reason)
         {
-        }
-    }
-    
-    public static class ChannelReconnectorMock implements IChannelReconnector
-    {
-        private boolean reconnectRequested;
-
-        @Override
-        public void reconnect()
-        {
-            reconnectRequested = true;
-        }
-    }
-    
-    public static class FailureDetectionListenerMock implements IFailureDetectionListener
-    {
-        private Set<INode> failedMembers = new HashSet<INode>();
-        private Set<INode> leftMembers = new HashSet<INode>();
-        
-        @Override
-        public void onMemberFailed(INode member)
-        {
-            failedMembers.add(member);
-        }
-
-        @Override
-        public void onMemberLeft(INode member)
-        {
-            leftMembers.add(member);
         }
     }
     

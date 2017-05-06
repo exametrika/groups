@@ -4,7 +4,6 @@
 package com.exametrika.impl.groups.cluster.membership;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -26,11 +25,16 @@ import com.exametrika.common.l10n.DefaultMessage;
 import com.exametrika.common.l10n.ILocalizedMessage;
 import com.exametrika.common.l10n.Messages;
 import com.exametrika.common.log.LogLevel;
+import com.exametrika.common.messaging.IAddress;
+import com.exametrika.common.messaging.IFeed;
 import com.exametrika.common.messaging.IMessage;
 import com.exametrika.common.messaging.IMessageFactory;
+import com.exametrika.common.messaging.IPullableSender;
 import com.exametrika.common.messaging.IReceiver;
+import com.exametrika.common.messaging.ISender;
+import com.exametrika.common.messaging.ISink;
 import com.exametrika.common.messaging.impl.protocols.AbstractProtocol;
-import com.exametrika.common.messaging.impl.protocols.routing.MessageRouter;
+import com.exametrika.common.messaging.impl.protocols.composite.MessageRouter;
 import com.exametrika.common.utils.Assert;
 
 /**
@@ -54,7 +58,7 @@ public final class WorkerGroupMembershipProtocol extends MessageRouter implement
         IClusterMembershipService membershipService, IGroupProtocolSubStackFactory protocolSubStackFactory,
         long groupSubStackRemoveDelay, int maxPendingMessageCount)
     {
-        super(channelName, messageFactory, Collections.<AbstractProtocol>emptyList());
+        super(channelName, messageFactory);
         
         Assert.notNull(membershipService);
         Assert.notNull(protocolSubStackFactory);
@@ -197,7 +201,7 @@ public final class WorkerGroupMembershipProtocol extends MessageRouter implement
     }
 
     @Override
-    protected boolean doRoute(IMessage message)
+    protected boolean doReceiveRoute(IMessage message)
     {
         if (message.getPart() instanceof GroupMessagePart)
         {
@@ -205,10 +209,7 @@ public final class WorkerGroupMembershipProtocol extends MessageRouter implement
             message = message.removePart();
             IReceiver receiver = groupsStacks.get(part.getGroupId());
             if (receiver != null)
-            {
                 receiver.receive(message);
-                return true;
-            }
             else
             {
                 List<IMessage> list = pendingMessages.get(part.getGroupId());
@@ -221,9 +222,56 @@ public final class WorkerGroupMembershipProtocol extends MessageRouter implement
                 if (list.size() < maxPendingMessageCount)
                     list.add(message);
             }
+            
+            return true;
         }
-
-        return false;
+        else
+            return false;
+    }
+    
+    @Override
+    protected boolean doSendRoute(IMessage message)
+    {
+        if (message.getDestination() instanceof GroupAddress)
+        {
+            ISender sender = groupsStacks.get(message.getDestination().getId());
+            if (sender != null)
+                sender.send(message);
+            
+            return true;
+        }
+        else
+            return false;
+    }
+    
+    @Override
+    protected ISink doRegisterRoute(IAddress destination, IFeed feed)
+    {
+        if (destination instanceof GroupAddress)
+        {
+            IPullableSender sender = groupsStacks.get(destination.getId());
+            if (sender != null)
+                return sender.register(destination, feed);
+            
+            return null;
+        }
+        else
+            return null;   
+    }
+    
+    @Override
+    protected boolean doUnregisterRoute(ISink sink)
+    {
+        if (sink.getDestination() instanceof GroupAddress)
+        {
+            IPullableSender sender = groupsStacks.get(sink.getDestination().getId());
+            if (sender != null)
+                sender.unregister(sink);
+            
+            return true;
+        }
+        else
+            return false;   
     }
     
     private void processPendingMessages(UUID groupId, GroupProtocolSubStack protocolSubStack)

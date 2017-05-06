@@ -72,8 +72,8 @@ import com.exametrika.spi.groups.cluster.channel.IChannelReconnector;
 import com.exametrika.spi.groups.cluster.discovery.IDiscoveryStrategy;
 import com.exametrika.tests.common.messaging.ReceiverMock;
 import com.exametrika.tests.groups.CoreGroupDiscoveryProtocolTests.GroupJoinStrategyMock;
-import com.exametrika.tests.groups.GroupMembershipManagerTests.PropertyProviderMock;
 import com.exametrika.tests.groups.channel.TestGroupChannel;
+import com.exametrika.tests.groups.mocks.PropertyProviderMock;
 
 /**
  * The {@link DataExchangeProtocolTests} are tests for flush.

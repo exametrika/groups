@@ -19,16 +19,18 @@ import com.exametrika.common.compartment.impl.Compartment;
 import com.exametrika.common.io.ISerializationRegistry;
 import com.exametrika.common.io.impl.SerializationRegistry;
 import com.exametrika.common.messaging.IAddress;
+import com.exametrika.common.messaging.IFeed;
 import com.exametrika.common.messaging.ILiveNodeProvider;
 import com.exametrika.common.messaging.IMessage;
 import com.exametrika.common.messaging.IMessageFactory;
 import com.exametrika.common.messaging.IReceiver;
 import com.exametrika.common.messaging.ISender;
+import com.exametrika.common.messaging.ISink;
 import com.exametrika.common.messaging.impl.MessageFlags;
 import com.exametrika.common.messaging.impl.message.MessageFactory;
 import com.exametrika.common.messaging.impl.protocols.AbstractProtocol;
 import com.exametrika.common.messaging.impl.protocols.ProtocolStack;
-import com.exametrika.common.messaging.impl.protocols.composite.AbstractCompositeProtocol;
+import com.exametrika.common.messaging.impl.protocols.composite.MessageRouter;
 import com.exametrika.common.messaging.impl.protocols.composite.ProtocolSubStack;
 import com.exametrika.common.messaging.impl.protocols.error.UnhandledMessageProtocol;
 import com.exametrika.common.messaging.impl.protocols.failuredetection.ChannelObserver;
@@ -36,17 +38,12 @@ import com.exametrika.common.messaging.impl.protocols.failuredetection.ICleanupM
 import com.exametrika.common.messaging.impl.protocols.failuredetection.IFailureObserver;
 import com.exametrika.common.messaging.impl.protocols.failuredetection.LiveNodeManager;
 import com.exametrika.common.messaging.impl.protocols.optimize.LocalSendOptimizationProtocol;
-import com.exametrika.common.messaging.impl.protocols.routing.AllMessageFlagsRoutingCondition;
-import com.exametrika.common.messaging.impl.protocols.routing.MessageRouter;
 import com.exametrika.common.time.impl.SystemTimeService;
-import com.exametrika.common.utils.ICondition;
-import com.exametrika.common.utils.Pair;
 
 
 /**
  * The {@link CompositeProtocolTests} are tests for composite protocol implementations.
  * 
- * @see AbstractCompositeProtocol
  * @see ProtocolSubStack
  * @see MessageRouter
  * @author Medvedev-A
@@ -83,9 +80,7 @@ public class CompositeProtocolTests
         ProtocolSubStack subStack1 = new ProtocolSubStack("test", messageFactory, Arrays.asList(leaf1, parent1));
         ProtocolSubStack subStack2 = new ProtocolSubStack("test", messageFactory, Arrays.asList(leaf2, parent2));
         
-        MessageRouter router = new MessageRouter("test", messageFactory, Arrays.asList(subStack1, subStack2), 
-            Arrays.asList(new Pair<ICondition<IMessage>, IReceiver>(new AllMessageFlagsRoutingCondition(MessageFlags.HIGH_PRIORITY), subStack1), 
-                new Pair<ICondition<IMessage>, IReceiver>(new AllMessageFlagsRoutingCondition(MessageFlags.LOW_PRIORITY), subStack2)));
+        MessageRouter router = new TestMessageRouter("test", messageFactory, subStack1, subStack2);
         
         ProtocolStack stack = new ProtocolStack("test", Arrays.asList(error, router, local, root), liveNodeManager, 100, 1000);
         stack.setTimeService(new SystemTimeService());
@@ -100,9 +95,16 @@ public class CompositeProtocolTests
         
         leaf1.send(messageFactory.create(member2, MessageFlags.LOW_PRIORITY));
         leaf1.send(messageFactory.create(member1, MessageFlags.LOW_PRIORITY));
+        leaf1.receive(messageFactory.create(member1, MessageFlags.HIGH_PRIORITY));
+        leaf1.receive(messageFactory.create(member1, MessageFlags.LOW_PRIORITY));
+        leaf1.receive(messageFactory.create(member1, MessageFlags.PARALLEL));
+        
         root.receive(messageFactory.create(member1, MessageFlags.HIGH_PRIORITY));
         root.receive(messageFactory.create(member1, MessageFlags.LOW_PRIORITY));
         root.receive(messageFactory.create(member1, MessageFlags.PARALLEL));
+        root.send(messageFactory.create(member1, MessageFlags.HIGH_PRIORITY));
+        root.send(messageFactory.create(member1, MessageFlags.LOW_PRIORITY));
+        root.send(messageFactory.create(member1, MessageFlags.PARALLEL));
         
         local.process();
         
@@ -119,19 +121,19 @@ public class CompositeProtocolTests
             assertTrue(protocol.getTimeService() != null);
         }
         
-        assertTrue(leaf1.messages.size() == 1);
-        assertEquals(leaf1.messages.get(0).getDestination(), member1);
-        assertEquals(leaf1.messages.get(0).getFlags(), MessageFlags.HIGH_PRIORITY);
+        assertTrue(leaf1.receiveMessages.size() == 1);
+        assertEquals(leaf1.receiveMessages.get(0).getDestination(), member1);
+        assertEquals(leaf1.receiveMessages.get(0).getFlags(), MessageFlags.HIGH_PRIORITY);
         
-        assertTrue(leaf2.messages.size() == 2);
-        assertEquals(leaf2.messages.get(0).getDestination(), member1);
-        assertEquals(leaf2.messages.get(0).getFlags(), MessageFlags.LOW_PRIORITY);
-        assertEquals(leaf2.messages.get(1).getDestination(), member1);
-        assertEquals(leaf2.messages.get(1).getFlags(), MessageFlags.LOW_PRIORITY);
+        assertTrue(leaf2.receiveMessages.size() == 2);
+        assertEquals(leaf2.receiveMessages.get(0).getDestination(), member1);
+        assertEquals(leaf2.receiveMessages.get(0).getFlags(), MessageFlags.LOW_PRIORITY);
+        assertEquals(leaf2.receiveMessages.get(1).getDestination(), member1);
+        assertEquals(leaf2.receiveMessages.get(1).getFlags(), MessageFlags.LOW_PRIORITY);
         
-        assertTrue(root.messages.size() == 1);
-        assertEquals(root.messages.get(0).getDestination(), member2);
-        assertEquals(root.messages.get(0).getFlags(), MessageFlags.LOW_PRIORITY);
+        assertTrue(root.sendMessages.size() == 1);
+        assertEquals(root.sendMessages.get(0).getDestination(), member2);
+        assertEquals(root.sendMessages.get(0).getFlags(), MessageFlags.LOW_PRIORITY);
     }
     
     private static class TestProtocol extends AbstractProtocol
@@ -189,7 +191,8 @@ public class CompositeProtocolTests
     
     private static class TestLeafProtocol extends TestProtocol
     {
-        private List<IMessage> messages = new ArrayList<IMessage>();
+        private List<IMessage> receiveMessages = new ArrayList<IMessage>();
+        private List<IMessage> sendMessages = new ArrayList<IMessage>();
         
         public TestLeafProtocol(String channelName, IMessageFactory messageFactory)
         {
@@ -206,13 +209,20 @@ public class CompositeProtocolTests
         @Override
         protected void doReceive(IReceiver receiver, IMessage message)
         {
-            messages.add(message);
+            receiveMessages.add(message);
+        }
+        
+        @Override
+        protected void doSend(ISender sender, IMessage message)
+        {
+            sendMessages.add(message);
         }
     }
     
     private static class TestRootProtocol extends TestProtocol
     {
-        private List<IMessage> messages = new ArrayList<IMessage>();
+        private List<IMessage> receiveMessages = new ArrayList<IMessage>();
+        private List<IMessage> sendMessages = new ArrayList<IMessage>();
         
         public TestRootProtocol(String channelName, IMessageFactory messageFactory)
         {
@@ -227,9 +237,85 @@ public class CompositeProtocolTests
         }
         
         @Override
+        protected void doReceive(IReceiver receiver, IMessage message)
+        {
+            receiveMessages.add(message);
+        }
+        
+        @Override
         protected void doSend(ISender sender, IMessage message)
         {
-            messages.add(message);
+            sendMessages.add(message);
+        }
+    }
+    
+    private static class TestMessageRouter extends MessageRouter
+    {
+        private final AbstractProtocol protocol1;
+        private final AbstractProtocol protocol2;
+
+        public TestMessageRouter(String channelName, IMessageFactory messageFactory, AbstractProtocol protocol1,
+            AbstractProtocol protocol2)
+        {
+            super(channelName, messageFactory);
+            
+            this.protocol1 = protocol1;
+            this.protocol2 = protocol2;
+        }
+
+        @Override
+        public void start()
+        {
+            super.start();
+            
+            addProtocol(protocol1);
+            addProtocol(protocol2);
+        }
+        
+        @Override
+        protected boolean doReceiveRoute(IMessage message)
+        {
+            if (message.hasFlags(MessageFlags.HIGH_PRIORITY))
+            {
+                protocol1.receive(message);
+                return true;
+            }
+            else if (message.hasFlags(MessageFlags.LOW_PRIORITY))
+            {
+                protocol2.receive(message);
+                return true;
+            }
+            else
+                return false;
+        }
+
+        @Override
+        protected boolean doSendRoute(IMessage message)
+        {
+            if (message.hasFlags(MessageFlags.HIGH_PRIORITY))
+            {
+                protocol1.send(message);
+                return true;
+            }
+            else if (message.hasFlags(MessageFlags.LOW_PRIORITY))
+            {
+                protocol2.send(message);
+                return true;
+            }
+            else
+                return false;
+        }
+
+        @Override
+        protected ISink doRegisterRoute(IAddress destination, IFeed feed)
+        {
+            return null;
+        }
+
+        @Override
+        protected boolean doUnregisterRoute(ISink sink)
+        {
+            return false;
         }
     }
 }

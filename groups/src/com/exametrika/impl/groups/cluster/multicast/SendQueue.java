@@ -311,6 +311,14 @@ public final class SendQueue
             sink.onWrite();
     }
 
+    public void stop()
+    {
+        for (MulticastSink sink : sinks)
+            sink.setInvalid();
+        
+        sinks = new ArrayList<MulticastSink>();
+    }
+    
     private boolean canWrite()
     {
         return lockCount > 0 || capacityController.isLocked() || !canWrite;

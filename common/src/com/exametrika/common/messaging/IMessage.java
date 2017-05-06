@@ -157,8 +157,9 @@ public interface IMessage
     /**
      * Retargets message by setting its destination.
      *
-     * @param destination new destination
+     * @param source new source or null if source is not changed
+     * @param destination new destination or null if destination is not changed
      * @return retargeted message
      */
-    IMessage retarget(IAddress destination);
+    IMessage retarget(IAddress source, IAddress destination);
 }

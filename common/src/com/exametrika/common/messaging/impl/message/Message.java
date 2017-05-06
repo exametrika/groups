@@ -239,8 +239,13 @@ public final class Message implements IMessage
     }
     
     @Override
-    public Message retarget(IAddress destination)
+    public Message retarget(IAddress source, IAddress destination)
     {
+        if (source == null)
+            source = this.source;
+        if (destination == null)
+            destination = this.destination;
+        
         return new Message(source, destination, flags, files, partsHead, serializationRegistry);
     }
 
