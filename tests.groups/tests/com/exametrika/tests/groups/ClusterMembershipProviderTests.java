@@ -193,7 +193,7 @@ public class ClusterMembershipProviderTests
         GroupDelta delta3 = new GroupDelta(group3.getId(), true, Arrays.<INode>asList(node1), Collections.<UUID>emptySet(), Collections.<UUID>emptySet());
         GroupDelta delta4 = new GroupDelta(group4.getId(), true, Arrays.<INode>asList(node1), Collections.<UUID>emptySet(), Collections.<UUID>emptySet());
         
-        Group group21 = new Group(new GroupAddress(UUID.randomUUID(), "group2"), true, Arrays.<INode>asList(node1, node3), Enums.of(GroupOption.DURABLE));
+        Group group21 = new Group(new GroupAddress(group2.getId(), group2.getName()), true, Arrays.<INode>asList(node1, node3), Enums.of(GroupOption.DURABLE));
         IGroupDelta delta21 = new GroupDelta(group2.getId(), true, Collections.<INode>singletonList(node3),
             Collections.<UUID>emptySet(), Collections.<UUID>singleton(node2.getId()));
         
@@ -215,14 +215,14 @@ public class ClusterMembershipProviderTests
         assertTrue(delta.getRemovedGroups().isEmpty());
         
         mappingStrategy.result = (List)Arrays.asList(new Pair(group1, null), new Pair(group2, null), new Pair(group3, null));
-        pair = provider.getDelta(1, domainMembership, domainMembershipDelta, null, null);
+        pair = provider.getDelta(1, domainMembership, domainMembershipDelta, null, membership);
         membership = (GroupsMembership)pair.getKey();
         delta = (GroupsMembershipDelta)pair.getValue();
         assertThat(membership.getGroups(), is(Arrays.<IGroup>asList(group1, group2, group3)));
         assertTrue(delta == null);
         
         mappingStrategy.result = (List)Arrays.asList(new Pair(group1, null), new Pair(group21, delta21), new Pair(group4, delta4));
-        pair = provider.getDelta(1, domainMembership, domainMembershipDelta, null, null);
+        pair = provider.getDelta(1, domainMembership, domainMembershipDelta, null, membership);
         membership = (GroupsMembership)pair.getKey();
         delta = (GroupsMembershipDelta)pair.getValue();
         
@@ -245,7 +245,7 @@ public class ClusterMembershipProviderTests
         
         assertTrue(provider.isEmptyMembership(new GroupsMembership(Collections.<IGroup>emptyList())));
         
-        membership = new GroupsMembership(Arrays.<IGroup>asList(group2, group2, group3));
+        membership = new GroupsMembership(Arrays.<IGroup>asList(group1, group2, group3));
         delta = (GroupsMembershipDelta)provider.createCoreFullDelta(membership);
         assertThat(delta.getNewGroups(), is(Arrays.<IGroup>asList(group1, group2, group3)));
         assertTrue(delta.getChangedGroups().isEmpty());
@@ -271,14 +271,16 @@ public class ClusterMembershipProviderTests
             Collections.<UUID>emptySet(), Collections.<UUID>singleton(node2.getId()));
         GroupsMembershipDelta newDelta = new GroupsMembershipDelta(Arrays.<IGroup>asList(group4), 
             com.exametrika.common.utils.Collections.asSet(changedGroup), 
-            com.exametrika.common.utils.Collections.asSet(group4.getId()));
+            com.exametrika.common.utils.Collections.asSet(group3.getId()));
         newMembership = (GroupsMembership)provider.createMembership(null, newDelta, newMembership);
         assertThat(newMembership.getGroups(), is(Arrays.<IGroup>asList(group1, group2, group4)));
-        assertThat(newMembership.getGroups().get(0).getMembers(), is(Arrays.<INode>asList(node1, node3)));
+        assertThat(newMembership.getGroups().get(1).getMembers(), is(Arrays.<INode>asList(node1, node3)));
   
-        GroupsMembershipChange change = (GroupsMembershipChange)provider.createChange(null, newDelta, membership);
+        domainMembership = new DomainMembership("domain1",  Arrays.asList(newMembership));
+        
+        GroupsMembershipChange change = (GroupsMembershipChange)provider.createChange(domainMembership, newDelta, membership);
         assertThat(change.getNewGroups(), is(Arrays.<IGroup>asList(group4)));
-        assertThat(change.getRemovedGroups(), is(Collections.<IGroup>singleton(group4)));
+        assertThat(change.getRemovedGroups(), is(Collections.<IGroup>singleton(group3)));
         assertThat(change.getChangedGroups().size(), is(1));
         IGroupChange groupChange = change.getChangedGroups().iterator().next();
         assertThat(groupChange.getJoinedMembers(), is(Arrays.<INode>asList(node3)));
@@ -286,7 +288,7 @@ public class ClusterMembershipProviderTests
         
         change = (GroupsMembershipChange)provider.createChange(null, newMembership, membership);
         assertThat(change.getNewGroups(), is(Arrays.<IGroup>asList(group4)));
-        assertThat(change.getRemovedGroups(), is(Collections.<IGroup>singleton(group4)));
+        assertThat(change.getRemovedGroups(), is(Collections.<IGroup>singleton(group3)));
         assertThat(change.getChangedGroups().size(), is(1));
         groupChange = change.getChangedGroups().iterator().next();
         assertThat(groupChange.getJoinedMembers(), is(Arrays.<INode>asList(node3)));
@@ -308,6 +310,7 @@ public class ClusterMembershipProviderTests
         WorkerToCoreMembershipProvider provider2 = new WorkerToCoreMembershipProvider();
         assertThat(provider.getDomains(), is(Collections.singleton(GroupMemberships.CORE_DOMAIN)));
         List<INode> coreNodes = new ArrayList<INode>();
+        coreNodes.add(localNodeProvider.getLocalNode());
         for (int i = 0; i < 5; i++)
             coreNodes.add(new Node(new UnicastAddress(UUID.randomUUID(), "core" + i), Collections.<String, Object>emptyMap(), "core"));
         List<INode> workerNodes = new ArrayList<INode>();
@@ -336,22 +339,19 @@ public class ClusterMembershipProviderTests
         assertTrue(delta.getFailedCoreNodes().isEmpty());
         assertTrue(delta.getLeftCoreNodes().isEmpty());
         assertTrue(delta.getNewCoreByWorkerMap().size() == workerNodes.size());
-        
+        WorkerToCoreMembership oldMembership = membership;
         WorkerToCoreMembership newMembership = (WorkerToCoreMembership)provider2.createMembership(domainMembership, delta, null);
-        WorkerToCoreMembershipChange mappingChange = (WorkerToCoreMembershipChange)provider2.createChange(domainMembership, delta, null);
-        assertThat(newMembership.getCoreNodes(), is(coreNodes));
-        assertThat(mappingChange.getJoinedCoreNodes(), is(coreNodes));
-        assertTrue(mappingChange.getFailedCoreNodes().isEmpty());
-        assertTrue(mappingChange.getLeftCoreNodes().isEmpty());
-        assertThat(mappingChange.getNewCoreByWorkerMap(), is(newMembership.getCoreByWorkerMap()));
         Map<UUID, UUID> map = new HashMap<UUID, UUID>();
         for (Map.Entry<INode, INode> entry : newMembership.getCoreByWorkerMap().entrySet())
             map.put(entry.getKey().getId(), entry.getValue().getId());
         assertThat(map, is(delta.getNewCoreByWorkerMap()));
         
+        nodesMembershipDelta = new NodesMembershipDelta(Collections.<INode>emptyList(), Collections.<UUID>emptySet(), 
+            Collections.<UUID>emptySet());
+        domainMembershipDelta = new DomainMembershipDelta("domain1", Arrays.asList(nodesMembershipDelta));
         assertTrue(provider.getDelta(1, domainMembership, domainMembershipDelta, null, membership).getValue() == null);
-        
-        INode removedCore = coreNodes.remove(0);
+        coreNodes = new ArrayList<INode>(coreNodes);
+        INode removedCore = coreNodes.remove(1);
         INode removedWorker = workerNodes.remove(0);
         coreNodes.add(new Node(new UnicastAddress(UUID.randomUUID(), "core6"), Collections.<String, Object>emptyMap(), "core"));
         workerNodes.add(new Node(new UnicastAddress(UUID.randomUUID(), "worker11"), Collections.<String, Object>emptyMap(), "domain1"));
@@ -382,11 +382,18 @@ public class ClusterMembershipProviderTests
         assertTrue(delta.getLeftCoreNodes().isEmpty());
         assertTrue(!delta.getNewCoreByWorkerMap().isEmpty());
         
-        newMembership = (WorkerToCoreMembership)provider2.createMembership(domainMembership, delta, newMembership);
-        mappingChange = (WorkerToCoreMembershipChange)provider2.createChange(domainMembership, newMembership, membership);
+        newDomainMembership = new DomainMembership("domain1", Arrays.asList(newNodesMembership, membership));
+        newMembership = (WorkerToCoreMembership)provider2.createMembership(newDomainMembership, delta, newMembership);
+        WorkerToCoreMembershipChange mappingChange = (WorkerToCoreMembershipChange)provider2.createChange(newDomainMembership, delta, oldMembership);
+        assertThat(delta.getJoinedCoreNodes(), is(coreNodes.subList(coreNodes.size() - 1, coreNodes.size())));
+        assertThat(delta.getFailedCoreNodes(), is(Collections.singleton(removedCore.getId())));
+        assertTrue(delta.getLeftCoreNodes().isEmpty());
+        assertThat(mappingChange.getNewCoreByWorkerMap().size(), is(delta.getNewCoreByWorkerMap().size()));
+        
+        mappingChange = (WorkerToCoreMembershipChange)provider2.createChange(newDomainMembership, newMembership, oldMembership);
         assertThat(newMembership.getCoreNodes(), is(coreNodes));
         assertThat(newMembership.getCoreByWorkerMap(), is(membership.getCoreByWorkerMap()));
-        assertThat(mappingChange.getJoinedCoreNodes(), is(is(coreNodes.subList(coreNodes.size() - 1, coreNodes.size()))));
+        assertThat(mappingChange.getJoinedCoreNodes(), is(coreNodes.subList(coreNodes.size() - 1, coreNodes.size())));
         assertThat(mappingChange.getFailedCoreNodes(), is(Collections.singleton(removedCore)));
         assertTrue(mappingChange.getLeftCoreNodes().isEmpty());
         assertTrue(mappingChange.getNewCoreByWorkerMap().size() == delta.getNewCoreByWorkerMap().size());

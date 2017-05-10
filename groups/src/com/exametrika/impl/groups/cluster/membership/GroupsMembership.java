@@ -12,6 +12,9 @@ import java.util.UUID;
 import com.exametrika.api.groups.cluster.IGroup;
 import com.exametrika.api.groups.cluster.IGroupsMembership;
 import com.exametrika.api.groups.cluster.INode;
+import com.exametrika.common.l10n.DefaultMessage;
+import com.exametrika.common.l10n.ILocalizedMessage;
+import com.exametrika.common.l10n.Messages;
 import com.exametrika.common.messaging.IAddress;
 import com.exametrika.common.utils.Assert;
 import com.exametrika.common.utils.Immutables;
@@ -25,6 +28,7 @@ import com.exametrika.common.utils.Strings;
  */
 public final class GroupsMembership implements IGroupsMembership
 {
+    private static final IMessages messages = Messages.get(IMessages.class);
     private final List<IGroup> groups;
     private final Map<UUID, IGroup> groupsByIdMap;
     private final Map<IAddress, IGroup> groupsByAddressMap;
@@ -33,7 +37,6 @@ public final class GroupsMembership implements IGroupsMembership
     public GroupsMembership(List<IGroup> groups)
     {
         Assert.notNull(groups);
-        Assert.isTrue(!groups.isEmpty());
 
         this.groups = Immutables.wrap(groups);
         
@@ -97,6 +100,12 @@ public final class GroupsMembership implements IGroupsMembership
     @Override
     public String toString()
     {
-        return Strings.toString(groups, false);
+        return messages.toString(Strings.toString(groups, true)).toString();
+    }
+    
+    private interface IMessages
+    {
+        @DefaultMessage("groups: \n{0}")
+        ILocalizedMessage toString(String groups);
     }
 }

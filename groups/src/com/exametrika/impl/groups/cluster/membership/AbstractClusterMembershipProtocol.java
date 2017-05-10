@@ -124,7 +124,10 @@ public abstract class AbstractClusterMembershipProtocol extends AbstractProtocol
                     for (int i = 0; i < membershipProviders.size(); i++)
                     {
                         if (!membershipProviders.get(i).isEmptyMembership(oldDomain.getElements().get(i)))
+                        {
+                            empty = false;
                             break;
+                        }
                     }
                     
                     if (!empty)

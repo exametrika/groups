@@ -71,7 +71,7 @@ public final class WorkerToCoreMembershipChange implements IClusterMembershipEle
     
     private interface IMessages
     {
-        @DefaultMessage("joined core nodes: {0}\nleft core nodes: {1}\nfailed core nodes: {2}, new worker to core node mappings: {3}")
+        @DefaultMessage("joined core nodes: {0}\nleft core nodes: {1}\nfailed core nodes: {2}\nnew worker to core node mappings: {3}")
         ILocalizedMessage toString(List<INode> joinedMembers, Set<INode> leftMembers, Set<INode> failedMembers,
             Map<INode, INode> newCoreByWorkerMap);
     }

@@ -10,10 +10,12 @@ import java.util.UUID;
 
 import com.exametrika.api.groups.cluster.INode;
 import com.exametrika.api.groups.cluster.INodesMembership;
+import com.exametrika.common.l10n.DefaultMessage;
+import com.exametrika.common.l10n.ILocalizedMessage;
+import com.exametrika.common.l10n.Messages;
 import com.exametrika.common.messaging.IAddress;
 import com.exametrika.common.utils.Assert;
 import com.exametrika.common.utils.Immutables;
-import com.exametrika.common.utils.Strings;
 
 /**
  * The {@link NodesMembership} is implementation of {@link INodesMembership}.
@@ -23,6 +25,7 @@ import com.exametrika.common.utils.Strings;
  */
 public final class NodesMembership implements INodesMembership
 {
+    private static final IMessages messages = Messages.get(IMessages.class);
     private final List<INode> nodes;
     private final Map<UUID, INode> nodesByIdMap;
     private final Map<IAddress, INode> nodesByAddressMap;
@@ -70,6 +73,12 @@ public final class NodesMembership implements INodesMembership
     @Override
     public String toString()
     {
-        return Strings.toString(nodes, false);
+        return messages.toString(nodes).toString();
+    }
+    
+    private interface IMessages
+    {
+        @DefaultMessage("nodes: {0}")
+        ILocalizedMessage toString(List<INode> nodes);
     }
 }

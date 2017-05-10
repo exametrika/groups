@@ -61,7 +61,7 @@ public final class NodesMembershipDelta implements IClusterMembershipElementDelt
     
     private interface IMessages
     {
-        @DefaultMessage("joined: {0}\nleft: {1}\nfailed: {2}")
+        @DefaultMessage("joined nodes: {0}\nleft node-ids: {1}\nfailed node-ids: {2}")
         ILocalizedMessage toString(List<INode> joinedNodes, Set<UUID> leftNodes, Set<UUID> failedNodes);
     }
 }

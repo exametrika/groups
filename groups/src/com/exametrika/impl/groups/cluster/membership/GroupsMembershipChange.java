@@ -84,7 +84,7 @@ public final class GroupsMembershipChange implements IGroupsMembershipChange
     
     private interface IMessages
     {
-        @DefaultMessage("new: {0}\nchanged: {1}\nremoved: {2}")
+        @DefaultMessage("new groups: \n{0}\nchanged groups: \n{1}\nremoved groups: \n{2}")
         ILocalizedMessage toString(String newGroups, String changedGroups, String removedGroups);
     }
 }

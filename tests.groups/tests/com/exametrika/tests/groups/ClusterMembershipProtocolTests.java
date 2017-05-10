@@ -111,18 +111,17 @@ public class ClusterMembershipProtocolTests
         
         domainDelta3 = new DomainMembershipDelta("domain3", Arrays.<IClusterMembershipElementDelta>asList(
             new NodesMembershipDelta(Arrays.<INode>asList(), Collections.<UUID>emptySet(),
-                Collections.<UUID>singleton(node1.getId()))));
+                com.exametrika.common.utils.Collections.<UUID>asSet(node1.getId(), node2.getId()))));
         DomainMembershipDelta domainDelta4 = new DomainMembershipDelta("domain4", Arrays.<IClusterMembershipElementDelta>asList(
             nodesMembershipDelta));
-        delta = new ClusterMembershipDelta(2, false, Arrays.asList(domainDelta2,
-            domainDelta3, domainDelta4));
+        delta = new ClusterMembershipDelta(2, false, Arrays.asList(domainDelta3, domainDelta4));
         part = new ClusterMembershipMessagePart(2, delta);
         protocol.installMembership(part);
         
         membership = manager.getMembership();
         assertTrue(membership != null);
         assertTrue(membership.getId() == 2);
-        checkDomains(membership.getDomains(), Arrays.asList("domain1", "domain2", "domain3", "domain4"));
+        checkDomains(membership.getDomains(), Arrays.asList("domain3", "domain4", "domain1", "domain2"));
         assertTrue(protocol.installedRoundId == 2);
         assertTrue(listener.onMembershipChangedEvent != null);
         assertTrue(listener.onMembershipChangedEvent.getMembershipChange().getNewDomains().size() == 1);
@@ -136,7 +135,7 @@ public class ClusterMembershipProtocolTests
         membership = manager.getMembership();
         assertTrue(membership != null);
         assertTrue(membership.getId() == 3);
-        checkDomains(membership.getDomains(), Arrays.asList("domain1", "domain2", "domain4"));
+        checkDomains(membership.getDomains(), Arrays.asList("domain4", "domain1", "domain2"));
         assertTrue(protocol.installedRoundId == 3);
         assertTrue(listener.onMembershipChangedEvent != null);
         assertTrue(listener.onMembershipChangedEvent.getMembershipChange().getNewDomains().size() == 0);
@@ -148,7 +147,7 @@ public class ClusterMembershipProtocolTests
         membership = manager.getMembership();
         assertTrue(membership != null);
         assertTrue(membership.getId() == 3);
-        checkDomains(membership.getDomains(), Arrays.asList("domain1", "domain2", "domain4"));
+        checkDomains(membership.getDomains(), Arrays.asList("domain4", "domain1", "domain2"));
         assertTrue(protocol.installedRoundId == 3);
         assertTrue(listener.onMembershipChangedEvent == null);
     }
@@ -195,13 +194,14 @@ public class ClusterMembershipProtocolTests
         assertTrue(stack.getSentMessages().isEmpty());
         
         IGroupMembership groupMembership = TestMemberships.createCoreGroupMembership(10);
+        Tests.set(localNodeProvider, "localNode", groupMembership.getGroup().getCoordinator());
+        
         groupMembershipManager.prepareInstallMembership(groupMembership);
         groupMembershipManager.commitMembership();
         
         stack.onTimer(4000);
         assertTrue(stack.getSentMessages().isEmpty());
-        
-        Tests.set(localNodeProvider, "localNode", groupMembership.getGroup().getCoordinator());
+      
         stack.onTimer(4000);
         assertTrue(stack.getSentMessages().size() == 1);
         assertThat(stack.getSentMessages().get(0).getDestination(), is((IAddress)GroupMemberships.CORE_GROUP_ADDRESS));

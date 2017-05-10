@@ -64,7 +64,7 @@ public final class NodesMembershipChange implements INodesMembershipChange
     
     private interface IMessages
     {
-        @DefaultMessage("joined: {0}\nleft: {1}\nfailed: {2}")
+        @DefaultMessage("joined nodes: {0}\nleft nodes: {1}\nfailed nodes: {2}")
         ILocalizedMessage toString(List<INode> joinedNodes, Set<INode> leftNodes, Set<INode> failedNodes);
     }
 }
