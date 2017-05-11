@@ -136,6 +136,11 @@ public final class WorkerToCoreMembershipProvider implements IClusterMembershipP
     }
 
     @Override
+    public void clearState()
+    {
+    }
+    
+    @Override
     public IClusterMembershipElementDelta createEmptyDelta()
     {
         return new WorkerToCoreMembershipDelta(java.util.Collections.<INode>emptyList(), java.util.Collections.<UUID>emptySet(),

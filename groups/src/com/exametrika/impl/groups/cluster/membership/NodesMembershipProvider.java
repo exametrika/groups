@@ -139,11 +139,15 @@ public final class NodesMembershipProvider implements IClusterMembershipProvider
             newNodeMembership = new NodesMembership(nodes);
         }
         
+        return new Pair<IClusterMembershipElement, IClusterMembershipElementDelta>(newNodeMembership, delta);
+    }
+    
+    @Override
+    public void clearState()
+    {
         discoveredNodes = null;
         failedNodes = null;
         leftNodes = null;
-        
-        return new Pair<IClusterMembershipElement, IClusterMembershipElementDelta>(newNodeMembership, delta);
     }
     
     @Override

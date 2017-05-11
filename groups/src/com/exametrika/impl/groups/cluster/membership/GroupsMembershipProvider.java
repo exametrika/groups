@@ -113,6 +113,11 @@ public final class GroupsMembershipProvider implements IClusterMembershipProvide
     }
 
     @Override
+    public void clearState()
+    {
+    }
+    
+    @Override
     public IClusterMembershipElementDelta createEmptyDelta()
     {
         return new GroupsMembershipDelta(Collections.<IGroup>emptyList(), Collections.<IGroupDelta>emptySet(), 

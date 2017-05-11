@@ -76,6 +76,7 @@ public class ClusterMembershipProviderTests
         
         assertTrue(provider.getDomains().isEmpty());
         assertThat(provider.getDelta(1, null, null, null, null), is(new Pair(null, null)));
+        provider.clearState();
         
         INode node1 = createNode("node1", "domain1");
         INode node2 = createNode("node2", "domain1");
@@ -95,6 +96,7 @@ public class ClusterMembershipProviderTests
         
         assertThat(provider.getDomains(), is(com.exametrika.common.utils.Collections.asSet("domain1", "domain2")));
         Pair pair = provider.getDelta(1, domainMembership1, null, null, null);
+        provider.clearState();
         
         NodesMembership membership = (NodesMembership)pair.getKey();
         NodesMembership oldMembership = membership;
@@ -116,6 +118,7 @@ public class ClusterMembershipProviderTests
         
         assertThat(provider.getDomains(), is(com.exametrika.common.utils.Collections.asSet("domain1", "domain2")));
         pair = provider.getDelta(1, domainMembership1, null, null, membership);
+        provider.clearState();
         
         membership = (NodesMembership)pair.getKey();
         assertThat(membership.getNodes(), is(Arrays.asList(node1, node4)));
@@ -132,6 +135,7 @@ public class ClusterMembershipProviderTests
         
         assertTrue(provider.getDomains().isEmpty());
         pair = provider.getDelta(1, domainMembership1, null, null, membership);
+        provider.clearState();
         assertTrue(pair.getKey() == membership);
         assertTrue(pair.getValue() == null);
         
@@ -308,7 +312,6 @@ public class ClusterMembershipProviderTests
         
         WorkerToCoreMembershipProvider provider = new WorkerToCoreMembershipProvider(membershipManager, new DefaultWorkerToCoreMappingStrategy());
         WorkerToCoreMembershipProvider provider2 = new WorkerToCoreMembershipProvider();
-        assertThat(provider.getDomains(), is(Collections.singleton(GroupMemberships.CORE_DOMAIN)));
         List<INode> coreNodes = new ArrayList<INode>();
         coreNodes.add(localNodeProvider.getLocalNode());
         for (int i = 0; i < 5; i++)

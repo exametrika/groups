@@ -245,6 +245,9 @@ public final class CoreCoordinatorClusterMembershipProtocol extends AbstractClus
                 domainDeltas.add(domainMembershipDelta);
         }
         
+        for (IClusterMembershipProvider provider : membershipProviders)
+            provider.clearState();
+        
         if (domainDeltas.isEmpty())
             return null;
         

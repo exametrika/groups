@@ -50,6 +50,11 @@ public interface IClusterMembershipProvider
         IDomainMembershipDelta domainMembershipDelta, IDomainMembership oldDomainMembership, IClusterMembershipElement oldMembership);
 
     /**
+     * Clears internal state.
+     */
+    void clearState();
+    
+    /**
      * Creates empty membership delta.
      *
      * @return empty membership delta

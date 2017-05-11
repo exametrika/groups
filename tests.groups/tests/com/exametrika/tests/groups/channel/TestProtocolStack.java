@@ -16,6 +16,7 @@ import com.exametrika.common.messaging.IConnectionProvider;
 import com.exametrika.common.messaging.IFeed;
 import com.exametrika.common.messaging.IMessage;
 import com.exametrika.common.messaging.IMessageFactory;
+import com.exametrika.common.messaging.IPullableSender;
 import com.exametrika.common.messaging.IReceiver;
 import com.exametrika.common.messaging.ISender;
 import com.exametrika.common.messaging.ISink;
@@ -173,41 +174,36 @@ public class TestProtocolStack extends AbstractProtocol implements ITimeService,
         super(channelName, messageFactory);
         
         this.serializationRegistry = serializationRegistry;
-        terminator = new TestTerminator(channelName, messageFactory);
+        terminator = new TestTerminator();
     }
     
-    private class TestTerminator extends AbstractProtocol
+    private class TestTerminator implements ISender, IReceiver, IPullableSender
     {
-        public TestTerminator(String channelName, IMessageFactory messageFactory)
+        @Override
+        public ISink register(IAddress destination, IFeed feed)
         {
-            super(channelName, messageFactory);
+            Assert.supports(false);
+            return null;
         }
 
         @Override
-        protected boolean supportsPullSendModel()
+        public void unregister(ISink sink)
         {
-            return true;
+            Assert.supports(false);
         }
-        
+
         @Override
-        protected void doSend(ISender sender, IMessage message)
+        public void receive(IMessage message)
+        {
+            checkSerialization(message);
+            receivedMessages.add(message);
+        }
+
+        @Override
+        public void send(IMessage message)
         {
             checkSerialization(message);
             sentMessages.add(message);
-        }
-        
-        @Override
-        protected boolean doSend(IFeed feed, ISink sink, IMessage message)
-        {
-            doSend(null, message);
-            return true;
-        }
-        
-        @Override
-        protected void doReceive(IReceiver receiver, IMessage message)
-        {
-            checkSerialization(message);
-            receivedMessages.add(message);   
         }
     }
 }

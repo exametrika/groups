@@ -199,7 +199,7 @@ public class ClusterMembershipProtocolTests
         groupMembershipManager.prepareInstallMembership(groupMembership);
         groupMembershipManager.commitMembership();
         
-        stack.onTimer(4000);
+        stack.onTimer(2000);
         assertTrue(stack.getSentMessages().isEmpty());
       
         stack.onTimer(4000);
