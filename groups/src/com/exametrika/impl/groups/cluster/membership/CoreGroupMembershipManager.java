@@ -5,9 +5,12 @@ package com.exametrika.impl.groups.cluster.membership;
 
 import java.util.Set;
 
+import com.exametrika.api.groups.cluster.IGroupMembership;
+import com.exametrika.api.groups.cluster.IGroupMembershipChange;
 import com.exametrika.api.groups.cluster.IGroupMembershipListener;
 import com.exametrika.common.utils.Assert;
 import com.exametrika.impl.groups.cluster.discovery.ICoreNodeDiscoverer;
+import com.exametrika.spi.groups.cluster.channel.IChannelReconnector;
 
 /**
  * The {@link CoreGroupMembershipManager} manages core group membership information.
@@ -18,6 +21,7 @@ import com.exametrika.impl.groups.cluster.discovery.ICoreNodeDiscoverer;
 public final class CoreGroupMembershipManager extends GroupMembershipManager
 {
     private ICoreNodeDiscoverer nodeDiscoverer;
+    private IChannelReconnector channelReconnector;
     
     public CoreGroupMembershipManager(String channelName, LocalNodeProvider localNodeProvider,
         Set<IPreparedGroupMembershipListener> preparedMembershipListeners, Set<IGroupMembershipListener> membershipListeners)
@@ -33,6 +37,30 @@ public final class CoreGroupMembershipManager extends GroupMembershipManager
         this.nodeDiscoverer = nodeDiscoverer;
     }
     
+    public void setChannelReconnector(IChannelReconnector channelReconnector)
+    {
+        Assert.notNull(channelReconnector);
+        Assert.isNull(this.channelReconnector);
+        
+        this.channelReconnector = channelReconnector;
+    }
+    
+    @Override
+    public void prepareInstallMembership(IGroupMembership membership)
+    {
+        super.prepareInstallMembership(membership);
+        
+        checkMembership(membership);
+    }
+    
+    @Override
+    public void prepareChangeMembership(IGroupMembership membership, IGroupMembershipChange membershipChange)
+    {
+        super.prepareChangeMembership(membership, membershipChange);
+        
+        checkMembership(membership);
+    }
+    
     @Override
     public void start()
     {
@@ -40,5 +68,11 @@ public final class CoreGroupMembershipManager extends GroupMembershipManager
         Assert.checkState(nodeDiscoverer != null);
         
         nodeDiscoverer.startDiscovery();
+    }
+    
+    private void checkMembership(IGroupMembership membership)
+    {
+        if (!membership.getGroup().isPrimary())
+            channelReconnector.reconnect();
     }
 }

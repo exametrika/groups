@@ -42,6 +42,7 @@ import com.exametrika.impl.groups.cluster.membership.GroupMemberships;
 import com.exametrika.impl.groups.cluster.membership.IClusterMembershipElementDelta;
 import com.exametrika.impl.groups.cluster.membership.IClusterMembershipManager;
 import com.exametrika.impl.groups.cluster.membership.IClusterMembershipProvider;
+import com.exametrika.impl.groups.cluster.membership.ICoreClusterMembershipProvider;
 import com.exametrika.impl.groups.cluster.membership.IDomainMembershipDelta;
 import com.exametrika.impl.groups.cluster.membership.IPreparedGroupMembershipListener;
 import com.exametrika.impl.groups.cluster.membership.LocalNodeProvider;
@@ -83,7 +84,8 @@ public class ClusterMembershipProtocolTests
         
         TestProtocolStack stack = TestProtocolStack.create("test");
         TestClusterMembershipProtocol protocol = new TestClusterMembershipProtocol("test", stack.getMessageFactory(), 
-            manager, Arrays.<IClusterMembershipProvider>asList(new NodesMembershipProvider()));
+            manager, Arrays.<IClusterMembershipProvider>asList(new NodesMembershipProvider()),
+            Arrays.<ICoreClusterMembershipProvider>asList(), false);
         stack.setProtocol(protocol);
         
         Node node1 = new Node(new UnicastAddress(UUID.randomUUID(), "node1"), Collections.<String, Object>singletonMap("key", "value"), "domain1");
@@ -98,7 +100,7 @@ public class ClusterMembershipProtocolTests
         DomainMembershipDelta domainDelta3 = new DomainMembershipDelta("domain3", Arrays.<IClusterMembershipElementDelta>asList(
             nodesMembershipDelta));
         ClusterMembershipDelta delta = new ClusterMembershipDelta(1, true, Arrays.asList(domainDelta1, domainDelta2,
-            domainDelta3));
+            domainDelta3), null);
         ClusterMembershipMessagePart part = new ClusterMembershipMessagePart(1, delta);
         protocol.installMembership(part);
         
@@ -114,7 +116,7 @@ public class ClusterMembershipProtocolTests
                 com.exametrika.common.utils.Collections.<UUID>asSet(node1.getId(), node2.getId()))));
         DomainMembershipDelta domainDelta4 = new DomainMembershipDelta("domain4", Arrays.<IClusterMembershipElementDelta>asList(
             nodesMembershipDelta));
-        delta = new ClusterMembershipDelta(2, false, Arrays.asList(domainDelta3, domainDelta4));
+        delta = new ClusterMembershipDelta(2, false, Arrays.asList(domainDelta3, domainDelta4), null);
         part = new ClusterMembershipMessagePart(2, delta);
         protocol.installMembership(part);
         
@@ -128,7 +130,7 @@ public class ClusterMembershipProtocolTests
         assertTrue(listener.onMembershipChangedEvent.getMembershipChange().getChangedDomains().size() == 1);
         assertTrue(listener.onMembershipChangedEvent.getMembershipChange().getRemovedDomains().size() == 0);
         
-        delta = new ClusterMembershipDelta(3, false, Arrays.<IDomainMembershipDelta>asList());
+        delta = new ClusterMembershipDelta(3, false, Arrays.<IDomainMembershipDelta>asList(), null);
         part = new ClusterMembershipMessagePart(3, delta);
         protocol.installMembership(part);
         
@@ -180,7 +182,8 @@ public class ClusterMembershipProtocolTests
         WorkerToCoreMembershipProvider workerToCoreMembershipProvider = new WorkerToCoreMembershipProvider(groupMembershipManager, mappingStarategy);
         
         CoreCoordinatorClusterMembershipProtocol protocol = new CoreCoordinatorClusterMembershipProtocol("test", stack.getMessageFactory(), 
-            clusterMembershipManager, Arrays.<IClusterMembershipProvider>asList(nodesMembershipProvider, workerToCoreMembershipProvider), groupMembershipManager, 1000);
+            clusterMembershipManager, Arrays.<IClusterMembershipProvider>asList(nodesMembershipProvider),
+            Arrays.<ICoreClusterMembershipProvider>asList(workerToCoreMembershipProvider), groupMembershipManager, 1000);
         FailureDetectorMock failureDetector = new FailureDetectorMock();
         protocol.setFailureDetector(failureDetector);
         FlushManagerMock flushManager = new FlushManagerMock();
@@ -189,7 +192,7 @@ public class ClusterMembershipProtocolTests
         stack.start();
         
         workerNodeDiscoverer.discoveredNodes.addAll(Arrays.asList(TestMemberships.createNode("test1", "domain1"),
-            TestMemberships.createNode("test2", "domain1")));
+            TestMemberships.createNode("test2", "domain2")));
         stack.onTimer(2000);
         assertTrue(stack.getSentMessages().isEmpty());
         
@@ -207,7 +210,7 @@ public class ClusterMembershipProtocolTests
         assertThat(stack.getSentMessages().get(0).getDestination(), is((IAddress)GroupMemberships.CORE_GROUP_ADDRESS));
         ClusterMembershipMessagePart part = stack.getSentMessages().get(0).getPart();
         assertTrue(part.getRoundId() == 1);
-        assertTrue(part.getDelta().getDomains().size() == 1);
+        assertTrue(part.getDelta().getDomains().size() == 2);
         assertThat((Set<IAddress>)Tests.get(protocol, "respondingNodes"), is(TestMemberships.buildNodeAddresses(groupMembership.getGroup().getMembers())));
         assertThat((Boolean)Tests.get(protocol, "installing"), is(true));
         stack.reset();
@@ -280,9 +283,11 @@ public class ClusterMembershipProtocolTests
         private long installedRoundId;
         
         public TestClusterMembershipProtocol(String channelName, IMessageFactory messageFactory,
-            IClusterMembershipManager clusterMembershipManager, List<IClusterMembershipProvider> membershipProviders)
+            IClusterMembershipManager clusterMembershipManager, List<IClusterMembershipProvider> membershipProviders,
+            List<ICoreClusterMembershipProvider> coreMembershipProviders, boolean coreProtocol)
         {
-            super(channelName, messageFactory, clusterMembershipManager, membershipProviders);
+            super(channelName, messageFactory, clusterMembershipManager, membershipProviders,
+                coreMembershipProviders, coreProtocol);
         }
         
         @Override

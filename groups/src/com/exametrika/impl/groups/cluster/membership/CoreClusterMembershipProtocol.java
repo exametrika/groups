@@ -24,8 +24,8 @@ import com.exametrika.common.messaging.IReceiver;
 import com.exametrika.common.messaging.ISender;
 import com.exametrika.common.messaging.impl.protocols.failuredetection.IFailureObserver;
 import com.exametrika.common.utils.Assert;
+import com.exametrika.impl.groups.cluster.failuredetection.IClusterFailureDetector;
 import com.exametrika.impl.groups.cluster.failuredetection.IFailureDetectionListener;
-import com.exametrika.impl.groups.cluster.failuredetection.IGroupFailureDetector;
 import com.exametrika.impl.groups.cluster.flush.IFlushManager;
 
 /**
@@ -43,7 +43,7 @@ public final class CoreClusterMembershipProtocol extends AbstractClusterMembersh
     private final CoreCoordinatorClusterMembershipProtocol coordinatorProtocol;
     private final long membershipTimeout;
     private IFailureObserver failureObserver;
-    private IGroupFailureDetector failureDetector;
+    private IClusterFailureDetector failureDetector;
     private IFlushManager flushManager;
     private Set<INode> workerNodes = Collections.emptySet();
     private long roundId;
@@ -52,10 +52,10 @@ public final class CoreClusterMembershipProtocol extends AbstractClusterMembersh
     
     public CoreClusterMembershipProtocol(String channelName, IMessageFactory messageFactory, 
         IClusterMembershipManager clusterMembershipManager, List<IClusterMembershipProvider> membershipProviders,
-        IGroupMembershipManager membershipManager, CoreCoordinatorClusterMembershipProtocol coordinatorProtocol, 
-        long membershipTimeout)
+        List<ICoreClusterMembershipProvider> coreMembershipProviders, IGroupMembershipManager membershipManager, 
+        CoreCoordinatorClusterMembershipProtocol coordinatorProtocol, long membershipTimeout)
     {
-        super(channelName, messageFactory, clusterMembershipManager, membershipProviders);
+        super(channelName, messageFactory, clusterMembershipManager, membershipProviders, coreMembershipProviders, true);
         
         Assert.notNull(membershipManager);
         Assert.notNull(coordinatorProtocol);
@@ -65,7 +65,7 @@ public final class CoreClusterMembershipProtocol extends AbstractClusterMembersh
         this.membershipTimeout = membershipTimeout;
     }
     
-    public void setFailureDetector(IGroupFailureDetector failureDetector)
+    public void setFailureDetector(IClusterFailureDetector failureDetector)
     {
         Assert.notNull(failureDetector);
         Assert.isNull(this.failureDetector);
@@ -146,7 +146,7 @@ public final class CoreClusterMembershipProtocol extends AbstractClusterMembersh
     {
         coordinatorProtocol.onInstalled(roundId, newMembership, coreDelta);
         
-        WorkerToCoreMembership mapping = newMembership.findDomain(GroupMemberships.CORE_DOMAIN).findElement(WorkerToCoreMembership.class);
+        WorkerToCoreMembership mapping = ((ClusterMembership)newMembership).getCoreDomain().findElement(WorkerToCoreMembership.class);
         Assert.notNull(mapping);
         Set<INode> workerNodes = mapping.findWorkerNodes(membershipManager.getLocalNode());
         
@@ -164,6 +164,9 @@ public final class CoreClusterMembershipProtocol extends AbstractClusterMembersh
         respondingNodes = new HashSet<IAddress>();
         for (INode workerNode : workerNodes)
         {
+            if (failureDetector.getFailedNodes().contains(workerNode) || failureDetector.getLeftNodes().contains(workerNode))
+                continue;
+            
             respondingNodes.add(workerNode.getAddress());
             
             ClusterMembershipDelta delta;
@@ -186,9 +189,6 @@ public final class CoreClusterMembershipProtocol extends AbstractClusterMembersh
         List<IDomainMembershipDelta> domains = new ArrayList<IDomainMembershipDelta>();
         for (IDomainMembership coreDomain : newMembership.getDomains())
         {
-            if (coreDomain.getName().equals(GroupMemberships.CORE_DOMAIN))
-                continue;
-            
             boolean publicPart = !coreDomain.getName().equals(domain);
             
             List<IClusterMembershipElementDelta> deltas = new ArrayList<IClusterMembershipElementDelta>();
@@ -197,7 +197,7 @@ public final class CoreClusterMembershipProtocol extends AbstractClusterMembersh
             
             domains.add(new DomainMembershipDelta(coreDomain.getName(), deltas));
         }
-        return new ClusterMembershipDelta(newMembership.getId(), true, domains);
+        return new ClusterMembershipDelta(newMembership.getId(), true, domains, null);
     }
 
     private ClusterMembershipDelta createWorkerDelta(String domain, ClusterMembershipDelta coreDelta)
@@ -205,9 +205,6 @@ public final class CoreClusterMembershipProtocol extends AbstractClusterMembersh
         List<IDomainMembershipDelta> domains = new ArrayList<IDomainMembershipDelta>();
         for (IDomainMembershipDelta coreDomainDelta : coreDelta.getDomains())
         {
-            if (coreDomainDelta.getName().equals(GroupMemberships.CORE_DOMAIN))
-                continue;
-            
             if (coreDomainDelta.getName().equals(domain))
                 domains.add(coreDomainDelta);
             else
@@ -220,7 +217,7 @@ public final class CoreClusterMembershipProtocol extends AbstractClusterMembersh
                 domains.add(new DomainMembershipDelta(coreDomainDelta.getName(), deltas));
             }
         }
-        return new ClusterMembershipDelta(coreDelta.getId(), coreDelta.isFull(), domains);
+        return new ClusterMembershipDelta(coreDelta.getId(), coreDelta.isFull(), domains, null);
     }
     
     private void removeFromRespondingNodes(IAddress node, long roundId)

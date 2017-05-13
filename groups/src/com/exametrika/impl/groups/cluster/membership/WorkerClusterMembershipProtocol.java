@@ -3,6 +3,7 @@
  */
 package com.exametrika.impl.groups.cluster.membership;
 
+import java.util.Collections;
 import java.util.List;
 
 import com.exametrika.common.l10n.DefaultMessage;
@@ -31,7 +32,7 @@ public final class WorkerClusterMembershipProtocol extends AbstractClusterMember
     public WorkerClusterMembershipProtocol(String channelName, IMessageFactory messageFactory, IClusterMembershipManager membershipManager,
         List<IClusterMembershipProvider> membershipProviders, List<IWorkerControllerObserver> controllerObservers)
     {
-        super(channelName, messageFactory, membershipManager, membershipProviders);
+        super(channelName, messageFactory, membershipManager, membershipProviders, Collections.<ICoreClusterMembershipProvider>emptyList(), false);
         
         Assert.notNull(controllerObservers);
         

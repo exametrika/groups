@@ -19,6 +19,7 @@ import org.junit.Test;
 
 import com.exametrika.api.groups.cluster.GroupOption;
 import com.exametrika.api.groups.cluster.IClusterMembershipElement;
+import com.exametrika.api.groups.cluster.IDomainMembership;
 import com.exametrika.api.groups.cluster.IGroup;
 import com.exametrika.api.groups.cluster.IGroupChange;
 import com.exametrika.api.groups.cluster.IGroupMembershipListener;
@@ -26,6 +27,8 @@ import com.exametrika.api.groups.cluster.INode;
 import com.exametrika.common.messaging.impl.transports.UnicastAddress;
 import com.exametrika.common.utils.Enums;
 import com.exametrika.common.utils.Pair;
+import com.exametrika.impl.groups.cluster.membership.ClusterMembership;
+import com.exametrika.impl.groups.cluster.membership.ClusterMembershipDelta;
 import com.exametrika.impl.groups.cluster.membership.DefaultWorkerToCoreMappingStrategy;
 import com.exametrika.impl.groups.cluster.membership.DomainMembership;
 import com.exametrika.impl.groups.cluster.membership.DomainMembershipDelta;
@@ -330,8 +333,9 @@ public class ClusterMembershipProviderTests
         NodesMembershipDelta nodesMembershipDelta = new NodesMembershipDelta(workerNodes,
             Collections.<UUID>emptySet(), Collections.<UUID>emptySet());
         DomainMembershipDelta domainMembershipDelta = new DomainMembershipDelta("domain", Arrays.asList(nodesMembershipDelta));
-        
-        Pair pair = provider.getDelta(1, domainMembership, domainMembershipDelta, null, null);
+        ClusterMembership clusterMembership = new ClusterMembership(1, Arrays.asList(domainMembership), null);
+        ClusterMembershipDelta clusterMembershipDelta = new ClusterMembershipDelta(1, true, Arrays.asList(domainMembershipDelta), null);
+        Pair pair = provider.getDelta(1, clusterMembership, clusterMembershipDelta, null, null);
         WorkerToCoreMembership membership = (WorkerToCoreMembership)pair.getKey();
         WorkerToCoreMembershipDelta delta = (WorkerToCoreMembershipDelta)pair.getValue();
         assertThat(membership.getCoreNodes(), is(coreNodes));
@@ -343,7 +347,7 @@ public class ClusterMembershipProviderTests
         assertTrue(delta.getLeftCoreNodes().isEmpty());
         assertTrue(delta.getNewCoreByWorkerMap().size() == workerNodes.size());
         WorkerToCoreMembership oldMembership = membership;
-        WorkerToCoreMembership newMembership = (WorkerToCoreMembership)provider2.createMembership(domainMembership, delta, null);
+        WorkerToCoreMembership newMembership = (WorkerToCoreMembership)provider2.createMembership(clusterMembership, delta, null);
         Map<UUID, UUID> map = new HashMap<UUID, UUID>();
         for (Map.Entry<INode, INode> entry : newMembership.getCoreByWorkerMap().entrySet())
             map.put(entry.getKey().getId(), entry.getValue().getId());
@@ -352,7 +356,8 @@ public class ClusterMembershipProviderTests
         nodesMembershipDelta = new NodesMembershipDelta(Collections.<INode>emptyList(), Collections.<UUID>emptySet(), 
             Collections.<UUID>emptySet());
         domainMembershipDelta = new DomainMembershipDelta("domain1", Arrays.asList(nodesMembershipDelta));
-        assertTrue(provider.getDelta(1, domainMembership, domainMembershipDelta, null, membership).getValue() == null);
+        clusterMembershipDelta = new ClusterMembershipDelta(1, true, Arrays.asList(domainMembershipDelta), null);
+        assertTrue(provider.getDelta(1, clusterMembership, clusterMembershipDelta, null, membership).getValue() == null);
         coreNodes = new ArrayList<INode>(coreNodes);
         INode removedCore = coreNodes.remove(1);
         INode removedWorker = workerNodes.remove(0);
@@ -372,8 +377,9 @@ public class ClusterMembershipProviderTests
         NodesMembershipDelta newNodesMembershipDelta = new NodesMembershipDelta(workerNodes.subList(workerNodes.size() - 1, workerNodes.size()),
             Collections.<UUID>emptySet(), Collections.<UUID>singleton(removedWorker.getId()));
         DomainMembershipDelta newDomainMembershipDelta = new DomainMembershipDelta("domain", Arrays.asList(newNodesMembershipDelta));
-        
-        pair = provider.getDelta(2, newDomainMembership, newDomainMembershipDelta, null, membership);
+        ClusterMembership newClusterMembership = new ClusterMembership(1, Arrays.asList(newDomainMembership), null);
+        ClusterMembershipDelta newClusterMembershipDelta = new ClusterMembershipDelta(1, true, Arrays.asList(newDomainMembershipDelta), null);
+        pair = provider.getDelta(2, newClusterMembership, newClusterMembershipDelta, null, membership);
         membership = (WorkerToCoreMembership)pair.getKey();
         delta = (WorkerToCoreMembershipDelta)pair.getValue();
         assertThat(membership.getCoreNodes(), is(coreNodes));
@@ -385,15 +391,17 @@ public class ClusterMembershipProviderTests
         assertTrue(delta.getLeftCoreNodes().isEmpty());
         assertTrue(!delta.getNewCoreByWorkerMap().isEmpty());
         
-        newDomainMembership = new DomainMembership("domain1", Arrays.asList(newNodesMembership, membership));
-        newMembership = (WorkerToCoreMembership)provider2.createMembership(newDomainMembership, delta, newMembership);
-        WorkerToCoreMembershipChange mappingChange = (WorkerToCoreMembershipChange)provider2.createChange(newDomainMembership, delta, oldMembership);
+        newDomainMembership = new DomainMembership("domain1", Arrays.asList(newNodesMembership));
+        IDomainMembership newCoreDomainMembership = new DomainMembership("CORE", Arrays.asList(membership));
+        newClusterMembership = new ClusterMembership(1, Arrays.asList(newDomainMembership), newCoreDomainMembership);
+        newMembership = (WorkerToCoreMembership)provider2.createMembership(newClusterMembership, delta, newMembership);
+        WorkerToCoreMembershipChange mappingChange = (WorkerToCoreMembershipChange)provider2.createChange(newClusterMembership, delta, oldMembership);
         assertThat(delta.getJoinedCoreNodes(), is(coreNodes.subList(coreNodes.size() - 1, coreNodes.size())));
         assertThat(delta.getFailedCoreNodes(), is(Collections.singleton(removedCore.getId())));
         assertTrue(delta.getLeftCoreNodes().isEmpty());
         assertThat(mappingChange.getNewCoreByWorkerMap().size(), is(delta.getNewCoreByWorkerMap().size()));
         
-        mappingChange = (WorkerToCoreMembershipChange)provider2.createChange(newDomainMembership, newMembership, oldMembership);
+        mappingChange = (WorkerToCoreMembershipChange)provider2.createChange(newClusterMembership, newMembership, oldMembership);
         assertThat(newMembership.getCoreNodes(), is(coreNodes));
         assertThat(newMembership.getCoreByWorkerMap(), is(membership.getCoreByWorkerMap()));
         assertThat(mappingChange.getJoinedCoreNodes(), is(coreNodes.subList(coreNodes.size() - 1, coreNodes.size())));
@@ -406,9 +414,6 @@ public class ClusterMembershipProviderTests
         assertTrue(delta.getFailedCoreNodes().isEmpty());
         assertTrue(delta.getLeftCoreNodes().isEmpty());
         assertTrue(delta.getNewCoreByWorkerMap().isEmpty());
-        
-        WorkerToCoreMembership emptyMembership = new WorkerToCoreMembership(Collections.<INode>emptyList(), Collections.<INode, INode>emptyMap());
-        assertTrue(provider2.isEmptyMembership(emptyMembership));
         
         delta = (WorkerToCoreMembershipDelta)provider2.createCoreFullDelta(membership);
         assertThat(delta.getJoinedCoreNodes(), is(membership.getCoreNodes()));

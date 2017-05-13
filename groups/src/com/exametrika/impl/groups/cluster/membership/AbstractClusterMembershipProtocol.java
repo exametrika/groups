@@ -30,17 +30,23 @@ public abstract class AbstractClusterMembershipProtocol extends AbstractProtocol
 {
     protected final IClusterMembershipManager clusterMembershipManager;
     protected final List<IClusterMembershipProvider> membershipProviders;
+    protected final List<ICoreClusterMembershipProvider> coreMembershipProviders;
+    private final boolean coreProtocol;
 
     public AbstractClusterMembershipProtocol(String channelName, IMessageFactory messageFactory, IClusterMembershipManager clusterMembershipManager,
-        List<IClusterMembershipProvider> membershipProviders)
+        List<IClusterMembershipProvider> membershipProviders, List<ICoreClusterMembershipProvider> coreMembershipProviders,
+        boolean coreProtocol)
     {
         super(channelName, messageFactory);
 
         Assert.notNull(clusterMembershipManager);
         Assert.notNull(membershipProviders);
+        Assert.notNull(coreMembershipProviders);
 
         this.clusterMembershipManager = clusterMembershipManager;
         this.membershipProviders = membershipProviders;
+        this.coreMembershipProviders = coreMembershipProviders;
+        this.coreProtocol = coreProtocol;
     }
 
     @Override
@@ -57,15 +63,22 @@ public abstract class AbstractClusterMembershipProtocol extends AbstractProtocol
 
     protected void installMembership(ClusterMembershipMessagePart part)
     {
-        IClusterMembership oldMembership = clusterMembershipManager.getMembership();
+        ClusterMembership oldMembership = (ClusterMembership)clusterMembershipManager.getMembership();
         if (oldMembership == null)
             Assert.isTrue(part.getDelta().isFull());
         else
         {
-            if (part.getDelta().getId() <= oldMembership.getId())
+            if (part.getDelta().getId() < oldMembership.getId())
                 return;
             
-            if (!part.getDelta().isFull())
+            if (part.getDelta().getId() == oldMembership.getId())
+            {
+                if (!coreProtocol)
+                    return;
+                
+                Assert.isTrue(part.getDelta().getDomains().isEmpty());
+            }
+            else if (!part.getDelta().isFull())
                 Assert.isTrue(part.getDelta().getId() == oldMembership.getId() + 1);
         }
         
@@ -138,11 +151,51 @@ public abstract class AbstractClusterMembershipProtocol extends AbstractProtocol
             }
         }
         
-        IClusterMembership newMembership = new ClusterMembership(part.getDelta().getId(), domains);
+        IClusterMembership newMembership;
+        IDomainMembershipChange coreDomainChange;
+        if (part.getDelta().getCoreDomain() != null)
+        {
+            Assert.checkState(!coreMembershipProviders.isEmpty());
+            
+            IDomainMembershipDelta coreDomainDelta = part.getDelta().getCoreDomain();
+            List<IClusterMembershipElement> elements = new ArrayList<IClusterMembershipElement>();
+            List<IClusterMembershipElementChange> changes = new ArrayList<IClusterMembershipElementChange>();
+            IDomainMembership coreDomain = new DomainMembership(coreDomainDelta.getName(), elements);
+            newMembership = new ClusterMembership(part.getDelta().getId(), domains, coreDomain);
+            IDomainMembership oldCoreDomain = oldMembership != null ? oldMembership.getCoreDomain() : null;
+            coreDomainChange = new DomainMembershipChange(coreDomainDelta.getName(), changes);
+            for (int i = 0; i < coreMembershipProviders.size(); i++)
+            {
+                IClusterMembershipElement element = coreMembershipProviders.get(i).createMembership(newMembership,
+                    coreDomainDelta.getDeltas().get(i), (oldCoreDomain != null && !part.getDelta().isFull()) ? oldCoreDomain.getElements().get(i) : null);
+                elements.add(element);
+                
+                if (oldMembership != null)
+                {
+                    IClusterMembershipElementChange change;
+                    if (!part.getDelta().isFull())
+                        change = coreMembershipProviders.get(i).createChange(newMembership, coreDomainDelta.getDeltas().get(i),
+                            oldCoreDomain.getElements().get(i));
+                    else
+                        change = coreMembershipProviders.get(i).createChange(newMembership, element, oldCoreDomain.getElements().get(i));
+                    
+                    changes.add(change);
+                }
+            }
+        }
+        else
+        {
+            Assert.checkState(coreMembershipProviders.isEmpty());
+            
+            newMembership = new ClusterMembership(part.getDelta().getId(), domains, null);
+            coreDomainChange = null;
+        }
+        
         if (oldMembership == null)
             clusterMembershipManager.installMembership(newMembership);
         else
-            clusterMembershipManager.changeMembership(newMembership, new ClusterMembershipChange(newDomains, domainsChanges, removedDomains));
+            clusterMembershipManager.changeMembership(newMembership, new ClusterMembershipChange(newDomains, domainsChanges, 
+                removedDomains, coreDomainChange));
         
         onInstalled(part.getRoundId(), newMembership, part.getDelta());
     }

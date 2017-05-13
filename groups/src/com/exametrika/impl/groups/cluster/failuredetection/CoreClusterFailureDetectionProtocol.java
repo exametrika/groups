@@ -3,13 +3,13 @@
  */
 package com.exametrika.impl.groups.cluster.failuredetection;
 
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
 import com.exametrika.api.groups.cluster.ClusterMembershipEvent;
-import com.exametrika.api.groups.cluster.IClusterMembership;
 import com.exametrika.api.groups.cluster.IClusterMembershipListener;
 import com.exametrika.api.groups.cluster.IClusterMembershipService;
 import com.exametrika.api.groups.cluster.IDomainMembership;
@@ -27,7 +27,7 @@ import com.exametrika.common.tasks.ThreadInterruptedException;
 import com.exametrika.common.utils.Assert;
 import com.exametrika.common.utils.Exceptions;
 import com.exametrika.impl.groups.MessageFlags;
-import com.exametrika.impl.groups.cluster.membership.GroupMemberships;
+import com.exametrika.impl.groups.cluster.membership.ClusterMembership;
 import com.exametrika.impl.groups.cluster.membership.WorkerToCoreMembership;
 
 /**
@@ -37,7 +37,7 @@ import com.exametrika.impl.groups.cluster.membership.WorkerToCoreMembership;
  * @author Medvedev-A
  */
 public final class CoreClusterFailureDetectionProtocol extends AbstractProtocol implements IClusterMembershipListener, 
-    IFailureObserver
+    IFailureObserver, IClusterFailureDetector
 {
     private static final IMessages messages = Messages.get(IMessages.class);
     private final IClusterMembershipService membershipService;
@@ -47,8 +47,8 @@ public final class CoreClusterFailureDetectionProtocol extends AbstractProtocol 
     private ISender bridgeSender;
     private Set<IAddress> workerNodes;
     private Map<UUID, INode> workerNodesMap;
-    private Set<UUID> failedNodes = new LinkedHashSet<UUID>();
-    private Set<UUID> leftNodes = new LinkedHashSet<UUID>();
+    private Set<INode> failedNodes = new LinkedHashSet<INode>();
+    private Set<INode> leftNodes = new LinkedHashSet<INode>();
     private INode currentCoordinator;
     private long lastFailureUpdateTime;
     private boolean modified;
@@ -97,7 +97,7 @@ public final class CoreClusterFailureDetectionProtocol extends AbstractProtocol 
                 (!failedNodes.isEmpty() || !leftNodes.isEmpty()))
             {
                 bridgeSender.send(messageFactory.create(currentCoordinator.getAddress(), new FailureUpdateMessagePart(
-                    failedNodes, leftNodes, false), MessageFlags.HIGH_PRIORITY | MessageFlags.PARALLEL));
+                    buildNodeIds(failedNodes), buildNodeIds(leftNodes), false), MessageFlags.HIGH_PRIORITY | MessageFlags.PARALLEL));
                 
                 lastFailureUpdateTime = timeService.getCurrentTime();
                 modified = false;
@@ -112,13 +112,13 @@ public final class CoreClusterFailureDetectionProtocol extends AbstractProtocol 
         if (workerNodesMap == null)
             return;
         
-        for (IAddress node : nodes)
+        for (IAddress address : nodes)
         {
-            if (workerNodesMap.containsKey(node.getId()) && !failedNodes.contains(node.getId()) &&
-                !leftNodes.contains(node.getId()))
+            INode node = workerNodesMap.get(address.getId());
+            if (node != null && !failedNodes.contains(node) && !leftNodes.contains(node))
             {
-                failedNodes.add(node.getId());
-                onNodeFailed(workerNodesMap.get(node.getId()));
+                failedNodes.add(node);
+                onNodeFailed(node);
                 modified = true;
             }
         }
@@ -130,13 +130,14 @@ public final class CoreClusterFailureDetectionProtocol extends AbstractProtocol 
         if (workerNodesMap == null)
             return;
         
-        for (IAddress node : nodes)
+        for (IAddress address : nodes)
         {
-            if (workerNodesMap.containsKey(node.getId()) && !leftNodes.contains(node.getId()))
+            INode node = workerNodesMap.get(address.getId());
+            if (node != null && !leftNodes.contains(node))
             {
-                leftNodes.add(node.getId());
-                failedNodes.remove(node.getId());
-                onNodeLeft(workerNodesMap.get(node.getId()));
+                leftNodes.add(node);
+                failedNodes.remove(node);
+                onNodeLeft(node);
                 modified = true;
             }
         }
@@ -145,7 +146,7 @@ public final class CoreClusterFailureDetectionProtocol extends AbstractProtocol 
     @Override
     public void onJoined()
     {
-        IClusterMembership membership = membershipService.getMembership();
+        ClusterMembership membership = (ClusterMembership)membershipService.getMembership();
         updateWorkerNodes(membership);
     }
 
@@ -157,12 +158,12 @@ public final class CoreClusterFailureDetectionProtocol extends AbstractProtocol 
     @Override
     public void onMembershipChanged(ClusterMembershipEvent event)
     {
-        updateWorkerNodes(event.getNewMembership());
+        updateWorkerNodes((ClusterMembership)event.getNewMembership());
     }
     
-    private void updateWorkerNodes(IClusterMembership membership)
+    private void updateWorkerNodes(ClusterMembership membership)
     {
-        IDomainMembership domainMembership = membership.findDomain(GroupMemberships.CORE_DOMAIN);
+        IDomainMembership domainMembership = membership.getCoreDomain();
         WorkerToCoreMembership mappingMembership = domainMembership.findElement(WorkerToCoreMembership.class);
         Set<INode> workerNodes = mappingMembership.findWorkerNodes(membershipService.getLocalNode());
         this.workerNodes.clear();
@@ -177,12 +178,21 @@ public final class CoreClusterFailureDetectionProtocol extends AbstractProtocol 
         }
         
         if (failedNodes != null)
-            failedNodes.retainAll(this.workerNodesMap.keySet());
+            failedNodes.retainAll(this.workerNodesMap.values());
         if (leftNodes != null)
-            leftNodes.retainAll(this.workerNodesMap.keySet());
+            leftNodes.retainAll(this.workerNodesMap.values());
         
         if (logger.isLogEnabled(LogLevel.DEBUG))
             logger.log(LogLevel.DEBUG, marker, messages.workerNodesChanged(workerNodes));
+    }
+    
+    private Set<UUID> buildNodeIds(Set<INode> nodes)
+    {
+        Set<UUID> set = new HashSet<UUID>();
+        for (INode node : nodes)
+            set.add(node.getId());
+        
+        return set;
     }
     
     private void onNodeFailed(INode node)
@@ -245,5 +255,17 @@ public final class CoreClusterFailureDetectionProtocol extends AbstractProtocol 
         ILocalizedMessage nodeLeft(INode node);
         @DefaultMessage("Worker nodes have been changed: {0}.")
         ILocalizedMessage workerNodesChanged(Set<INode> workerNodes);
+    }
+
+    @Override
+    public Set<INode> getFailedNodes()
+    {
+        return failedNodes;
+    }
+
+    @Override
+    public Set<INode> getLeftNodes()
+    {
+        return leftNodes;
     }
 }

@@ -28,14 +28,16 @@ public final class ClusterMembership implements IClusterMembership
     private final long id;
     private final List<IDomainMembership> domains;
     private final Map<String, IDomainMembership> domainsMap;
+    private final IDomainMembership coreDomain;
 
-    public ClusterMembership(long id, List<? extends IDomainMembership> domains)
+    public ClusterMembership(long id, List<? extends IDomainMembership> domains, IDomainMembership coreDomain)
     {
         Assert.isTrue(id > 0);
         Assert.notNull(domains);
 
         this.id = id;
         this.domains = Immutables.wrap(domains);
+        this.coreDomain = coreDomain;
         
         Map<String, IDomainMembership> domainsMap = new HashMap<String, IDomainMembership>();
         for (IDomainMembership domain : domains)
@@ -64,6 +66,11 @@ public final class ClusterMembership implements IClusterMembership
         return domains;
     }
 
+    public IDomainMembership getCoreDomain()
+    {
+        return coreDomain;
+    }
+    
     @Override
     public boolean equals(Object o)
     {
@@ -86,12 +93,12 @@ public final class ClusterMembership implements IClusterMembership
     @Override
     public String toString()
     {
-        return messages.toString(id, Strings.toString(domains, true)).toString();
+        return messages.toString(id, Strings.toString(domains, true), coreDomain != null ? Strings.indent(coreDomain.toString(), 4) : null).toString();
     }
     
     private interface IMessages
     {
-        @DefaultMessage("id : {0}, domains: \n{1}")
-        ILocalizedMessage toString(long id, String elements);
+        @DefaultMessage("id : {0}, domains: \n{1}\ncore domain: \n{2}")
+        ILocalizedMessage toString(long id, String elements, String coreDomain);
     }
 }

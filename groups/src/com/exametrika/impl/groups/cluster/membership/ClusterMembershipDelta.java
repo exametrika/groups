@@ -24,8 +24,10 @@ public final class ClusterMembershipDelta implements IClusterMembershipDelta
     private final long id;
     private final boolean full;
     private final List<IDomainMembershipDelta> domains;
+    private final IDomainMembershipDelta coreDomain;
 
-    public ClusterMembershipDelta(long id, boolean full, List<? extends IDomainMembershipDelta> domains)
+    public ClusterMembershipDelta(long id, boolean full, List<? extends IDomainMembershipDelta> domains,
+        IDomainMembershipDelta coreDomain)
     {
         Assert.isTrue(id > 0);
         Assert.notNull(domains);
@@ -33,6 +35,7 @@ public final class ClusterMembershipDelta implements IClusterMembershipDelta
         this.id = id;
         this.full = full;
         this.domains = Immutables.wrap(domains);
+        this.coreDomain = coreDomain;
     }
 
     @Override
@@ -53,6 +56,11 @@ public final class ClusterMembershipDelta implements IClusterMembershipDelta
         return domains;
     }
 
+    public IDomainMembershipDelta getCoreDomain()
+    {
+        return coreDomain;
+    }
+    
     @Override
     public boolean equals(Object o)
     {
@@ -75,12 +83,13 @@ public final class ClusterMembershipDelta implements IClusterMembershipDelta
     @Override
     public String toString()
     {
-        return messages.toString(id, full, Strings.toString(domains, true)).toString();
+        return messages.toString(id, full, Strings.toString(domains, true), coreDomain != null ? 
+            Strings.indent(coreDomain.toString(), 4) : "").toString();
     }
     
     private interface IMessages
     {
-        @DefaultMessage("id : {0}, full: {1}, domains: \n{2}")
-        ILocalizedMessage toString(long id, boolean full, String domains);
+        @DefaultMessage("id : {0}, full: {1}, domains: \n{2}\ncore domain: \n{3}")
+        ILocalizedMessage toString(long id, boolean full, String domains, String coreDomain);
     }
 }

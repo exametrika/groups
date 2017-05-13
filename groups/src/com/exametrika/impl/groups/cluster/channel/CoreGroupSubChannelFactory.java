@@ -43,6 +43,7 @@ import com.exametrika.impl.groups.cluster.exchange.GroupDataExchangeProtocol;
 import com.exametrika.impl.groups.cluster.exchange.IDataExchangeProvider;
 import com.exametrika.impl.groups.cluster.exchange.IFeedbackListener;
 import com.exametrika.impl.groups.cluster.exchange.IFeedbackProvider;
+import com.exametrika.impl.groups.cluster.failuredetection.CoreClusterFailureDetectionProtocol;
 import com.exametrika.impl.groups.cluster.failuredetection.CoreCoordinatorClusterFailureDetectionProtocol;
 import com.exametrika.impl.groups.cluster.failuredetection.CoreGroupFailureDetectionProtocol;
 import com.exametrika.impl.groups.cluster.failuredetection.GroupNodeTrackingStrategy;
@@ -62,16 +63,17 @@ import com.exametrika.impl.groups.cluster.membership.CoreClusterMembershipProtoc
 import com.exametrika.impl.groups.cluster.membership.CoreCoordinatorClusterMembershipProtocol;
 import com.exametrika.impl.groups.cluster.membership.CoreGroupMembershipManager;
 import com.exametrika.impl.groups.cluster.membership.CoreGroupMembershipTracker;
+import com.exametrika.impl.groups.cluster.membership.DefaultGroupMappingStrategy;
+import com.exametrika.impl.groups.cluster.membership.DefaultWorkerToCoreMappingStrategy;
 import com.exametrika.impl.groups.cluster.membership.GroupDefinitionStateTransferFactory;
 import com.exametrika.impl.groups.cluster.membership.GroupMemberships;
 import com.exametrika.impl.groups.cluster.membership.GroupsMembershipProvider;
 import com.exametrika.impl.groups.cluster.membership.IClusterMembershipProvider;
+import com.exametrika.impl.groups.cluster.membership.ICoreClusterMembershipProvider;
 import com.exametrika.impl.groups.cluster.membership.IGroupMembershipManager;
 import com.exametrika.impl.groups.cluster.membership.IPreparedGroupMembershipListener;
 import com.exametrika.impl.groups.cluster.membership.LocalNodeProvider;
 import com.exametrika.impl.groups.cluster.membership.NodesMembershipProvider;
-import com.exametrika.impl.groups.cluster.membership.DefaultGroupMappingStrategy;
-import com.exametrika.impl.groups.cluster.membership.DefaultWorkerToCoreMappingStrategy;
 import com.exametrika.impl.groups.cluster.membership.WorkerToCoreMembershipProvider;
 import com.exametrika.impl.groups.cluster.multicast.FailureAtomicMulticastProtocol;
 import com.exametrika.impl.groups.cluster.multicast.FlowControlProtocol;
@@ -106,6 +108,9 @@ public class CoreGroupSubChannelFactory extends AbstractChannelFactory
     private CoreClusterMembershipProtocol clusterMembershipProtocol;
     private IChannelReconnector channelReconnector;
     private CoreGroupFailureDetectionProtocol failureDetectionProtocol;
+    private CoreClusterFailureDetectionProtocol clusterFailureDetectionProtocol;
+    private IFailureObserver coreToWorkerFailureObserver;
+    private Set<IFailureDetectionListener> coreToWorkerFailureDetectionListeners;
     
     public CoreGroupSubChannelFactory()
     {
@@ -140,6 +145,21 @@ public class CoreGroupSubChannelFactory extends AbstractChannelFactory
     public void setChannelReconnector(IChannelReconnector channelReconnector)
     {
         this.channelReconnector = channelReconnector;
+    }
+    
+    public void setClusterFailureDetectionProtocol(CoreClusterFailureDetectionProtocol clusterFailureDetectionProtocol)
+    {
+        this.clusterFailureDetectionProtocol = clusterFailureDetectionProtocol;
+    }
+    
+    public void setCoreToWorkerFailureObserver(IFailureObserver failureObserver)
+    {
+        this.coreToWorkerFailureObserver = failureObserver;
+    }
+    
+    public void setCoreToWorkerFailureDetectionListeners(Set<IFailureDetectionListener> failureDetectionListeners)
+    {
+        this.coreToWorkerFailureDetectionListeners = failureDetectionListeners;
     }
     
     public List<IGracefulExitStrategy> getGracefulExitStrategies()
@@ -227,8 +247,9 @@ public class CoreGroupSubChannelFactory extends AbstractChannelFactory
         flowControlProtocol.setFailureDetector(failureDetectionProtocol);
         
         List<IClusterMembershipProvider> membershipProviders = new ArrayList<IClusterMembershipProvider>();
+        List<ICoreClusterMembershipProvider> coreMembershipProviders = new ArrayList<ICoreClusterMembershipProvider>();
         CoreCoordinatorClusterMembershipProtocol coordinatorClusterMembershipProtocol = new CoreCoordinatorClusterMembershipProtocol(
-            channelName, messageFactory, clusterMembershipManager, membershipProviders, membershipManager, 
+            channelName, messageFactory, clusterMembershipManager, membershipProviders, coreMembershipProviders, membershipManager, 
             nodeFactoryParameters.membershipTrackPeriod);
         protocols.add(coordinatorClusterMembershipProtocol);
         coordinatorClusterMembershipProtocol.setFailureDetector(failureDetectionProtocol);
@@ -236,15 +257,13 @@ public class CoreGroupSubChannelFactory extends AbstractChannelFactory
         membershipListeners.add(coordinatorClusterMembershipProtocol);
         
         clusterMembershipProtocol = new CoreClusterMembershipProtocol(
-            channelName, messageFactory, clusterMembershipManager, membershipProviders, membershipManager, 
+            channelName, messageFactory, clusterMembershipManager, membershipProviders, coreMembershipProviders, membershipManager, 
             coordinatorClusterMembershipProtocol, nodeFactoryParameters.membershipTrackPeriod);
         protocols.add(clusterMembershipProtocol);
-        clusterMembershipProtocol.setFailureDetector(failureDetectionProtocol);
-        failureDetectionListeners.add(clusterMembershipProtocol);
         
         GroupDefinitionStateTransferFactory groupDefinitionStateTransferFactory =  new GroupDefinitionStateTransferFactory(nodeParameters.stateStore);
         IStateTransferFactory stateTransferFactory = new CompositeSimpleStateTransferFactory(Arrays.asList(
-            new ClusterMembershipStateTransferFactory(clusterMembershipManager, membershipProviders, nodeParameters.stateStore), 
+            new ClusterMembershipStateTransferFactory(clusterMembershipManager, membershipProviders, coreMembershipProviders, nodeParameters.stateStore), 
             groupDefinitionStateTransferFactory));
         
         SimpleStateTransferClientProtocol stateTransferClientProtocol = new SimpleStateTransferClientProtocol(channelName,
@@ -348,7 +367,7 @@ public class CoreGroupSubChannelFactory extends AbstractChannelFactory
         
         WorkerToCoreMembershipProvider workerToCoreMembershipProvider = new WorkerToCoreMembershipProvider(membershipManager, 
             new DefaultWorkerToCoreMappingStrategy());
-        membershipProviders.add(workerToCoreMembershipProvider);
+        coreMembershipProviders.add(workerToCoreMembershipProvider);
         
         DefaultGroupMappingStrategy groupMappingStrategy = new DefaultGroupMappingStrategy(groupFeedbackProvider, nodeFeedbackProvider);
         commandHandlers.add(groupMappingStrategy);
@@ -373,15 +392,17 @@ public class CoreGroupSubChannelFactory extends AbstractChannelFactory
         
         CommandManager commandManager = protocolStack.find(CommandManager.class);
         commandManager.setCompartment(channel.getCompartment());
-        
-        clusterMembershipProtocol.setFailureObserver(transport);
     }
     
     protected void wireSubChannel()
     {
         nodesMembershipProvider.setNodeDiscoverer(workerNodeDiscoverer);
         clusterMembershipProtocol.setWorkerSender(workerSender);
+        membershipManager.setChannelReconnector(channelReconnector);
         failureDetectionProtocol.setChannelReconnector(channelReconnector);
+        clusterMembershipProtocol.setFailureDetector(clusterFailureDetectionProtocol);
+        clusterMembershipProtocol.setFailureObserver(coreToWorkerFailureObserver);
+        coreToWorkerFailureDetectionListeners.add(clusterMembershipProtocol);
     }
     
     @Override

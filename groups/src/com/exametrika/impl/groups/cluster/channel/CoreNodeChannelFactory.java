@@ -98,6 +98,9 @@ public class CoreNodeChannelFactory extends CompositeChannelFactory
         
         coreGroupSubChannelFactory.setWorkerSender(coreToWorkerSubChannelFactory.getWorkerSender());
         coreGroupSubChannelFactory.setChannelReconnector((CoreNodeChannel)channel);
+        coreGroupSubChannelFactory.setClusterFailureDetectionProtocol(coreToWorkerSubChannelFactory.getClusterFailureDetectionProtocol());
+        coreGroupSubChannelFactory.setCoreToWorkerFailureObserver(coreToWorkerSubChannelFactory.getCoreToWorkerFailureObserver());
+        coreGroupSubChannelFactory.setCoreToWorkerFailureDetectionListeners(coreToWorkerSubChannelFactory.getCoreToWorkerFailureDetectionListeners());
         
         coreGroupSubChannelFactory.wireSubChannel();
         coreToWorkerSubChannelFactory.wireSubChannel();

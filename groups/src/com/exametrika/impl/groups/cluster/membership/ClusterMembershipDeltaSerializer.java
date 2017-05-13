@@ -37,7 +37,8 @@ public final class ClusterMembershipDeltaSerializer extends AbstractSerializer
         for (int i = 0; i < count; i++)
             domains.add(deserialization.readTypedObject(DomainMembershipDelta.class));
         
-        return new ClusterMembershipDelta(newMembershipId, full, domains);
+        IDomainMembershipDelta coreDomain = deserialization.readTypedObject(DomainMembershipDelta.class);
+        return new ClusterMembershipDelta(newMembershipId, full, domains, coreDomain);
     }
 
     @Override
@@ -50,5 +51,7 @@ public final class ClusterMembershipDeltaSerializer extends AbstractSerializer
         serialization.writeInt(delta.getDomains().size());
         for (IDomainMembershipDelta elementDelta : delta.getDomains())
             serialization.writeTypedObject(elementDelta);
+        
+        serialization.writeTypedObject(delta.getCoreDomain());
     }
 }

@@ -21,13 +21,6 @@ import com.exametrika.common.utils.Pair;
 public interface IClusterMembershipProvider
 {
     /**
-     * Is provided membership used in core group only?
-     *
-     * @return true if provided membership used in core group only
-     */
-    boolean isCoreGroupOnly();
-    
-    /**
      * Returns list of domains, used in {@link #getDelta}.
      *
      * @return list of domains, used in {@link #getDelta}
@@ -76,6 +69,7 @@ public interface IClusterMembershipProvider
      * @return core full membership delta
      */
     IClusterMembershipElementDelta createCoreFullDelta(IClusterMembershipElement membership);
+    
     /**
      * Creates worker membership delta based on given membership. Only one of membership or delta must be specified.
      *

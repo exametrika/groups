@@ -58,6 +58,7 @@ import com.exametrika.impl.groups.cluster.membership.GroupMemberships;
 import com.exametrika.impl.groups.cluster.membership.GroupsMembership;
 import com.exametrika.impl.groups.cluster.membership.GroupsMembershipDelta;
 import com.exametrika.impl.groups.cluster.membership.GroupsMembershipProvider;
+import com.exametrika.impl.groups.cluster.membership.ICoreClusterMembershipProvider;
 import com.exametrika.impl.groups.cluster.membership.IGroupDelta;
 import com.exametrika.impl.groups.cluster.membership.LocalNodeProvider;
 import com.exametrika.impl.groups.cluster.membership.Node;
@@ -86,8 +87,8 @@ public class ClusterMembershipManagerTests
     public void testClusterMembership()
     {
         ClusterMembership clusterMembership = createClusterMembership();
-        ClusterMembership clusterMembership2 = new ClusterMembership(1, Collections.<IDomainMembership>emptyList());
-        ClusterMembership clusterMembership3 = new ClusterMembership(2, Collections.<IDomainMembership>emptyList());
+        ClusterMembership clusterMembership2 = new ClusterMembership(1, Collections.<IDomainMembership>emptyList(), null);
+        ClusterMembership clusterMembership3 = new ClusterMembership(2, Collections.<IDomainMembership>emptyList(), null);
         
         IDomainMembership domainMembership1 = clusterMembership.getDomains().get(0);
         IDomainMembership domainMembership2 = clusterMembership.getDomains().get(1);
@@ -122,7 +123,7 @@ public class ClusterMembershipManagerTests
         
         DomainMembershipDelta domainMembershipDelta = new DomainMembershipDelta("domain", Arrays.asList(nodesMembershipDelta,
             groupsMembershipDelta, workerToCoreMembershipDelta));
-        ClusterMembershipDelta clusterMembershipDelta = new ClusterMembershipDelta(1, true, Arrays.asList(domainMembershipDelta));
+        ClusterMembershipDelta clusterMembershipDelta = new ClusterMembershipDelta(1, true, Arrays.asList(domainMembershipDelta), null);
         
         ISerializationRegistry registry = Serializers.createRegistry();
         registry.register(new ClusterMembershipSerializationRegistrar());
@@ -154,15 +155,15 @@ public class ClusterMembershipManagerTests
         assertThat(manager.getLocalNode().getName(), is(liveNodeProvider.getLocalNode().getName()));
         assertThat(manager.getLocalNode().getProperties(), is(Collections.<String, Object>singletonMap("key", "value")));
         
-        ClusterMembership membership = new ClusterMembership(1l, Collections.<IDomainMembership>emptyList());
+        ClusterMembership membership = new ClusterMembership(1l, Collections.<IDomainMembership>emptyList(), null);
         
         manager.installMembership(membership);
         assertThat(manager.getMembership(), is((IClusterMembership)membership));
         assertTrue(listener.onJoined);
         
-        ClusterMembership membership2 = new ClusterMembership(2l, Collections.<IDomainMembership>emptyList());
+        ClusterMembership membership2 = new ClusterMembership(2l, Collections.<IDomainMembership>emptyList(), null);
         ClusterMembershipChange membershipChange = new ClusterMembershipChange(Collections.<IDomainMembership>emptyList(), 
-            Collections.<IDomainMembershipChange>emptyList(), Collections.<IDomainMembership>emptySet());
+            Collections.<IDomainMembershipChange>emptyList(), Collections.<IDomainMembership>emptySet(), null);
         
         manager.changeMembership(membership2, membershipChange);
         
@@ -214,14 +215,14 @@ public class ClusterMembershipManagerTests
         DomainMembership domainMembership1 = new DomainMembership("domain1", Arrays.<IClusterMembershipElement>asList(
             nodesMembership, groupsMembership));
         DomainMembership domainMembership2 = new DomainMembership("domain2", Collections.<IClusterMembershipElement>emptyList());
-        ClusterMembership clusterMembership = new ClusterMembership(1, Arrays.asList(domainMembership1, domainMembership2));
+        ClusterMembership clusterMembership = new ClusterMembership(1, Arrays.asList(domainMembership1, domainMembership2), null);
         manager.installMembership(clusterMembership);
         
         assertThat(strategy.requestExit(), is(false));
         
-        ClusterMembership membership2 = new ClusterMembership(2l, Collections.<IDomainMembership>emptyList());
+        ClusterMembership membership2 = new ClusterMembership(2l, Collections.<IDomainMembership>emptyList(), null);
         ClusterMembershipChange membershipChange = new ClusterMembershipChange(Collections.<IDomainMembership>emptyList(), 
-            Collections.<IDomainMembershipChange>emptyList(), Collections.<IDomainMembership>emptySet());
+            Collections.<IDomainMembershipChange>emptyList(), Collections.<IDomainMembership>emptySet(), null);
         
         manager.changeMembership(membership2, membershipChange);
         
@@ -244,11 +245,13 @@ public class ClusterMembershipManagerTests
         GroupsMembershipProvider groupsMembershipProvider = new GroupsMembershipProvider();
         WorkerToCoreMembershipProvider workerToCoreMembershipProvider = new WorkerToCoreMembershipProvider();
         ClusterMembershipStateTransferFactory serverFactory = new ClusterMembershipStateTransferFactory(serverManager, 
-            Arrays.asList(nodesMembershipProvider, groupsMembershipProvider, workerToCoreMembershipProvider), new SimpleStateStoreMock());
+            Arrays.asList(nodesMembershipProvider, groupsMembershipProvider),
+            Arrays.<ICoreClusterMembershipProvider>asList(workerToCoreMembershipProvider), new SimpleStateStoreMock());
         ISimpleStateTransferServer server = serverFactory.createServer(GroupMemberships.CORE_GROUP_ID);
         
         ClusterMembershipStateTransferFactory clientFactory = new ClusterMembershipStateTransferFactory(clientManager, 
-            Arrays.asList(nodesMembershipProvider, groupsMembershipProvider, workerToCoreMembershipProvider), new SimpleStateStoreMock());
+            Arrays.asList(nodesMembershipProvider, groupsMembershipProvider),
+            Arrays.<ICoreClusterMembershipProvider>asList(workerToCoreMembershipProvider), new SimpleStateStoreMock());
         ISimpleStateTransferClient client = clientFactory.createClient(GroupMemberships.CORE_GROUP_ID);
         
         ByteArray state = server.saveSnapshot(true);
@@ -341,6 +344,8 @@ public class ClusterMembershipManagerTests
             nodesMembership, groupsMembership, workerToCoreMembership));
         DomainMembership domainMembership2 = new DomainMembership("domain2", Arrays.<IClusterMembershipElement>asList(
             nodesMembership, groupsMembership, workerToCoreMembership));
-        return new ClusterMembership(1, Arrays.asList(domainMembership1, domainMembership2));
+        DomainMembership coreDomainMembership = new DomainMembership("core", Arrays.<IClusterMembershipElement>asList(
+            workerToCoreMembership));
+        return new ClusterMembership(1, Arrays.asList(domainMembership1, domainMembership2), coreDomainMembership);
     }
 }

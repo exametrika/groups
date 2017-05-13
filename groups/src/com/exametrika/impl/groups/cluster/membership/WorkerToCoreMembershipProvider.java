@@ -12,6 +12,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
+import com.exametrika.api.groups.cluster.IClusterMembership;
 import com.exametrika.api.groups.cluster.IClusterMembershipElement;
 import com.exametrika.api.groups.cluster.IClusterMembershipElementChange;
 import com.exametrika.api.groups.cluster.IDomainMembership;
@@ -19,7 +20,6 @@ import com.exametrika.api.groups.cluster.IGroupMembership;
 import com.exametrika.api.groups.cluster.IGroupMembershipService;
 import com.exametrika.api.groups.cluster.INode;
 import com.exametrika.common.utils.Assert;
-import com.exametrika.common.utils.Collections;
 import com.exametrika.common.utils.Pair;
 
 /**
@@ -28,7 +28,7 @@ import com.exametrika.common.utils.Pair;
  * @threadsafety This class and its methods are thread safe.
  * @author Medvedev-A
  */
-public final class WorkerToCoreMembershipProvider implements IClusterMembershipProvider
+public final class WorkerToCoreMembershipProvider implements ICoreClusterMembershipProvider
 {
     private final IGroupMembershipService membershipService;
     private final IWorkerToCoreMappingStarategy mappingStarategy;
@@ -49,20 +49,8 @@ public final class WorkerToCoreMembershipProvider implements IClusterMembershipP
     }
     
     @Override
-    public boolean isCoreGroupOnly()
-    {
-        return true;
-    }
-    
-    @Override
-    public Set<String> getDomains()
-    {
-        return Collections.asSet(GroupMemberships.CORE_DOMAIN);
-    }
-
-    @Override
     public Pair<IClusterMembershipElement, IClusterMembershipElementDelta> getDelta(long membershipId,
-        IDomainMembership newDomainMembership, IDomainMembershipDelta domainMembershipDelta, IDomainMembership oldDomainMembership,
+        IClusterMembership newClusterMembership, IClusterMembershipDelta clusterMembershipDelta, IClusterMembership oldClusterMembership,
         IClusterMembershipElement oldMembership)
     {
         IGroupMembership newCoreMembership = membershipService.getMembership();
@@ -89,15 +77,34 @@ public final class WorkerToCoreMembershipProvider implements IClusterMembershipP
             }
         }
         
-        NodesMembership nodeMembership = newDomainMembership.findElement(NodesMembership.class);
-        Assert.notNull(nodeMembership);
+        boolean joinedWorkerNodes = false;
+        List<INode> workerNodes = new ArrayList<INode>();
+        Map<UUID, INode> workerNodesMap = new HashMap<UUID, INode>();
+        for (IDomainMembership domainMembership : newClusterMembership.getDomains())
+        {
+            NodesMembership nodeMembership = domainMembership.findElement(NodesMembership.class);
+            Assert.notNull(nodeMembership);
+            for (INode node : nodeMembership.getNodes())
+            {
+                workerNodes.add(node);
+                workerNodesMap.put(node.getId(), node);
+            }
+        }
         
-        NodesMembershipDelta nodeMembershipDelta = domainMembershipDelta.findDelta(NodesMembershipDelta.class);
-        Assert.notNull(nodeMembershipDelta);
+        for (IDomainMembershipDelta domainMembershipDelta : clusterMembershipDelta.getDomains())
+        {
+            NodesMembershipDelta nodeMembershipDelta = domainMembershipDelta.findDelta(NodesMembershipDelta.class);
+            Assert.notNull(nodeMembershipDelta);
+            if (!nodeMembershipDelta.getJoinedNodes().isEmpty())
+            {
+                joinedWorkerNodes = true;
+                break;
+            }
+        }
         
         WorkerToCoreMembershipDelta delta = null;
         WorkerToCoreMembership newMembership = oldMappingMembership;
-        if (!nodeMembershipDelta.getJoinedNodes().isEmpty() || !joinedCoreNodes.isEmpty() || !failedCoreNodes.isEmpty() ||
+        if (joinedWorkerNodes || !joinedCoreNodes.isEmpty() || !failedCoreNodes.isEmpty() ||
             !leftCoreNodes.isEmpty())
         {
             Map<INode, INode> oldCoreByWorkerMap = null;
@@ -108,14 +115,14 @@ public final class WorkerToCoreMembershipProvider implements IClusterMembershipP
                 {
                     INode workerNode = entry.getKey();
                     INode coreNode = entry.getValue();
-                    if (nodeMembership.findNode(workerNode.getId()) != null &&
+                    if (workerNodesMap.containsKey(workerNode.getId()) &&
                         newCoreMembership.getGroup().findMember(coreNode.getId()) != null)
                         oldCoreByWorkerMap.put(workerNode, coreNode);
                 }
             }
             
             Map<INode, INode> newCoreByWorkerMap = mappingStarategy.mapWorkers(newCoreMembership.getGroup().getMembers(),
-                nodeMembership.getNodes(), oldCoreByWorkerMap);
+                workerNodes, oldCoreByWorkerMap);
             Map<UUID, UUID> newCoreByWorkerMapDelta = new LinkedHashMap<UUID, UUID>();
             for (Map.Entry<INode, INode> entry : newCoreByWorkerMap.entrySet())
             {
@@ -136,22 +143,10 @@ public final class WorkerToCoreMembershipProvider implements IClusterMembershipP
     }
 
     @Override
-    public void clearState()
-    {
-    }
-    
-    @Override
     public IClusterMembershipElementDelta createEmptyDelta()
     {
         return new WorkerToCoreMembershipDelta(java.util.Collections.<INode>emptyList(), java.util.Collections.<UUID>emptySet(),
             java.util.Collections.<UUID>emptySet(), java.util.Collections.<UUID, UUID>emptyMap());
-    }
-
-    @Override
-    public boolean isEmptyMembership(IClusterMembershipElement membership)
-    {
-        WorkerToCoreMembership mappingMembership = (WorkerToCoreMembership)membership;
-        return mappingMembership.getCoreByWorkerMap().isEmpty();
     }
 
     @Override
@@ -167,18 +162,18 @@ public final class WorkerToCoreMembershipProvider implements IClusterMembershipP
     }
     
     @Override
-    public IClusterMembershipElementDelta createWorkerDelta(IClusterMembershipElement membership,
-        IClusterMembershipElementDelta delta, boolean full, boolean publicPart)
-    {
-        Assert.supports(false);
-        return null;
-    }
-
-    @Override
-    public IClusterMembershipElement createMembership(IDomainMembership newDomainMembership,
+    public IClusterMembershipElement createMembership(IClusterMembership newClusterMembership,
         IClusterMembershipElementDelta delta, IClusterMembershipElement oldMembership)
     {
-        NodesMembership nodeMembership = newDomainMembership.findElement(NodesMembership.class);
+        Map<UUID, INode> workerNodesMap = new HashMap<UUID, INode>();
+        for (IDomainMembership domainMembership : newClusterMembership.getDomains())
+        {
+            NodesMembership nodeMembership = domainMembership.findElement(NodesMembership.class);
+            Assert.notNull(nodeMembership);
+            for (INode node : nodeMembership.getNodes())
+                workerNodesMap.put(node.getId(), node);
+        }
+
         WorkerToCoreMembership oldMappingMembership = (WorkerToCoreMembership)oldMembership;
         WorkerToCoreMembershipDelta mappingDelta = (WorkerToCoreMembershipDelta)delta;
         List<INode> coreNodes = new ArrayList<INode>();
@@ -191,7 +186,6 @@ public final class WorkerToCoreMembershipProvider implements IClusterMembershipP
                     !mappingDelta.getLeftCoreNodes().contains(coreNode.getId()))
                     coreNodes.add(coreNode);
             }
-            
         }
         
         coreNodes.addAll(mappingDelta.getJoinedCoreNodes());
@@ -205,7 +199,7 @@ public final class WorkerToCoreMembershipProvider implements IClusterMembershipP
             {
                 INode workerNode = entry.getKey();
                 INode coreNode = entry.getValue();
-                if (nodeMembership.findNode(workerNode.getId()) == null)
+                if (!workerNodesMap.containsKey(workerNode.getId()))
                     continue;
                 if (coreNodesMap.get(coreNode.getId()) == null)
                     continue;
@@ -220,7 +214,7 @@ public final class WorkerToCoreMembershipProvider implements IClusterMembershipP
         {
             UUID workerId = entry.getKey();
             UUID coreId = entry.getValue();
-            INode workerNode = nodeMembership.findNode(workerId);
+            INode workerNode = workerNodesMap.get(workerId);
             Assert.notNull(workerNode);
            
             INode coreNode = coreNodesMap.get(coreId);
@@ -232,13 +226,21 @@ public final class WorkerToCoreMembershipProvider implements IClusterMembershipP
     }
 
     @Override
-    public IClusterMembershipElementChange createChange(IDomainMembership newDomainMembership,
+    public IClusterMembershipElementChange createChange(IClusterMembership newClusterMembership,
         IClusterMembershipElementDelta delta, IClusterMembershipElement oldMembership)
     {
-        NodesMembership nodeMembership = newDomainMembership.findElement(NodesMembership.class);
+        Map<UUID, INode> workerNodesMap = new HashMap<UUID, INode>();
+        for (IDomainMembership domainMembership : newClusterMembership.getDomains())
+        {
+            NodesMembership nodeMembership = domainMembership.findElement(NodesMembership.class);
+            Assert.notNull(nodeMembership);
+            for (INode node : nodeMembership.getNodes())
+                workerNodesMap.put(node.getId(), node);
+        }
+
         WorkerToCoreMembership oldMappingMembership = (WorkerToCoreMembership)oldMembership;
         WorkerToCoreMembershipDelta mappingDelta = (WorkerToCoreMembershipDelta)delta;
-        WorkerToCoreMembership mappingMembership = newDomainMembership.findElement(WorkerToCoreMembership.class);
+        WorkerToCoreMembership mappingMembership = ((ClusterMembership)newClusterMembership).getCoreDomain().findElement(WorkerToCoreMembership.class);
         
         Set<INode> failedCoreNodes = new LinkedHashSet<INode>();
         for (UUID id : mappingDelta.getFailedCoreNodes())
@@ -258,7 +260,7 @@ public final class WorkerToCoreMembershipProvider implements IClusterMembershipP
         Map<INode, INode> newCoreByWorkerMap = new LinkedHashMap<INode, INode>();
         for (Map.Entry<UUID, UUID> entry : mappingDelta.getNewCoreByWorkerMap().entrySet())
         {
-            INode workerNode = nodeMembership.findNode(entry.getKey());
+            INode workerNode = workerNodesMap.get(entry.getKey());
             Assert.notNull(workerNode);
             INode coreNode = mappingMembership.findCoreNode(entry.getValue());
             Assert.notNull(coreNode);
@@ -270,7 +272,7 @@ public final class WorkerToCoreMembershipProvider implements IClusterMembershipP
     }
 
     @Override
-    public IClusterMembershipElementChange createChange(IDomainMembership newDomainMembership,
+    public IClusterMembershipElementChange createChange(IClusterMembership newClusterMembership,
         IClusterMembershipElement newMembership, IClusterMembershipElement oldMembership)
     {
         WorkerToCoreMembership oldMappingMembership = (WorkerToCoreMembership)oldMembership;

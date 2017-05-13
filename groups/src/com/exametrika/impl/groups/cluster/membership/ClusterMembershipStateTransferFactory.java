@@ -36,18 +36,22 @@ public final class ClusterMembershipStateTransferFactory implements IStateTransf
 {
     private final IClusterMembershipManager membershipManager;
     private final List<IClusterMembershipProvider> membershipProviders;
+    private final List<ICoreClusterMembershipProvider> coreMembershipProviders;
     private final ISimpleStateStore stateStore;
     private final ISerializationRegistry serializationRegistry;
 
     public ClusterMembershipStateTransferFactory(IClusterMembershipManager membershipManager,
-        List<IClusterMembershipProvider> membershipProviders, ISimpleStateStore stateStore)
+        List<IClusterMembershipProvider> membershipProviders, List<ICoreClusterMembershipProvider> coreMembershipProviders,
+        ISimpleStateStore stateStore)
     {
         Assert.notNull(membershipManager);
         Assert.notNull(membershipProviders);
+        Assert.notNull(coreMembershipProviders);
         Assert.notNull(stateStore);
         
         this.membershipManager = membershipManager;
         this.membershipProviders = membershipProviders;
+        this.coreMembershipProviders = coreMembershipProviders;
         this.stateStore = stateStore;
         serializationRegistry = Serializers.createRegistry();
         serializationRegistry.register(new ClusterMembershipSerializationRegistrar());
@@ -97,7 +101,7 @@ public final class ClusterMembershipStateTransferFactory implements IStateTransf
         {
             if (!full)
                 return new ByteArray(new byte[]{});
-            IClusterMembership membership = membershipManager.getMembership();
+            ClusterMembership membership = (ClusterMembership)membershipManager.getMembership();
             ClusterMembershipDelta delta = null;
             if (membership != null)
             {
@@ -110,7 +114,14 @@ public final class ClusterMembershipStateTransferFactory implements IStateTransf
                     
                     domains.add(new DomainMembershipDelta(domain.getName(), deltas));
                 }
-                delta = new ClusterMembershipDelta(membership.getId(), true, domains);
+                
+                IDomainMembership coreDomain = membership.getCoreDomain();
+                List<IClusterMembershipElementDelta> deltas = new ArrayList<IClusterMembershipElementDelta>();
+                for (int i = 0; i < coreMembershipProviders.size(); i++)
+                    deltas.add(coreMembershipProviders.get(i).createCoreFullDelta(coreDomain.getElements().get(i)));
+                
+                DomainMembershipDelta coreDomainDelta = new DomainMembershipDelta(coreDomain.getName(), deltas);
+                delta = new ClusterMembershipDelta(membership.getId(), true, domains, coreDomainDelta);
             }
             
             ByteOutputStream stream = new ByteOutputStream(0x1000);
@@ -152,7 +163,21 @@ public final class ClusterMembershipStateTransferFactory implements IStateTransf
                     elements.add(element);
                 }
             }
-            IClusterMembership membership = new ClusterMembership(delta.getId(), domains);
+            
+            IDomainMembershipDelta coreDomainDelta = delta.getCoreDomain();
+            Assert.isTrue(coreDomainDelta.getDeltas().size() == coreMembershipProviders.size());
+            
+            List<IClusterMembershipElement> elements = new ArrayList<IClusterMembershipElement>();
+            IDomainMembership coreDomain = new DomainMembership(coreDomainDelta.getName(), elements);
+            IClusterMembership membership = new ClusterMembership(delta.getId(), domains, coreDomain);
+            
+            for (int i = 0; i < coreMembershipProviders.size(); i++)
+            {
+                IClusterMembershipElement element = coreMembershipProviders.get(i).createMembership(membership,
+                    coreDomainDelta.getDeltas().get(i), null);
+                elements.add(element);
+            }
+            
             membershipManager.installMembership(membership);
         }
     }

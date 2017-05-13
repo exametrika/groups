@@ -16,7 +16,7 @@ public class ClusterFailureDetectorMock implements IClusterFailureDetector
     public Set<INode> leftNodes = new HashSet<INode>();
     
     @Override
-    public Set<INode> takeFailedNodes()
+    public Set<INode> getFailedNodes()
     {
         Set<INode> result = failedNodes;
         failedNodes = new LinkedHashSet<INode>();
@@ -24,7 +24,7 @@ public class ClusterFailureDetectorMock implements IClusterFailureDetector
     }
 
     @Override
-    public Set<INode> takeLeftNodes()
+    public Set<INode> getLeftNodes()
     {
         Set<INode> result = leftNodes;
         leftNodes = new LinkedHashSet<INode>();

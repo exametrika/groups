@@ -55,9 +55,9 @@ public final class CoreCoordinatorClusterMembershipProtocol extends AbstractClus
     
     public CoreCoordinatorClusterMembershipProtocol(String channelName, IMessageFactory messageFactory, 
         IClusterMembershipManager clusterMembershipManager, List<IClusterMembershipProvider> membershipProviders,
-        IGroupMembershipManager membershipManager, long trackPeriod)
+        List<ICoreClusterMembershipProvider> coreMembershipProviders, IGroupMembershipManager membershipManager, long trackPeriod)
     {
-        super(channelName, messageFactory, clusterMembershipManager, membershipProviders);
+        super(channelName, messageFactory, clusterMembershipManager, membershipProviders, coreMembershipProviders, true);
         
         Assert.notNull(membershipManager);
         
@@ -94,16 +94,16 @@ public final class CoreCoordinatorClusterMembershipProtocol extends AbstractClus
         if (!canInstallMembership(currentTime))
             return;
         
-        IClusterMembership oldMembership = clusterMembershipManager.getMembership();
+        ClusterMembership oldMembership = (ClusterMembership)clusterMembershipManager.getMembership();
         ClusterMembershipDelta delta;
         if (oldMembership == null || !coreNodesFailed)
         {
-            delta = createCoreDelta(oldMembership, false);
+            delta = createDelta(oldMembership);
             if (delta != null)
                 roundId++;
         }
         else 
-            delta = createCoreDelta(oldMembership, true);
+            delta = createCoreDelta(oldMembership);
         
         coreNodesFailed = false;
         if (delta == null)
@@ -181,58 +181,53 @@ public final class CoreCoordinatorClusterMembershipProtocol extends AbstractClus
             logger.log(LogLevel.DEBUG, marker, messages.installCompleted(roundId));
     }
     
-    private ClusterMembershipDelta createCoreDelta(IClusterMembership oldMembership, boolean coreGroupOnly)
+    private ClusterMembershipDelta createDelta(ClusterMembership oldClusterMembership)
     {
         Set<String> domainNames = new LinkedHashSet<String>();
-        if (!coreGroupOnly)
+        if (oldClusterMembership != null)
         {
-            if (oldMembership != null)
-            {
-                for (IDomainMembership domainMembership : oldMembership.getDomains())
-                    domainNames.add(domainMembership.getName());
-            }
-            
-            for (int i = 0; i < membershipProviders.size(); i++)
-                domainNames.addAll(membershipProviders.get(i).getDomains());
+            for (IDomainMembership domainMembership : oldClusterMembership.getDomains())
+                domainNames.add(domainMembership.getName());
         }
-        else
-            domainNames.add(GroupMemberships.CORE_DOMAIN);
+        
+        for (int i = 0; i < membershipProviders.size(); i++)
+            domainNames.addAll(membershipProviders.get(i).getDomains());
         
         long membershipId;
-        if (oldMembership != null)
-            membershipId = oldMembership.getId() + (coreGroupOnly ? 0 : 1);
+        if (oldClusterMembership != null)
+            membershipId = oldClusterMembership.getId() + 1;
         else
             membershipId = 1;
         
+        List<IDomainMembership> domains = new ArrayList<IDomainMembership>();
         List<IDomainMembershipDelta> domainDeltas = new ArrayList<IDomainMembershipDelta>();
         for (String domainName : domainNames)
         {
             IDomainMembership oldDomainMembership = null;
-            if (oldMembership != null)
-                oldDomainMembership = oldMembership.findDomain(domainName);
+            if (oldClusterMembership != null)
+                oldDomainMembership = oldClusterMembership.findDomain(domainName);
             
             List<IClusterMembershipElement> elements = new ArrayList<IClusterMembershipElement>();
             IDomainMembership newDomainMembership = new DomainMembership(domainName, elements);
+            domains.add(newDomainMembership);
             
-            boolean empty = true;
             List<IClusterMembershipElementDelta> deltas = new ArrayList<IClusterMembershipElementDelta>();
             DomainMembershipDelta domainMembershipDelta = new DomainMembershipDelta(domainName, deltas);
+            
+            boolean empty = true;
             for (int i = 0; i < membershipProviders.size(); i++)
             {
+                Pair<IClusterMembershipElement, IClusterMembershipElementDelta> pair = membershipProviders.get(i).getDelta(
+                    membershipId, newDomainMembership, domainMembershipDelta, oldDomainMembership,
+                    oldDomainMembership != null ? oldDomainMembership.getElements().get(i) : null);
+                
+                elements.add(pair.getKey());
+                
                 IClusterMembershipElementDelta delta = null;
-                if (!coreGroupOnly || membershipProviders.get(i).isCoreGroupOnly())
+                if (pair.getValue() != null)
                 {
-                    Pair<IClusterMembershipElement, IClusterMembershipElementDelta> pair = membershipProviders.get(i).getDelta(
-                        membershipId, newDomainMembership, domainMembershipDelta, oldDomainMembership,
-                        oldDomainMembership != null ? oldDomainMembership.getElements().get(i) : null);
-                    
-                    elements.add(pair.getKey());
-                    
-                    if (pair.getValue() != null)
-                    {
-                        delta = pair.getValue();
-                        empty = false;
-                    }
+                    delta = pair.getValue();
+                    empty = false;
                 }
                 
                 if (delta != null)
@@ -245,18 +240,78 @@ public final class CoreCoordinatorClusterMembershipProtocol extends AbstractClus
                 domainDeltas.add(domainMembershipDelta);
         }
         
+        List<IClusterMembershipElement> coreElements = new ArrayList<IClusterMembershipElement>();
+        IDomainMembership coreDomain = new DomainMembership(GroupMemberships.CORE_DOMAIN, coreElements);
+        
+        List<IClusterMembershipElementDelta> coreDeltas = new ArrayList<IClusterMembershipElementDelta>();
+        DomainMembershipDelta coreDomainDelta = new DomainMembershipDelta(GroupMemberships.CORE_DOMAIN, coreDeltas);
+       
+        ClusterMembership newClusterMembership = new ClusterMembership(membershipId, domains, coreDomain);
+        ClusterMembershipDelta clusterMembershipDelta = new ClusterMembershipDelta(membershipId, oldClusterMembership == null,
+                domainDeltas, coreDomainDelta);
+        
+        boolean coreDomainEmpty = !buildCoreDomainDelta(membershipId, coreElements, coreDeltas, newClusterMembership, clusterMembershipDelta,
+            oldClusterMembership);
+        
         for (IClusterMembershipProvider provider : membershipProviders)
             provider.clearState();
         
-        if (domainDeltas.isEmpty())
+        if (domainDeltas.isEmpty() && coreDomainEmpty)
             return null;
-        
-        ClusterMembershipDelta delta;
-        if (oldMembership == null)
-            delta = new ClusterMembershipDelta(membershipId, true, domainDeltas);
         else
-            delta = new ClusterMembershipDelta(membershipId, false, domainDeltas);
-        return delta;
+            return clusterMembershipDelta;
+    }
+    
+    private ClusterMembershipDelta createCoreDelta(ClusterMembership oldClusterMembership)
+    {
+        Assert.notNull(oldClusterMembership);
+        
+        long membershipId = oldClusterMembership.getId();
+        
+        List<IClusterMembershipElement> elements = new ArrayList<IClusterMembershipElement>();
+        IDomainMembership coreDomain = new DomainMembership(GroupMemberships.CORE_DOMAIN, elements);
+        
+        List<IClusterMembershipElementDelta> deltas = new ArrayList<IClusterMembershipElementDelta>();
+        DomainMembershipDelta coreDomainDelta = new DomainMembershipDelta(GroupMemberships.CORE_DOMAIN, deltas);
+        
+        ClusterMembership newClusterMembership = new ClusterMembership(membershipId, oldClusterMembership.getDomains(), coreDomain);
+        ClusterMembershipDelta clusterMembershipDelta = new ClusterMembershipDelta(membershipId, false, 
+            java.util.Collections.<IDomainMembershipDelta>emptyList(), coreDomainDelta);
+        
+        if (!buildCoreDomainDelta(membershipId, elements, deltas, newClusterMembership, clusterMembershipDelta,
+            oldClusterMembership))
+            return null;
+        else
+            return clusterMembershipDelta;
+    }
+
+    private boolean buildCoreDomainDelta(long membershipId, List<IClusterMembershipElement> elements,
+        List<IClusterMembershipElementDelta> deltas, ClusterMembership newClusterMembership,
+        ClusterMembershipDelta clusterMembershipDelta, ClusterMembership oldClusterMembership)
+    {
+        boolean empty = true;
+        for (int i = 0; i < coreMembershipProviders.size(); i++)
+        {
+            IClusterMembershipElementDelta delta = null;
+            Pair<IClusterMembershipElement, IClusterMembershipElementDelta> pair = coreMembershipProviders.get(i).getDelta(
+                membershipId, newClusterMembership, clusterMembershipDelta, oldClusterMembership,
+                oldClusterMembership != null ? oldClusterMembership.getCoreDomain().getElements().get(i) : null);
+                
+            elements.add(pair.getKey());
+                
+            if (pair.getValue() != null)
+            {
+                delta = pair.getValue();
+                empty = false;
+            }
+        
+            if (delta != null)
+                deltas.add(delta);
+            else
+                deltas.add(coreMembershipProviders.get(i).createEmptyDelta());
+        }
+        
+        return !empty;
     }
     
     private boolean canInstallMembership(long currentTime)

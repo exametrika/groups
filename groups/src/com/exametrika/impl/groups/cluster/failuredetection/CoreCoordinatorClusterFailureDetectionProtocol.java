@@ -46,7 +46,7 @@ public final class CoreCoordinatorClusterFailureDetectionProtocol extends Abstra
     }
 
     @Override
-    public Set<INode> takeFailedNodes()
+    public Set<INode> getFailedNodes()
     {
         Set<INode> failedMembers = this.failedMembers;
         this.failedMembers = new LinkedHashSet<INode>();
@@ -54,7 +54,7 @@ public final class CoreCoordinatorClusterFailureDetectionProtocol extends Abstra
     }
 
     @Override
-    public Set<INode> takeLeftNodes()
+    public Set<INode> getLeftNodes()
     {
         Set<INode> leftMembers = this.leftMembers;
         this.leftMembers = new LinkedHashSet<INode>();

@@ -51,6 +51,8 @@ public class CoreToWorkerSubChannelFactory extends AbstractChannelFactory
     private ISender bridgeSender;
     private CoreFeedbackProtocol coreToWorkerFeedbackProtocol;
     private ISender workerSender;
+    private IFailureObserver coreToWorkerFailureObserver;
+    private Set<IFailureDetectionListener> failureDetectionListeners;
     
     public CoreToWorkerSubChannelFactory()
     {
@@ -92,6 +94,21 @@ public class CoreToWorkerSubChannelFactory extends AbstractChannelFactory
         return workerSender;
     }
     
+    public CoreClusterFailureDetectionProtocol getClusterFailureDetectionProtocol()
+    {
+        return clusterFailureDetectionProtocol;
+    }
+    
+    public IFailureObserver getCoreToWorkerFailureObserver()
+    {
+        return coreToWorkerFailureObserver;
+    }
+    
+    public Set<IFailureDetectionListener> getCoreToWorkerFailureDetectionListeners()
+    {
+        return failureDetectionListeners;
+    }
+    
     @Override
     protected INodeTrackingStrategy createNodeTrackingStrategy()
     {
@@ -108,7 +125,7 @@ public class CoreToWorkerSubChannelFactory extends AbstractChannelFactory
         clusterDiscoveryProtocol = new CoreClusterDiscoveryProtocol(channelName, messageFactory);
         protocols.add(clusterDiscoveryProtocol);
         
-        Set<IFailureDetectionListener> failureDetectionListeners = new HashSet<IFailureDetectionListener>();
+        failureDetectionListeners = new HashSet<IFailureDetectionListener>();
         clusterFailureDetectionProtocol = new CoreClusterFailureDetectionProtocol(
             channelName, messageFactory, clusterMembershipManager, failureDetector, failureDetectionListeners, nodeFactoryParameters.failureUpdatePeriod);
         protocols.add(clusterFailureDetectionProtocol);
@@ -123,7 +140,7 @@ public class CoreToWorkerSubChannelFactory extends AbstractChannelFactory
     @Override
     protected void wireProtocols(IChannel channel, TcpTransport transport, ProtocolStack protocolStack)
     {
-        
+        coreToWorkerFailureObserver = transport;
     }
     
     protected void wireSubChannel()

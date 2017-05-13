@@ -121,7 +121,7 @@ public final class ClusterMembershipManager implements IClusterMembershipManager
         Assert.notNull(membership);
         Assert.notNull(membershipChange);
         Assert.notNull(this.membership);
-        Assert.isTrue(this.membership.getId() + 1 == membership.getId());
+        Assert.isTrue(this.membership.getId() == membership.getId() || this.membership.getId() + 1 == membership.getId());
         
         IClusterMembership oldMembership = this.membership;
         ClusterMembershipEvent event = new ClusterMembershipEvent(oldMembership, membership, membershipChange);

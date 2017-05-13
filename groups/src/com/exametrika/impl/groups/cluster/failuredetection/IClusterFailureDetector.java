@@ -22,12 +22,12 @@ public interface IClusterFailureDetector
      *
      * @return set of failed nodes
      */
-    Set<INode> takeFailedNodes();
+    Set<INode> getFailedNodes();
     
     /**
      * Returns set of cluster nodes, which intentionally left the group.
      *
      * @return set of left nodes
      */
-    Set<INode> takeLeftNodes();
+    Set<INode> getLeftNodes();
 }

@@ -11,6 +11,9 @@ import java.util.Set;
 import com.exametrika.api.groups.cluster.IClusterMembershipChange;
 import com.exametrika.api.groups.cluster.IDomainMembership;
 import com.exametrika.api.groups.cluster.IDomainMembershipChange;
+import com.exametrika.common.l10n.DefaultMessage;
+import com.exametrika.common.l10n.ILocalizedMessage;
+import com.exametrika.common.l10n.Messages;
 import com.exametrika.common.utils.Assert;
 import com.exametrika.common.utils.Immutables;
 import com.exametrika.common.utils.Strings;
@@ -23,13 +26,15 @@ import com.exametrika.common.utils.Strings;
  */
 public final class ClusterMembershipChange implements IClusterMembershipChange
 {
+    private static final IMessages messages = Messages.get(IMessages.class);
     private final List<IDomainMembership> newDomains;
     private final List<IDomainMembershipChange> changedDomains;
     private final Map<String, IDomainMembershipChange> changedDomainsMap;
     private final Set<IDomainMembership> removedDomains;
+    private final IDomainMembershipChange coreDomain;
 
     public ClusterMembershipChange(List<IDomainMembership> newDomains, List<IDomainMembershipChange> changedDomains,
-        Set<IDomainMembership> removedDomains)
+        Set<IDomainMembership> removedDomains, IDomainMembershipChange coreDomain)
     {
         Assert.notNull(newDomains);
         Assert.notNull(changedDomains);
@@ -38,6 +43,7 @@ public final class ClusterMembershipChange implements IClusterMembershipChange
         this.newDomains = Immutables.wrap(newDomains);
         this.changedDomains = Immutables.wrap(changedDomains);
         this.removedDomains = Immutables.wrap(removedDomains);
+        this.coreDomain = coreDomain;
         
         Map<String, IDomainMembershipChange> changedDomainsMap = new HashMap<String, IDomainMembershipChange>();
         for (IDomainMembershipChange domain : changedDomains)
@@ -72,9 +78,21 @@ public final class ClusterMembershipChange implements IClusterMembershipChange
         return removedDomains;
     }
     
+    public IDomainMembershipChange getCoreDomain()
+    {
+        return coreDomain;
+    }
+    
     @Override
     public String toString()
     {
-        return Strings.toString(changedDomains, false);
+        return messages.toString(Strings.toString(newDomains, true), Strings.toString(changedDomains, true), 
+            Strings.toString(removedDomains, true), coreDomain != null ? Strings.indent(coreDomain.toString(), 4) : "").toString();
+    }
+    
+    private interface IMessages
+    {
+        @DefaultMessage("new domains: \n{0}\nchanged domains: \n{1}\nremoved domains: \n{2}\ncore domain: \n{3}")
+        ILocalizedMessage toString(String newDomains, String changedDomains, String removedDomains, String coreDomain);
     }
 }

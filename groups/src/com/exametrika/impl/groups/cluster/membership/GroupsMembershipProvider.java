@@ -44,12 +44,6 @@ public final class GroupsMembershipProvider implements IClusterMembershipProvide
     }
     
     @Override
-    public boolean isCoreGroupOnly()
-    {
-        return false;
-    }
-
-    @Override
     public Set<String> getDomains()
     {
         return Collections.emptySet();

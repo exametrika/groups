@@ -43,7 +43,6 @@ import com.exametrika.impl.groups.cluster.membership.IClusterMembershipProvider;
 import com.exametrika.impl.groups.cluster.membership.IWorkerControllerObserver;
 import com.exametrika.impl.groups.cluster.membership.NodesMembershipProvider;
 import com.exametrika.impl.groups.cluster.membership.WorkerClusterMembershipProtocol;
-import com.exametrika.impl.groups.cluster.membership.WorkerToCoreMembershipProvider;
 
 /**
  * The {@link WorkerToCoreSubChannelFactory} is a worker to core node sub-channel factory.
@@ -139,9 +138,6 @@ public class WorkerToCoreSubChannelFactory extends AbstractChannelFactory
         
         NodesMembershipProvider nodesMembershipProvider = new NodesMembershipProvider();
         membershipProviders.add(nodesMembershipProvider);
-        
-        WorkerToCoreMembershipProvider workerToCoreMembershipProvider = new WorkerToCoreMembershipProvider();
-        membershipProviders.add(workerToCoreMembershipProvider);
         
         GroupsMembershipProvider groupsMembershipProvider = new GroupsMembershipProvider();
         membershipProviders.add(groupsMembershipProvider);

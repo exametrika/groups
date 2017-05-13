@@ -54,17 +54,11 @@ public final class NodesMembershipProvider implements IClusterMembershipProvider
     }
 
     @Override
-    public boolean isCoreGroupOnly()
-    {
-        return false;
-    }
-    
-    @Override
     public Set<String> getDomains()
     {
         discoveredNodes = nodeDiscoverer.takeDiscoveredNodes();
-        failedNodes = failureDetector.takeFailedNodes();
-        leftNodes = failureDetector.takeLeftNodes();
+        failedNodes = failureDetector.getFailedNodes();
+        leftNodes = failureDetector.getLeftNodes();
         
         Set<String> domains = new LinkedHashSet<String>();
         for (INode node : discoveredNodes)
