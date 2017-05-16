@@ -59,7 +59,7 @@ import com.exametrika.tests.groups.channel.TestGroupFactoryParameters;
 import com.exametrika.tests.groups.channel.TestGroupParameters;
 
 /**
- * The {@link MulticastProtocolTests} are tests for flush.
+ * The {@link MulticastProtocolTests} are tests for multicast protocol.
  * 
  * @author Medvedev-A
  */

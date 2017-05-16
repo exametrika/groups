@@ -291,7 +291,7 @@ public final class SendQueue
             this.canWrite = canWrite;
         }
         
-        if (canWrite)
+        if (canWrite && compartment != null)
             compartment.wakeup();
     }
     

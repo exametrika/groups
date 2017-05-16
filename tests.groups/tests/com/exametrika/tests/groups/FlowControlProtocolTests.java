@@ -38,7 +38,6 @@ import com.exametrika.common.messaging.impl.protocols.failuredetection.IFailureO
 import com.exametrika.common.messaging.impl.protocols.failuredetection.INodeTrackingStrategy;
 import com.exametrika.common.messaging.impl.transports.tcp.TcpTransport;
 import com.exametrika.common.net.nio.TcpNioDispatcher;
-import com.exametrika.common.tasks.IFlowController;
 import com.exametrika.common.tests.Tests;
 import com.exametrika.common.utils.Debug;
 import com.exametrika.common.utils.Enums;
@@ -60,6 +59,7 @@ import com.exametrika.impl.groups.cluster.multicast.RemoteFlowId;
 import com.exametrika.spi.groups.cluster.channel.IChannelReconnector;
 import com.exametrika.tests.common.messaging.ReceiverMock;
 import com.exametrika.tests.common.messaging.TestAddress;
+import com.exametrika.tests.groups.mocks.FlowControllerMock;
 
 /**
  * The {@link FlowControlProtocolTests} are tests for {@link FlowControlProtocol}.
@@ -337,24 +337,6 @@ public class FlowControlProtocolTests
     {
         ((TcpNioDispatcher)Tests.get(((Channel)channel).getCompartment(), "dispatcher")).getSelector().close();
         IOs.close(channel);
-    }
-    
-    private static class FlowControllerMock implements IFlowController<RemoteFlowId>
-    {
-        private List<RemoteFlowId> lockedFlows = new ArrayList<RemoteFlowId>();
-        private List<RemoteFlowId> unlockedFlows = new ArrayList<RemoteFlowId>();
-        
-        @Override
-        public synchronized void lockFlow(RemoteFlowId flow)
-        {
-            lockedFlows.add(flow);
-        }
-
-        @Override
-        public void unlockFlow(RemoteFlowId flow)
-        {
-            unlockedFlows.add(flow);
-        }
     }
     
     private static class MembershipServiceMock implements IGroupMembershipManager

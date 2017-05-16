@@ -14,6 +14,7 @@ import com.exametrika.common.io.impl.Serialization;
 import com.exametrika.common.messaging.IAddress;
 import com.exametrika.common.messaging.IConnectionProvider;
 import com.exametrika.common.messaging.IFeed;
+import com.exametrika.common.messaging.ILiveNodeProvider;
 import com.exametrika.common.messaging.IMessage;
 import com.exametrika.common.messaging.IMessageFactory;
 import com.exametrika.common.messaging.IPullableSender;
@@ -38,21 +39,24 @@ import com.exametrika.tests.groups.mocks.LiveNodeProviderMock;
  */
 public class TestProtocolStack extends AbstractProtocol implements ITimeService, IConnectionProvider
 {
+    private LiveNodeProviderMock liveNodeProvider;
     private TestTerminator terminator;
     private ISerializationRegistry serializationRegistry;
     private AbstractProtocol protocol;
     private List<IMessage> sentMessages = new ArrayList<IMessage>();
     private List<IMessage> receivedMessages = new ArrayList<IMessage>();
     private long currentTime;
+    private Object object;
+    private boolean active = true;
     
     public static TestProtocolStack create(String channelName)
     {
         ISerializationRegistry serializationRegistry = Serializers.createRegistry();
         serializationRegistry.register(new UnicastAddressSerializer());
-        LiveNodeProviderMock liveNodeProvider = new LiveNodeProviderMock();
+        LiveNodeProviderMock liveNodeProvider = new LiveNodeProviderMock(channelName);
         MessageFactory messageFactory = new MessageFactory(serializationRegistry, liveNodeProvider);
         
-        return new TestProtocolStack(channelName, messageFactory, serializationRegistry);
+        return new TestProtocolStack(channelName, liveNodeProvider, messageFactory, serializationRegistry);
     }
     
     public void setProtocol(AbstractProtocol protocol)
@@ -60,14 +64,29 @@ public class TestProtocolStack extends AbstractProtocol implements ITimeService,
         this.protocol = protocol;
     }
     
+    public void setObject(Object object)
+    {
+        this.object = object;
+    }
+    
+    public IAddress getAddress()
+    {
+        return liveNodeProvider.localNode;
+    }
+    
+    public ILiveNodeProvider getLiveNodeProvider()
+    {
+        return liveNodeProvider;
+    }
+    
     public ISerializationRegistry getSerializationRegistry()
     {
         return serializationRegistry;
     }
     
-    public AbstractProtocol getProtocol()
+    public <T extends AbstractProtocol> T getProtocol()
     {
-        return protocol;
+        return (T)protocol;
     }
     
     public List<IMessage> getSentMessages()
@@ -78,6 +97,21 @@ public class TestProtocolStack extends AbstractProtocol implements ITimeService,
     public List<IMessage> getReceivedMessages()
     {
         return receivedMessages;
+    }
+    
+    public <T> T getObject()
+    {
+        return (T)object;
+    }
+    
+    public boolean isActive()
+    {
+        return active;
+    }
+    
+    public void setActive(boolean active)
+    {
+        this.active = active;
     }
     
     @Override
@@ -112,7 +146,6 @@ public class TestProtocolStack extends AbstractProtocol implements ITimeService,
         this.currentTime = currentTime;
         protocol.onTimer(currentTime);
     }
-    
 
     @Override
     public void connect(String connection)
@@ -146,6 +179,16 @@ public class TestProtocolStack extends AbstractProtocol implements ITimeService,
         return currentTime;
     }
     
+    public void clearSentMessages()
+    {
+        sentMessages.clear();
+    }
+    
+    public void clearReceivedMessages()
+    {
+        receivedMessages.clear();
+    }
+    
     public void reset()
     {
         receivedMessages.clear();
@@ -169,10 +212,12 @@ public class TestProtocolStack extends AbstractProtocol implements ITimeService,
         Assert.notNull(MessageSerializers.deserializeFully(deserialization));
     }
     
-    private TestProtocolStack(String channelName, IMessageFactory messageFactory, ISerializationRegistry serializationRegistry) 
+    private TestProtocolStack(String channelName, LiveNodeProviderMock liveNodeProvider, IMessageFactory messageFactory,
+        ISerializationRegistry serializationRegistry) 
     {
         super(channelName, messageFactory);
         
+        this.liveNodeProvider = liveNodeProvider;
         this.serializationRegistry = serializationRegistry;
         terminator = new TestTerminator();
     }

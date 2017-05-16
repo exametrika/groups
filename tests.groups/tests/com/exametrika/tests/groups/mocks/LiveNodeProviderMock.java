@@ -12,7 +12,17 @@ import com.exametrika.common.messaging.impl.transports.UnicastAddress;
 
 public class LiveNodeProviderMock implements ILiveNodeProvider
 {
-    public IAddress localNode = new UnicastAddress(UUID.randomUUID(), "test");
+    public final IAddress localNode;
+    
+    public LiveNodeProviderMock()
+    {
+        this("test");
+    }
+    
+    public LiveNodeProviderMock(String channelName)
+    {
+        localNode = new UnicastAddress(UUID.randomUUID(), channelName);
+    }
     
     @Override
     public long getId()
