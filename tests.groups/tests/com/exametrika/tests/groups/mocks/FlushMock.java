@@ -3,6 +3,9 @@
  */
 package com.exametrika.tests.groups.mocks;
 
+import java.util.HashSet;
+import java.util.Set;
+
 import com.exametrika.api.groups.cluster.IGroupMembership;
 import com.exametrika.api.groups.cluster.IGroupMembershipChange;
 import com.exametrika.impl.groups.cluster.flush.IFlush;
@@ -15,7 +18,7 @@ public class FlushMock implements IFlush
     public IGroupMembership oldMembership;
     public IGroupMembership newMembership;
     public IGroupMembershipChange membershipChange;
-    public boolean granted;
+    public Set<IFlushParticipant> granted = new HashSet<IFlushParticipant>();
     
     @Override
     public boolean isGroupForming()
@@ -44,6 +47,6 @@ public class FlushMock implements IFlush
     @Override
     public void grantFlush(IFlushParticipant participant)
     {
-        granted = true;
+        granted.add(participant);
     }
 }

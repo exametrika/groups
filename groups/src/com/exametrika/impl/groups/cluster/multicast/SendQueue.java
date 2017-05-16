@@ -59,7 +59,7 @@ public final class SendQueue
     private ICompartment compartment;
     private long lockCount;
     private volatile ArrayList<MulticastSink> sinks = new ArrayList<MulticastSink>();
-    private volatile boolean canWrite;
+    private volatile boolean canWrite = true;
     
     public SendQueue(FailureAtomicMulticastProtocol parent, IGroupFailureDetector failureDetector, ITimeService timeService, 
         IDeliveryHandler deliveryHandler, boolean durable, int maxUnlockQueueCapacity, int minLockQueueCapacity, 
@@ -303,7 +303,7 @@ public final class SendQueue
     
     public void process()
     {
-        if (canWrite())
+        if (!canWrite())
             return;
         
         List<MulticastSink> sinks = this.sinks;
@@ -321,7 +321,7 @@ public final class SendQueue
     
     private boolean canWrite()
     {
-        return lockCount > 0 || capacityController.isLocked() || !canWrite;
+        return lockCount == 0 && !capacityController.isLocked() && canWrite;
     }
     
     private void setCompletionRequired()

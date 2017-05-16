@@ -5,12 +5,15 @@ package com.exametrika.tests.groups;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 import org.junit.After;
@@ -29,9 +32,12 @@ import com.exametrika.common.messaging.IMessage;
 import com.exametrika.common.messaging.IMessagePart;
 import com.exametrika.common.messaging.ISink;
 import com.exametrika.common.utils.Enums;
+import com.exametrika.common.utils.Times;
 import com.exametrika.impl.groups.cluster.exchange.IExchangeData;
 import com.exametrika.impl.groups.cluster.membership.Group;
+import com.exametrika.impl.groups.cluster.membership.GroupChange;
 import com.exametrika.impl.groups.cluster.membership.GroupMembership;
+import com.exametrika.impl.groups.cluster.membership.GroupMembershipChange;
 import com.exametrika.impl.groups.cluster.membership.GroupMembershipManager;
 import com.exametrika.impl.groups.cluster.membership.GroupMemberships;
 import com.exametrika.impl.groups.cluster.membership.IPreparedGroupMembershipListener;
@@ -119,7 +125,7 @@ public class MulticastProtocolUnitTests
         sendMessages(stack, 10);
         flush();
         sendMessages(stack, 10);
-        network.process(10, 200);
+        process(10, 200);
         checkReceived(network, 0, 20);
         checkDelivered(stack, 0, 20);
     }
@@ -131,7 +137,7 @@ public class MulticastProtocolUnitTests
         TestFeed feed = new TestFeed(10, stack);
         stack.register(GroupMemberships.CORE_GROUP_ADDRESS, feed);
         flush();
-        network.process(10, 200);
+        process(10, 200);
         checkReceived(network, 0, 20);
         checkDelivered(stack, 0, 20);
     }
@@ -143,11 +149,12 @@ public class MulticastProtocolUnitTests
         sendMessages(stack, 10);
         flush();
         sendMessages(stack, 10);
-        network.process(10, 200, com.exametrika.common.utils.Collections.asSet(network.getNodes().get(8),
+        process(10, 200, com.exametrika.common.utils.Collections.asSet(network.getNodes().get(8),
             network.getNodes().get(9)));
         stack.setActive(false);
+        updateFailureDetectors();
         flush();
-        network.process(10, 200);
+        process(10, 200);
         checkReceived(network, 0, 20);
     }
     
@@ -158,12 +165,31 @@ public class MulticastProtocolUnitTests
         sendMessages(stack, 10);
         flush();
         sendMessages(stack, 10);
-        network.process(10, 200, com.exametrika.common.utils.Collections.asSet(network.getNodes().get(8),
+        process(10, 200, com.exametrika.common.utils.Collections.asSet(network.getNodes().get(8),
             network.getNodes().get(9)));
         network.getNodes().get(8).setActive(false);
         network.getNodes().get(9).setActive(false);
+        updateFailureDetectors();
         flush();
-        network.process(10, 200);
+        process(10, 200);
+        checkReceived(network, 0, 20);
+        checkDelivered(stack, 0, 20);
+    }
+    
+    @Test
+    public void testReceiverOnFlushFailure()
+    {
+        TestProtocolStack stack = network.getNodes().get(1);
+        sendMessages(stack, 10);
+        flush();
+        sendMessages(stack, 10);
+        startFlush();
+        network.getNodes().get(8).setActive(false);
+        network.getNodes().get(9).setActive(false);
+        updateFailureDetectors();
+        process(10, 200);
+        flush();
+        process(10, 200);
         checkReceived(network, 0, 20);
         checkDelivered(stack, 0, 20);
     }
@@ -194,6 +220,31 @@ public class MulticastProtocolUnitTests
         return new GroupMembership(membershipId, new Group(GroupMemberships.CORE_GROUP_ADDRESS, true, nodes, Enums.of(GroupOption.DURABLE)));
     }
     
+    private void updateFailureDetectors()
+    {
+        List<INode> healthy = new ArrayList<INode>();
+        Set<INode> failed = new HashSet<INode>();
+        for (TestProtocolStack stack : network.getNodes())
+        {
+            TestInfo info = stack.getObject();
+            if (stack.isActive())
+                healthy.add(info.localNodeProvider.getLocalNode());
+            else
+                failed.add(info.localNodeProvider.getLocalNode());
+        }
+        
+        for (TestProtocolStack stack : network.getNodes())
+        {
+            TestInfo info = stack.getObject();
+            info.failureDetector.currentCoordinator = healthy.get(0);
+            info.failureDetector.failedNodes = failed;
+            info.failureDetector.healthyNodes = healthy;
+            FailureAtomicMulticastProtocol protocol = stack.getProtocol();
+            for (INode node : failed)
+                protocol.onMemberFailed(node);
+        }
+    }
+    
     private void startFlush()
     {
         IGroupMembership newMembership = createMembership(membershipId, network);
@@ -201,6 +252,7 @@ public class MulticastProtocolUnitTests
         flush.groupForming = membership == null;
         flush.oldMembership = membership;
         flush.newMembership = newMembership;
+        prepareMembership(newMembership);
         boolean first = true;
         for (TestProtocolStack stack : network.getNodes())
         {
@@ -217,7 +269,7 @@ public class MulticastProtocolUnitTests
             protocol.startFlush(flush);
         }
         
-        network.process(10, 200);
+        process(10, 200);
     }
     
     private void exchangeData()
@@ -243,7 +295,7 @@ public class MulticastProtocolUnitTests
             protocol.setRemoteData(dataMap);
         }
         
-        network.process(10, 200);
+        process(10, 200);
     }
     
     private void beforeProcessFlush()
@@ -257,7 +309,7 @@ public class MulticastProtocolUnitTests
             protocol.beforeProcessFlush();
         }
         
-        network.process(10, 200);
+        process(10, 200);
     }
     
     private void processFlush()
@@ -271,7 +323,7 @@ public class MulticastProtocolUnitTests
             protocol.processFlush();
         }
         
-        network.process(10, 200);
+        process(10, 200);
     }
     
     private void endFlush()
@@ -288,17 +340,64 @@ public class MulticastProtocolUnitTests
         membership = flush.getNewMembership();
         membershipId++;
         flush = null;
-        
-        network.process(10, 200);
+        commitMembership();
+        process(10, 200);
+    }
+    
+    private void checkGrantFlush()
+    {
+        for (TestProtocolStack stack : network.getNodes())
+        {
+            if (!stack.isActive())
+                continue;
+            
+            FailureAtomicMulticastProtocol protocol = stack.getProtocol();
+            assertTrue(flush.granted.contains(protocol));
+        }
+        flush.granted.clear();
     }
     
     private void flush()
     {
         startFlush();
         exchangeData();
+        checkGrantFlush();
         beforeProcessFlush();
         processFlush();
+        checkGrantFlush();
         endFlush();
+    }
+    
+    private void prepareMembership(IGroupMembership membership)
+    {
+        for (TestProtocolStack stack : network.getNodes())
+        {
+            if (!stack.isActive())
+                continue;
+            
+            TestInfo info = stack.getObject();
+            if (membership.getId() == 1)
+                info.membershipManager.prepareInstallMembership(membership);
+            else
+            {
+                GroupChange groupChange = new GroupChange(membership.getGroup(), membership.getGroup(), 
+                    Collections.<INode>emptyList(), Collections.<INode>emptySet(), Collections.<INode>emptySet());
+                GroupMembershipChange membershipChange = new GroupMembershipChange(groupChange);
+                info.membershipManager.prepareChangeMembership(membership, membershipChange);
+            }
+        }
+    }
+    
+    private void commitMembership()
+    {
+        for (TestProtocolStack stack : network.getNodes())
+        {
+            if (!stack.isActive())
+                continue;
+            
+            TestInfo info = stack.getObject();
+            info.membershipManager.commitMembership();
+        }
     }
     
     private void checkReceived(TestNetwork network, long startId, long endId)
@@ -335,6 +434,26 @@ public class MulticastProtocolUnitTests
         
         assertThat(id, is(endId));
         info.deliveryHandler.messages.clear();
+    }
+    
+    private void process(int roundCount, long timeIncrement)
+    {
+        process(roundCount, timeIncrement, Collections.<TestProtocolStack>emptySet());
+    }
+    
+    public void process(int roundCount, long timeIncrement, Set<TestProtocolStack> ignoredNodes)
+    {
+        long currentTime = Times.getCurrentTime() + timeIncrement;
+        for (TestProtocolStack stack : network.getNodes())
+        {
+            if (!stack.isActive())
+                continue;
+            
+            FailureAtomicMulticastProtocol protocol = stack.getProtocol();
+            protocol.process();
+        }
+        network.onTimer(currentTime);
+        network.process(roundCount, timeIncrement, ignoredNodes);   
     }
     
     private static class TestInfo

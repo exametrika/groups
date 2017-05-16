@@ -254,7 +254,8 @@ public final class FailureAtomicMulticastProtocol extends AbstractProtocol imple
         
         processReceiveQueues(currentTime);
         
-        totalOrderProtocol.onTimer();
+        if (totalOrderProtocol != null)
+            totalOrderProtocol.onTimer();
     }
 
     @Override
