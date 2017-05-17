@@ -105,6 +105,7 @@ public final class TotalOrderProtocol
         if (orderingQueues.isEmpty())
             lastOrderSendTime = timeService.getCurrentTime();
         
+        receiveQueue.getElement().remove();
         receiveQueue.getElement().reset();
         orderingQueues.addLast(receiveQueue.getElement());
 

@@ -219,6 +219,8 @@ public final class FailureAtomicMulticastProtocol extends AbstractProtocol imple
         if (totalOrderProtocol != null)
             totalOrderProtocol.endFlush();
         
+        flush = null;
+        
         for (IMessage message : pendingNewMessages)
         {
             if (failureDetector.isHealthyMember(message.getSource().getId()))
@@ -418,7 +420,7 @@ public final class FailureAtomicMulticastProtocol extends AbstractProtocol imple
                 (receiveQueue.getLastReceivedMessageId() - receiveQueue.getLastAcknowledgedMessageId() > maxUnacknowledgedMessageCount)))
             {
                 boolean noDelay = message.hasFlags(MessageFlags.NO_DELAY);
-                send(messageFactory.create(message.getSource(), new AcknowledgeSendMessagePart(receiveQueue.getLastReceivedMessageId()),
+                send(messageFactory.create(message.getSource(), new AcknowledgeSendMessagePart(receiveQueue.getLastReceivedMessageId(), true),
                     MessageFlags.HIGH_PRIORITY | (noDelay ? MessageFlags.NO_DELAY : 0)));
                 receiveQueue.acknowledge();
             }
@@ -435,9 +437,11 @@ public final class FailureAtomicMulticastProtocol extends AbstractProtocol imple
             AcknowledgeSendMessagePart part = message.getPart();
             sendQueue.acknowledge(message.getSource(), part.getLastReceivedMessageId());
             
-            message = message.removePart();
-            if (message != null)
+            if (!part.isStandalone())
+            {
+                message = message.removePart();
                 doReceive(receiver, message);
+            }
             
             if (durable && message.hasFlags(MessageFlags.NO_DELAY) && sendQueue.isCompletionRequired())
                 sendCompletion();
@@ -496,7 +500,7 @@ public final class FailureAtomicMulticastProtocol extends AbstractProtocol imple
             ReceiveQueue receiveQueue = receiveQueues.get(message.getDestination());
             if (receiveQueue != null && receiveQueue.isAcknowledgementRequired())
             {
-                message = message.addPart(new AcknowledgeSendMessagePart(receiveQueue.getLastReceivedMessageId()));
+                message = message.addPart(new AcknowledgeSendMessagePart(receiveQueue.getLastReceivedMessageId(), false));
                 receiveQueue.acknowledge();
             }
         }
@@ -567,7 +571,7 @@ public final class FailureAtomicMulticastProtocol extends AbstractProtocol imple
             if (receiveQueue.isAcknowledgementRequired() && 
                 currentTime >= receiveQueue.getFirstUnacknowledgedReceiveTime() + maxUnacknowledgedPeriod)
             {
-                send(messageFactory.create(entry.getKey(), new AcknowledgeSendMessagePart(receiveQueue.getLastReceivedMessageId()),
+                send(messageFactory.create(entry.getKey(), new AcknowledgeSendMessagePart(receiveQueue.getLastReceivedMessageId(), true),
                     MessageFlags.HIGH_PRIORITY));
                 receiveQueue.acknowledge();
             }

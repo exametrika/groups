@@ -18,10 +18,12 @@ public final class AcknowledgeSendMessagePart implements IMessagePart
 {
     private static final IMessages messages = Messages.get(IMessages.class);
     private final long lastReceivedMessageId;
+    private final boolean standalone;
 
-    public AcknowledgeSendMessagePart(long lastReceivedMessageId)
+    public AcknowledgeSendMessagePart(long lastReceivedMessageId, boolean standalone)
     {
         this.lastReceivedMessageId = lastReceivedMessageId;
+        this.standalone = standalone;
     }
     
     public long getLastReceivedMessageId()
@@ -29,10 +31,15 @@ public final class AcknowledgeSendMessagePart implements IMessagePart
         return lastReceivedMessageId;
     }
     
+    public boolean isStandalone()
+    {
+        return standalone;
+    }
+    
     @Override
     public int getSize()
     {
-        return 8;
+        return 9;
     }
     
     @Override 

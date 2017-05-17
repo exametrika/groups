@@ -31,13 +31,15 @@ public final class AcknowledgeSendMessagePartSerializer extends AbstractSerializ
         AcknowledgeSendMessagePart part = (AcknowledgeSendMessagePart)object;
 
         Serializers.writeVarLong(serialization, part.getLastReceivedMessageId());
+        serialization.writeBoolean(part.isStandalone());
     }
     
     @Override
     public Object deserialize(IDeserialization deserialization, UUID id)
     {
         long lastReceivedMessageId = Serializers.readVarLong(deserialization);
+        boolean standalone = deserialization.readBoolean();
         
-        return new AcknowledgeSendMessagePart(lastReceivedMessageId);
+        return new AcknowledgeSendMessagePart(lastReceivedMessageId, standalone);
     }
 }

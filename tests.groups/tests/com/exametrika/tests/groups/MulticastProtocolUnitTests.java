@@ -58,7 +58,7 @@ import com.exametrika.tests.groups.mocks.PropertyProviderMock;
  */
 public class MulticastProtocolUnitTests
 {
-    private static final int COUNT = 10;
+    private static final int COUNT = 2;//TODO:10;
     private TestNetwork network;
     private long membershipId = 1;
     private IGroupMembership membership;
@@ -67,71 +67,26 @@ public class MulticastProtocolUnitTests
     @Before
     public void setUp()
     {
+        Times.setTest(0);
         createNetwork(true);
     }
-    
-    private void createNetwork(boolean durable)
-    {
-        int maxBundlingMessageSize = 100;
-        long maxBundlingPeriod = 1000;
-        int maxBundleSize = 200;
-        int maxTotalOrderBundlingMessageCount = 2;
-        long maxUnacknowledgedPeriod = 1000;
-        int maxUnacknowledgedMessageCount = 2;
-        long maxIdleReceiveQueuePeriod = 10000;
-        boolean ordered = durable;
-        int maxUnlockQueueCapacity = 2000;
-        int minLockQueueCapacity = 5000;
-        List<TestProtocolStack> nodes = new ArrayList<TestProtocolStack>();
-        for (int i = 0; i < COUNT; i++)
-        {
-            String channelName = "test" + (i + 1);
-            TestInfo info = new TestInfo();
-            TestProtocolStack stack = TestProtocolStack.create(channelName);
-            stack.getSerializationRegistry().register(new TestMessagePartSerializer());
-            stack.setObject(info);
-            PropertyProviderMock propertyProvider = new PropertyProviderMock();
-            info.localNodeProvider = new LocalNodeProvider(stack.getLiveNodeProvider(), propertyProvider, 
-                GroupMemberships.CORE_DOMAIN);
-            info.membershipManager = new GroupMembershipManager(channelName, info.localNodeProvider, 
-                Collections.<IPreparedGroupMembershipListener>emptySet(), 
-                Collections.<IGroupMembershipListener>emptySet());
-            info.failureDetector = new FailureDetectorMock();
-            info.deliveryHandler = new DeliveryHandlerMock();
-            info.localFlowController = new FlowControllerMock();
-            info.remoteFlowController = new FlowControllerMock();
-            FailureAtomicMulticastProtocol protocol = new FailureAtomicMulticastProtocol(channelName, stack.getMessageFactory(),
-                info.membershipManager, info.failureDetector, maxBundlingMessageSize, maxBundlingPeriod, maxBundleSize, 
-                maxTotalOrderBundlingMessageCount, maxUnacknowledgedPeriod, maxUnacknowledgedMessageCount, 
-                maxIdleReceiveQueuePeriod, info.deliveryHandler, durable, ordered, maxUnlockQueueCapacity, minLockQueueCapacity, 
-                stack.getSerializationRegistry(), GroupMemberships.CORE_GROUP_ADDRESS, GroupMemberships.CORE_GROUP_ID);
-            protocol.setRemoteFlowController(info.remoteFlowController);
-            protocol.setLocalFlowController(info.localFlowController);
-            
-            stack.setProtocol(protocol);
-            nodes.add(stack);
-        }
-        
-        network = new TestNetwork(nodes, System.currentTimeMillis());
-        network.start();
-    }
-    
+   
     @After
     public void tearDown()
     {
         network.stop();
+        Times.clearTest();
     }
     
     @Test
     public void testSimpleSend()
     {
         TestProtocolStack stack = network.getNodes().get(1);
-        sendMessages(stack, 10);
         flush();
         sendMessages(stack, 10);
         process(10, 200);
-        checkReceived(network, stack, 0, 20);
-        checkDelivered(stack, 0, 20);
+        checkReceived(network, stack, 0, 10);
+        checkDelivered(stack, 0, 10);
     }
     
     @Test
@@ -264,6 +219,52 @@ public class MulticastProtocolUnitTests
         TestProtocolStack sender = network.getNodes().get(1);
         checkLocalFlowControl(sender);
         checkRemoteFlowControl(network, sender);
+    }
+    
+    private void createNetwork(boolean durable)
+    {
+        int maxBundlingMessageSize = 100;
+        long maxBundlingPeriod = 1000;
+        int maxBundleSize = 200;
+        int maxTotalOrderBundlingMessageCount = 2;
+        long maxUnacknowledgedPeriod = 1000;
+        int maxUnacknowledgedMessageCount = 2;
+        long maxIdleReceiveQueuePeriod = 10000;
+        boolean ordered = durable;
+        int maxUnlockQueueCapacity = 2000;
+        int minLockQueueCapacity = 5000;
+        List<TestProtocolStack> nodes = new ArrayList<TestProtocolStack>();
+        for (int i = 0; i < COUNT; i++)
+        {
+            String channelName = "test" + (i + 1);
+            TestInfo info = new TestInfo();
+            TestProtocolStack stack = TestProtocolStack.create(channelName);
+            stack.getSerializationRegistry().register(new TestMessagePartSerializer());
+            stack.setObject(info);
+            PropertyProviderMock propertyProvider = new PropertyProviderMock();
+            info.localNodeProvider = new LocalNodeProvider(stack.getLiveNodeProvider(), propertyProvider, 
+                GroupMemberships.CORE_DOMAIN);
+            info.membershipManager = new GroupMembershipManager(channelName, info.localNodeProvider, 
+                Collections.<IPreparedGroupMembershipListener>emptySet(), 
+                Collections.<IGroupMembershipListener>emptySet());
+            info.failureDetector = new FailureDetectorMock();
+            info.deliveryHandler = new DeliveryHandlerMock();
+            info.localFlowController = new FlowControllerMock();
+            info.remoteFlowController = new FlowControllerMock();
+            FailureAtomicMulticastProtocol protocol = new FailureAtomicMulticastProtocol(channelName, stack.getMessageFactory(),
+                info.membershipManager, info.failureDetector, maxBundlingMessageSize, maxBundlingPeriod, maxBundleSize, 
+                maxTotalOrderBundlingMessageCount, maxUnacknowledgedPeriod, maxUnacknowledgedMessageCount, 
+                maxIdleReceiveQueuePeriod, info.deliveryHandler, durable, ordered, maxUnlockQueueCapacity, minLockQueueCapacity, 
+                stack.getSerializationRegistry(), GroupMemberships.CORE_GROUP_ADDRESS, GroupMemberships.CORE_GROUP_ID);
+            protocol.setRemoteFlowController(info.remoteFlowController);
+            protocol.setLocalFlowController(info.localFlowController);
+            
+            stack.setProtocol(protocol);
+            nodes.add(stack);
+        }
+        
+        network = new TestNetwork(nodes, System.currentTimeMillis());
+        network.start();
     }
     
     private void sendMessages(TestProtocolStack stack, int count)

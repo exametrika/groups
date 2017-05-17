@@ -93,7 +93,10 @@ public class TestProtocolStack extends AbstractProtocol implements ITimeService,
     public List<IMessage> getSentMessages()
     {
         if (preparedSentMessages == null)
+        {
             preparedSentMessages = new ArrayList<IMessage>(sentMessages);
+            sentMessages.clear();
+        }
         return preparedSentMessages;
     }
     
@@ -184,7 +187,6 @@ public class TestProtocolStack extends AbstractProtocol implements ITimeService,
     
     public void clearSentMessages()
     {
-        sentMessages.clear();
         preparedSentMessages = null;
     }
     
