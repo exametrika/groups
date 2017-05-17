@@ -80,23 +80,34 @@ public class TestNetwork
     {
         for (int i = 0; i < roundCount; i++)
         {
-            List<TestProtocolStack> nodes = new ArrayList<TestProtocolStack>(this.nodes);
-            java.util.Collections.shuffle(nodes, random);
-            for (TestProtocolStack stack : nodes)
+            int k = 0;
+            while (true)
             {
-                if (stack.isActive())
+                List<TestProtocolStack> nodes = new ArrayList<TestProtocolStack>(this.nodes);
+                java.util.Collections.shuffle(nodes, random);
+                boolean sent = false;
+                for (TestProtocolStack stack : nodes)
                 {
-                    for (IMessage message : stack.getSentMessages())
+                    if (!stack.isActive())
+                        continue;
+                    if (k < stack.getSentMessages().size())
                     {
+                        IMessage message = stack.getSentMessages().get(k);
                         TestProtocolStack destination = nodesMap.get(message.getDestination());
                         Assert.notNull(destination);
                         
                         if (!ignoredNodes.contains(destination))
                             destination.receive(message);
+                        sent = true;
                     }
                 }
-                stack.clearSentMessages();
+                k++;
+                if (!sent)
+                    break;
             }
+            
+            for (TestProtocolStack stack : nodes)
+                stack.clearSentMessages();
             
             Times.setTest(Times.getCurrentTime() + timeIncrement);
         }

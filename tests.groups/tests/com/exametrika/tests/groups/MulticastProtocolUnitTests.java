@@ -67,6 +67,11 @@ public class MulticastProtocolUnitTests
     @Before
     public void setUp()
     {
+        createNetwork(true);
+    }
+    
+    private void createNetwork(boolean durable)
+    {
         int maxBundlingMessageSize = 100;
         long maxBundlingPeriod = 1000;
         int maxBundleSize = 200;
@@ -74,8 +79,7 @@ public class MulticastProtocolUnitTests
         long maxUnacknowledgedPeriod = 1000;
         int maxUnacknowledgedMessageCount = 2;
         long maxIdleReceiveQueuePeriod = 10000;
-        boolean durable = true;
-        boolean ordered = true;
+        boolean ordered = durable;
         int maxUnlockQueueCapacity = 2000;
         int minLockQueueCapacity = 5000;
         List<TestProtocolStack> nodes = new ArrayList<TestProtocolStack>();
@@ -126,7 +130,26 @@ public class MulticastProtocolUnitTests
         flush();
         sendMessages(stack, 10);
         process(10, 200);
-        checkReceived(network, 0, 20);
+        checkReceived(network, stack, 0, 20);
+        checkDelivered(stack, 0, 20);
+    }
+    
+    @Test
+    public void testNonDurableSend()
+    {
+        createNetwork(false);
+        testSimpleSend();
+    }
+    
+    @Test
+    public void testSimpleSendCoordinator()
+    {
+        TestProtocolStack stack = network.getNodes().get(0);
+        sendMessages(stack, 10);
+        flush();
+        sendMessages(stack, 10);
+        process(10, 200);
+        checkReceived(network, stack, 0, 20);
         checkDelivered(stack, 0, 20);
     }
     
@@ -138,7 +161,21 @@ public class MulticastProtocolUnitTests
         stack.register(GroupMemberships.CORE_GROUP_ADDRESS, feed);
         flush();
         process(10, 200);
-        checkReceived(network, 0, 20);
+        checkReceived(network, stack, 0, 20);
+        checkDelivered(stack, 0, 20);
+    }
+    
+    @Test
+    public void testSendInNewMembership()
+    {
+        TestProtocolStack stack = network.getNodes().get(1);
+        sendMessages(stack, 10);
+        flush();
+        startFlush();
+        sendMessages(stack, 10);
+        process(10, 200);
+        flush();
+        checkReceived(network, stack, 0, 20);
         checkDelivered(stack, 0, 20);
     }
     
@@ -155,7 +192,7 @@ public class MulticastProtocolUnitTests
         updateFailureDetectors();
         flush();
         process(10, 200);
-        checkReceived(network, 0, 20);
+        checkReceived(network, stack, 0, 20);
     }
     
     @Test
@@ -172,7 +209,7 @@ public class MulticastProtocolUnitTests
         updateFailureDetectors();
         flush();
         process(10, 200);
-        checkReceived(network, 0, 20);
+        checkReceived(network, stack, 0, 20);
         checkDelivered(stack, 0, 20);
     }
     
@@ -190,8 +227,34 @@ public class MulticastProtocolUnitTests
         process(10, 200);
         flush();
         process(10, 200);
-        checkReceived(network, 0, 20);
+        checkReceived(network, stack, 0, 20);
         checkDelivered(stack, 0, 20);
+    }
+    
+    @Test
+    public void testNonDurableFlushSend()
+    {
+        createNetwork(false);
+        testReceiverFailure();
+    }
+    
+    @Test
+    public void testTotalOrder()
+    {
+        TestProtocolStack stack1 = network.getNodes().get(1);
+        TestProtocolStack stack2 = network.getNodes().get(2);
+        sendMessages(stack1, 10);
+        sendMessages(stack2, 10);
+        flush();
+        sendMessages(stack1, 10);
+        sendMessages(stack2, 10);
+        process(10, 200);
+        checkOrder(network);
+        checkReceived(network, stack1, 0, 20);
+        checkReceived(network, stack2, 0, 20);
+        checkDelivered(stack1, 0, 20);
+        checkDelivered(stack2, 0, 20);
+        clearReceived(network);
     }
     
     private void sendMessages(TestProtocolStack stack, int count)
@@ -400,8 +463,10 @@ public class MulticastProtocolUnitTests
         }
     }
     
-    private void checkReceived(TestNetwork network, long startId, long endId)
+    private void checkReceived(TestNetwork network, TestProtocolStack sender, long startId, long endId)
     {
+        TestInfo info = sender.getObject();
+        INode senderNode = info.localNodeProvider.getLocalNode();
         for (TestProtocolStack stack : network.getNodes())
         {
             if (!stack.isActive())
@@ -410,14 +475,54 @@ public class MulticastProtocolUnitTests
             long id = startId;
             for (IMessage message : stack.getReceivedMessages())
             {
+                if (!message.getSource().equals(senderNode.getAddress()))
+                    continue;
+                
                 TestMessagePart part = message.getPart();
                 assertThat(part.value, is(id));
                 id++;
             }
             
             assertThat(id, is(endId));
-            stack.clearReceivedMessages();
         }
+    }
+    
+    private void checkOrder(TestNetwork network)
+    {
+        int messageCount = -1;
+        for (TestProtocolStack stack : network.getNodes())
+        {
+            if (!stack.isActive())
+                continue;
+            
+            if (messageCount == -1)
+                messageCount = stack.getReceivedMessages().size();
+            else
+                assertThat(stack.getReceivedMessages().size(), is(messageCount));
+        }
+        
+        for (int i = 0; i < messageCount; i++)
+        {
+            long id = -1;
+            for (TestProtocolStack stack : network.getNodes())
+            {
+                if (!stack.isActive())
+                    continue;
+                
+                IMessage message = stack.getReceivedMessages().get(i);
+                TestMessagePart part = message.getPart();
+                if (id == -1)
+                    id = part.value;
+                else
+                    assertThat(part.value, is(id));
+            }
+        }
+    }
+    
+    private void clearReceived(TestNetwork network)
+    {
+        for (TestProtocolStack stack : network.getNodes())
+            stack.clearReceivedMessages();
     }
     
     private void checkDelivered(TestProtocolStack stack, long startId, long endId)

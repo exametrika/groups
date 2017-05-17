@@ -44,6 +44,7 @@ public class TestProtocolStack extends AbstractProtocol implements ITimeService,
     private ISerializationRegistry serializationRegistry;
     private AbstractProtocol protocol;
     private List<IMessage> sentMessages = new ArrayList<IMessage>();
+    private List<IMessage> preparedSentMessages = new ArrayList<IMessage>();
     private List<IMessage> receivedMessages = new ArrayList<IMessage>();
     private long currentTime;
     private Object object;
@@ -91,7 +92,9 @@ public class TestProtocolStack extends AbstractProtocol implements ITimeService,
     
     public List<IMessage> getSentMessages()
     {
-        return sentMessages;
+        if (preparedSentMessages == null)
+            preparedSentMessages = new ArrayList<IMessage>(sentMessages);
+        return preparedSentMessages;
     }
     
     public List<IMessage> getReceivedMessages()
@@ -182,6 +185,7 @@ public class TestProtocolStack extends AbstractProtocol implements ITimeService,
     public void clearSentMessages()
     {
         sentMessages.clear();
+        preparedSentMessages = null;
     }
     
     public void clearReceivedMessages()
@@ -191,8 +195,8 @@ public class TestProtocolStack extends AbstractProtocol implements ITimeService,
     
     public void reset()
     {
-        receivedMessages.clear();
-        sentMessages.clear();
+        clearSentMessages();
+        clearReceivedMessages();
     }
     
     @Override
