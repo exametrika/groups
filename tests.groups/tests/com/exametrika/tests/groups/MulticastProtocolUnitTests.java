@@ -83,7 +83,7 @@ public class MulticastProtocolUnitTests
         int maxUnlockQueueCapacity = 2000;
         int minLockQueueCapacity = 5000;
         List<TestProtocolStack> nodes = new ArrayList<TestProtocolStack>();
-        for (int i = 0 ; i < COUNT; i++)
+        for (int i = 0; i < COUNT; i++)
         {
             String channelName = "test" + (i + 1);
             TestInfo info = new TestInfo();
@@ -255,6 +255,15 @@ public class MulticastProtocolUnitTests
         checkDelivered(stack1, 0, 20);
         checkDelivered(stack2, 0, 20);
         clearReceived(network);
+    }
+    
+    @Test
+    public void testFlowControl()
+    {
+        testSimpleSend();
+        TestProtocolStack sender = network.getNodes().get(1);
+        checkLocalFlowControl(sender);
+        checkRemoteFlowControl(network, sender);
     }
     
     private void sendMessages(TestProtocolStack stack, int count)
@@ -539,6 +548,30 @@ public class MulticastProtocolUnitTests
         
         assertThat(id, is(endId));
         info.deliveryHandler.messages.clear();
+    }
+    
+    private void checkLocalFlowControl(TestProtocolStack stack)
+    {
+        TestInfo info = stack.getObject();
+        assertTrue(!info.localFlowController.lockedFlows.isEmpty());
+        assertThat(info.localFlowController.unlockedFlows.size(), is(info.localFlowController.lockedFlows.size()));
+        assertThat(info.localFlowController.lockedFlows.get(0).getFlowId(), is(GroupMemberships.CORE_GROUP_ID));
+        assertThat(info.localFlowController.unlockedFlows.get(0).getFlowId(), is(GroupMemberships.CORE_GROUP_ID));
+    }
+    
+    private void checkRemoteFlowControl(TestNetwork network, TestProtocolStack sender)
+    {
+        for (TestProtocolStack stack : network.getNodes())
+        {
+            if (!stack.isActive())
+                continue;
+            
+            TestInfo info = stack.getObject();
+            assertTrue(!info.remoteFlowController.lockedFlows.isEmpty());
+            assertThat(info.remoteFlowController.unlockedFlows.size(), is(info.remoteFlowController.lockedFlows.size()));
+            assertThat(info.remoteFlowController.lockedFlows.get(0).getFlowId(), is(GroupMemberships.CORE_GROUP_ID));
+            assertThat(info.remoteFlowController.unlockedFlows.get(0).getFlowId(), is(GroupMemberships.CORE_GROUP_ID));
+        }
     }
     
     private void process(int roundCount, long timeIncrement)
