@@ -58,7 +58,7 @@ import com.exametrika.tests.groups.mocks.PropertyProviderMock;
  */
 public class MulticastProtocolUnitTests
 {
-    private static final int COUNT = 10;
+    private static final int COUNT = 2;//TODO:10;
     private TestNetwork network;
     private long membershipId = 1;
     private IGroupMembership membership;
@@ -446,8 +446,11 @@ public class MulticastProtocolUnitTests
         {
             if (!stack.isActive())
                 continue;
-            
             TestInfo info = stack.getObject();
+            if (info.membershipManager.getPreparedMembership() != null && 
+                info.membershipManager.getPreparedMembership().getId() == membership.getId())
+                continue;
+            
             if (membership.getId() == 1)
                 info.membershipManager.prepareInstallMembership(membership);
             else
