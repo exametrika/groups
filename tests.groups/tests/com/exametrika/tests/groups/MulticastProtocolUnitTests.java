@@ -265,6 +265,7 @@ public class MulticastProtocolUnitTests
         
         network = new TestNetwork(nodes, System.currentTimeMillis());
         network.start();
+        updateFailureDetectors();
     }
     
     private void sendMessages(TestProtocolStack stack, int count)
