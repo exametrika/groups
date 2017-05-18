@@ -191,7 +191,7 @@ public final class ReceiveQueue
             deliver(info);
             
             Assert.isTrue(deque.poll() == info);
-            Assert.isTrue(ordered && order != 0);
+            Assert.isTrue(ordered && (order != 0 || info.message.hasFlags(MessageFlags.UNORDERED)));
             startMessageId++;
         }
 
@@ -218,7 +218,7 @@ public final class ReceiveQueue
             
             info.completed = true;
             
-            if (allowPoll && (!ordered || info.order > 0))
+            if (allowPoll && (!ordered || info.order > 0 || info.message.hasFlags(MessageFlags.UNORDERED)))
             {
                 Assert.isTrue(deque.poll() == info);
                 startMessageId++;

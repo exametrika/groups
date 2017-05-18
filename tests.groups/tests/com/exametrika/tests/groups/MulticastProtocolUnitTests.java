@@ -224,15 +224,15 @@ public class MulticastProtocolUnitTests
     private void createNetwork(boolean durable)
     {
         int maxBundlingMessageSize = 100;
-        long maxBundlingPeriod = 1000;
+        long maxBundlingPeriod = 100;
         int maxBundleSize = 200;
         int maxTotalOrderBundlingMessageCount = 2;
-        long maxUnacknowledgedPeriod = 1000;
+        long maxUnacknowledgedPeriod = 100;
         int maxUnacknowledgedMessageCount = 2;
         long maxIdleReceiveQueuePeriod = 10000;
         boolean ordered = durable;
-        int maxUnlockQueueCapacity = 2000;
-        int minLockQueueCapacity = 5000;
+        int maxUnlockQueueCapacity = 200;
+        int minLockQueueCapacity = 500;
         List<TestProtocolStack> nodes = new ArrayList<TestProtocolStack>();
         for (int i = 0; i < COUNT; i++)
         {

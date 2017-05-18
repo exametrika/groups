@@ -21,9 +21,10 @@ import com.exametrika.impl.groups.cluster.membership.GroupAddress;
  */
 public final class OrderedQueue
 {
+    // TODO: почему FailureAtomicMessagePart лежит в очереди
     private final IReceiver receiver;
     private final SimpleDeque<IMessage> deque = new SimpleDeque<IMessage>();
-    private long startOrder;
+    private long startOrder = 1;
     private final QueueCapacityController capacityController;
     
     public OrderedQueue(IReceiver receiver, int maxUnlockQueueCapacity, int minLockQueueCapacity,
@@ -72,6 +73,7 @@ public final class OrderedQueue
         }
         
         capacityController.clearCapacity();
+        startOrder = 1;
     }
     
     private void deliverMessages()
@@ -83,6 +85,7 @@ public final class OrderedQueue
                 return;
             
             message = deque.poll();
+            startOrder++;
             receiver.receive(message);
             
             capacityController.removeCapacity(message.getSize());

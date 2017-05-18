@@ -464,8 +464,8 @@ public final class FailureAtomicMulticastProtocol extends AbstractProtocol imple
             return;
         else if (message.getPart() instanceof FailureAtomicMessagePart)
         {
-            message = message.removePart();
-            receiver.receive(message);
+            receive(message.removePart());
+            return;
         }
         else
             receiver.receive(message);

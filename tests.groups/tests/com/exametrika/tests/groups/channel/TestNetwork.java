@@ -109,7 +109,7 @@ public class TestNetwork
             for (TestProtocolStack stack : nodes)
                 stack.clearSentMessages();
             
-            Times.setTest(Times.getCurrentTime() + timeIncrement);
+            onTimer(Times.getCurrentTime() + timeIncrement);
         }
     }
 }
