@@ -84,7 +84,7 @@ public class TestNetwork
             while (true)
             {
                 List<TestProtocolStack> nodes = new ArrayList<TestProtocolStack>(this.nodes);
-                //TODO:java.util.Collections.shuffle(nodes, random);
+                java.util.Collections.shuffle(nodes, random);
                 boolean sent = false;
                 for (TestProtocolStack stack : nodes)
                 {

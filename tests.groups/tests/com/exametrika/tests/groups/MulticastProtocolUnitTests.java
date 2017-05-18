@@ -58,7 +58,7 @@ import com.exametrika.tests.groups.mocks.PropertyProviderMock;
  */
 public class MulticastProtocolUnitTests
 {
-    private static final int COUNT = 2;//TODO:10;
+    private static final int COUNT = 10;
     private TestNetwork network;
     private long membershipId = 1;
     private IGroupMembership membership;
@@ -93,39 +93,42 @@ public class MulticastProtocolUnitTests
     public void testNonDurableSend()
     {
         createNetwork(false);
-        testSimpleSend();
+        TestProtocolStack stack = network.getNodes().get(1);
+        flush();
+        sendMessages(stack, 10);
+        process(10, 200);
+        checkReceived(network, stack, 0, 10);
     }
     
     @Test
     public void testSimpleSendCoordinator()
     {
         TestProtocolStack stack = network.getNodes().get(0);
-        sendMessages(stack, 10);
         flush();
         sendMessages(stack, 10);
         process(10, 200);
-        checkReceived(network, stack, 0, 20);
-        checkDelivered(stack, 0, 20);
+        checkReceived(network, stack, 0, 10);
+        checkDelivered(stack, 0, 10);
     }
     
     @Test
     public void testPullableSend()
     {
         TestProtocolStack stack = network.getNodes().get(1);
+        flush();
         TestFeed feed = new TestFeed(10, stack);
         stack.register(GroupMemberships.CORE_GROUP_ADDRESS, feed);
-        flush();
         process(10, 200);
-        checkReceived(network, stack, 0, 20);
-        checkDelivered(stack, 0, 20);
+        checkReceived(network, stack, 0, 10);
+        checkDelivered(stack, 0, 10);
     }
     
     @Test
     public void testSendInNewMembership()
     {
         TestProtocolStack stack = network.getNodes().get(1);
-        sendMessages(stack, 10);
         flush();
+        sendMessages(stack, 10);
         startFlush();
         sendMessages(stack, 10);
         process(10, 200);
@@ -138,7 +141,6 @@ public class MulticastProtocolUnitTests
     public void testSenderFailure()
     {
         TestProtocolStack stack = network.getNodes().get(1);
-        sendMessages(stack, 10);
         flush();
         sendMessages(stack, 10);
         process(10, 200, com.exametrika.common.utils.Collections.asSet(network.getNodes().get(8),
@@ -147,14 +149,13 @@ public class MulticastProtocolUnitTests
         updateFailureDetectors();
         flush();
         process(10, 200);
-        checkReceived(network, stack, 0, 20);
+        checkReceived(network, stack, 0, 10);
     }
     
     @Test
     public void testReceiverFailure()
     {
         TestProtocolStack stack = network.getNodes().get(1);
-        sendMessages(stack, 10);
         flush();
         sendMessages(stack, 10);
         process(10, 200, com.exametrika.common.utils.Collections.asSet(network.getNodes().get(8),
@@ -164,15 +165,14 @@ public class MulticastProtocolUnitTests
         updateFailureDetectors();
         flush();
         process(10, 200);
-        checkReceived(network, stack, 0, 20);
-        checkDelivered(stack, 0, 20);
+        checkReceived(network, stack, 0, 10);
+        checkDelivered(stack, 0, 10);
     }
     
     @Test
     public void testReceiverOnFlushFailure()
     {
         TestProtocolStack stack = network.getNodes().get(1);
-        sendMessages(stack, 10);
         flush();
         sendMessages(stack, 10);
         startFlush();
@@ -182,8 +182,8 @@ public class MulticastProtocolUnitTests
         process(10, 200);
         flush();
         process(10, 200);
-        checkReceived(network, stack, 0, 20);
-        checkDelivered(stack, 0, 20);
+        checkReceived(network, stack, 0, 10);
+        checkDelivered(stack, 0, 10);
     }
     
     @Test
@@ -198,17 +198,15 @@ public class MulticastProtocolUnitTests
     {
         TestProtocolStack stack1 = network.getNodes().get(1);
         TestProtocolStack stack2 = network.getNodes().get(2);
-        sendMessages(stack1, 10);
-        sendMessages(stack2, 10);
         flush();
         sendMessages(stack1, 10);
         sendMessages(stack2, 10);
         process(10, 200);
         checkOrder(network);
-        checkReceived(network, stack1, 0, 20);
-        checkReceived(network, stack2, 0, 20);
-        checkDelivered(stack1, 0, 20);
-        checkDelivered(stack2, 0, 20);
+        checkReceived(network, stack1, 0, 10);
+        checkReceived(network, stack2, 0, 10);
+        checkDelivered(stack1, 0, 10);
+        checkDelivered(stack2, 0, 10);
         clearReceived(network);
     }
     

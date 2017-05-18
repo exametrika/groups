@@ -21,7 +21,6 @@ import com.exametrika.impl.groups.cluster.membership.GroupAddress;
  */
 public final class OrderedQueue
 {
-    // TODO: почему FailureAtomicMessagePart лежит в очереди
     private final IReceiver receiver;
     private final SimpleDeque<IMessage> deque = new SimpleDeque<IMessage>();
     private long startOrder = 1;

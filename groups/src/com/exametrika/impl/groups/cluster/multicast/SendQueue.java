@@ -68,7 +68,7 @@ public final class SendQueue
         Assert.notNull(parent);
         Assert.notNull(failureDetector);
         Assert.notNull(timeService);
-        Assert.isTrue(durable == (deliveryHandler != null));
+        Assert.isTrue(!durable || deliveryHandler != null);
         Assert.notNull(messageFactory);
         
         this.parent = parent;
@@ -220,7 +220,7 @@ public final class SendQueue
                 IMessage message = deque.poll();
                 Assert.checkState(message != null);
                 
-                deliveryHandler.onDelivered(message);
+                deliveryHandler.onDelivered(message.removePart());
                 capacityController.removeCapacity(message.getSize());
             }
             

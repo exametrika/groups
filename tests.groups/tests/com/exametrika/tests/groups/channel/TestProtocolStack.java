@@ -246,7 +246,6 @@ public class TestProtocolStack extends AbstractProtocol implements ITimeService,
         @Override
         public void receive(IMessage message)
         {
-            checkSerialization(message);
             receivedMessages.add(message);
         }
 
