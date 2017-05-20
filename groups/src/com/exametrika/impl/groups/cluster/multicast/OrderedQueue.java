@@ -23,8 +23,8 @@ public final class OrderedQueue
 {
     private final IReceiver receiver;
     private final SimpleDeque<IMessage> deque = new SimpleDeque<IMessage>();
-    private long startOrder = 1;
     private final QueueCapacityController capacityController;
+    private long startOrder = 1;
     
     public OrderedQueue(IReceiver receiver, int maxUnlockQueueCapacity, int minLockQueueCapacity,
         GroupAddress groupAddress, UUID groupId)

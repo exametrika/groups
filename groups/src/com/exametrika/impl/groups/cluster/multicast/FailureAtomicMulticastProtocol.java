@@ -183,18 +183,28 @@ public final class FailureAtomicMulticastProtocol extends AbstractProtocol imple
     @Override
     public void startFlush(IFlush flush)
     {
-        sendBundle(0);
-        sendQueue.setLastOldMembershipMessageId();
+        boolean started = false;
+        if (this.flush == null)
+        {
+            sendBundle(0);
+            sendQueue.setLastOldMembershipMessageId();
+            started = true;
+        }
         
         this.flush = flush;
         flushGranted = false;
         retransmitProtocol.startFlush(flush);
         
-        if (totalOrderProtocol != null)
-            totalOrderProtocol.startFlush();
+        if (started)
+        {
+            if (totalOrderProtocol != null)
+                totalOrderProtocol.startFlush();
+            
+            if (sendQueue.isCompletionRequired())
+                sendCompletion();
+        }
         
-        if (sendQueue.isCompletionRequired())
-            sendCompletion();
+        tryGrantFlush();
     }
 
     @Override

@@ -58,7 +58,7 @@ import com.exametrika.tests.groups.mocks.PropertyProviderMock;
  */
 public class MulticastProtocolUnitTests
 {
-    private static final int COUNT = 2;//TODO:10;
+    private static final int COUNT = 10;
     private TestNetwork network;
     private long membershipId = 1;
     private IGroupMembership membership;
@@ -400,6 +400,8 @@ public class MulticastProtocolUnitTests
     
     private void endFlush()
     {
+        commitMembership();
+        
         for (TestProtocolStack stack : network.getNodes())
         {
             if (!stack.isActive())
@@ -412,7 +414,7 @@ public class MulticastProtocolUnitTests
         membership = flush.getNewMembership();
         membershipId++;
         flush = null;
-        commitMembership();
+        
         process(10, 200);
     }
     
