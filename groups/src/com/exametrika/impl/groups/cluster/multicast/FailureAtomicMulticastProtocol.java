@@ -70,7 +70,7 @@ public final class FailureAtomicMulticastProtocol extends AbstractProtocol imple
     private final int minLockQueueCapacity;
     private IFlowController<RemoteFlowId> remoteFlowController;
     private final ISerializationRegistry serializationRegistry;
-    private Map<IAddress, ReceiveQueue> receiveQueues = new LinkedHashMap<IAddress, ReceiveQueue>();
+    private final Map<IAddress, ReceiveQueue> receiveQueues = new LinkedHashMap<IAddress, ReceiveQueue>();
     private final SendQueue sendQueue;
     private final MessageRetransmitProtocol retransmitProtocol;
     private final List<IMessage> pendingNewMessages = new ArrayList<IMessage>();
@@ -610,6 +610,6 @@ public final class FailureAtomicMulticastProtocol extends AbstractProtocol imple
                 receiveQueue.completeAll();
         }
         
-        this.receiveQueues = new LinkedHashMap<IAddress, ReceiveQueue>(receiveQueues);
+        this.receiveQueues.keySet().retainAll(receiveQueues.keySet());
     }
 }
