@@ -10,11 +10,16 @@ import java.util.UUID;
 import com.exametrika.common.io.IDeserialization;
 import com.exametrika.common.io.ISerialization;
 import com.exametrika.common.io.impl.AbstractSerializer;
+import com.exametrika.common.io.impl.ByteInputStream;
+import com.exametrika.common.io.impl.ByteOutputStream;
+import com.exametrika.common.io.impl.Deserialization;
+import com.exametrika.common.io.impl.Serialization;
 import com.exametrika.common.messaging.IAddress;
 import com.exametrika.common.messaging.IMessage;
 import com.exametrika.common.messaging.impl.message.Message;
 import com.exametrika.common.messaging.impl.message.MessageSerializers;
 import com.exametrika.common.utils.Assert;
+import com.exametrika.common.utils.ByteArray;
 import com.exametrika.common.utils.Serializers;
 
 /**
@@ -47,8 +52,11 @@ public final class RetransmitMessagePartSerializer extends AbstractSerializer
         
         Serializers.writeVarInt(serialization, part.getRetransmittedMessages().size());
 
+        ByteOutputStream stream = new ByteOutputStream(0x1000);
+        Serialization messageSerialization = new Serialization(serialization.getRegistry(), true, stream);
         for (IMessage retransmittedMessage : part.getRetransmittedMessages())
-            MessageSerializers.serialize(serialization, (Message)retransmittedMessage);
+            MessageSerializers.serialize(messageSerialization, (Message)retransmittedMessage);
+        serialization.writeByteArray(new ByteArray(stream.getBuffer(), 0, stream.getLength()));
     }
     
     @Override
@@ -60,9 +68,12 @@ public final class RetransmitMessagePartSerializer extends AbstractSerializer
         IAddress destination = deserialization.readObject();
         int count = Serializers.readVarInt(deserialization);
         
+        ByteArray data = deserialization.readByteArray();
+        ByteInputStream stream = new ByteInputStream(data.getBuffer(), data.getOffset(), data.getLength());
+        Deserialization messageDeserialization = new Deserialization(deserialization.getRegistry(), stream);
         List<IMessage> retransmittedMessages = new ArrayList<IMessage>();
         for (int i = 0; i < count; i++)
-            retransmittedMessages.add(MessageSerializers.deserialize(deserialization, source, destination, null));
+            retransmittedMessages.add(MessageSerializers.deserialize(messageDeserialization, source, destination, null));
         
         return new RetransmitMessagePart(failedNodeId, flushId, retransmittedMessages);
     }

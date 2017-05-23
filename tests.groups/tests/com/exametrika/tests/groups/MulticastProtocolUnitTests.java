@@ -35,6 +35,7 @@ import com.exametrika.common.utils.Enums;
 import com.exametrika.common.utils.Times;
 import com.exametrika.impl.groups.cluster.exchange.IExchangeData;
 import com.exametrika.impl.groups.cluster.membership.Group;
+import com.exametrika.impl.groups.cluster.membership.GroupAddressSerializer;
 import com.exametrika.impl.groups.cluster.membership.GroupChange;
 import com.exametrika.impl.groups.cluster.membership.GroupMembership;
 import com.exametrika.impl.groups.cluster.membership.GroupMembershipChange;
@@ -238,6 +239,7 @@ public class MulticastProtocolUnitTests
             TestInfo info = new TestInfo();
             TestProtocolStack stack = TestProtocolStack.create(channelName);
             stack.getSerializationRegistry().register(new TestMessagePartSerializer());
+            stack.getSerializationRegistry().register(new GroupAddressSerializer());
             stack.setObject(info);
             PropertyProviderMock propertyProvider = new PropertyProviderMock();
             info.localNodeProvider = new LocalNodeProvider(stack.getLiveNodeProvider(), propertyProvider, 

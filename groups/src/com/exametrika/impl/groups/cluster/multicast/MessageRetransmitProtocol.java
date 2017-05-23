@@ -148,7 +148,7 @@ public final class MessageRetransmitProtocol
                 for (RetransmitNodeInfo nodeInfo : info.retransmits)
                 {
                     if (nodeInfo.receivedMessageId == -1)
-                        nodeInfo.receivedMessageId = receiveQueue.getLastAcknowledgedMessageId();
+                        nodeInfo.receivedMessageId = receiveQueue.getStartMessageId() - 1;
                     
                     if (nodeInfo.receivedMessageId < info.maxReceivedMessageId)
                     {
@@ -187,12 +187,12 @@ public final class MessageRetransmitProtocol
             INode failedNode = membership.getGroup().findMember(part.getFailedNodeId());
             FailureAtomicMessagePart firstPart = part.getRetransmittedMessages().get(0).getPart();
             ReceiveQueue receiveQueue = parent.ensureReceiveQueue(failedNode.getAddress(), firstPart.getMessageId());
-            
+            long currentTime = timeService.getCurrentTime();
             for (IMessage retransmittedMessage : part.getRetransmittedMessages())
             {
                 FailureAtomicMessagePart failureAtomicPart = retransmittedMessage.getPart();
                 receiveQueue.receive(failureAtomicPart.getMessageId(), failureAtomicPart.getOrder(), 
-                    retransmittedMessage, timeService.getCurrentTime());
+                    retransmittedMessage, currentTime);
                 receiveQueue.acknowledge();
             }
             

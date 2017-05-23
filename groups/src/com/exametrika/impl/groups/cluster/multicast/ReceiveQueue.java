@@ -79,6 +79,11 @@ public final class ReceiveQueue
         return element;
     }
     
+    public long getStartMessageId()
+    {
+        return startMessageId;
+    }
+    
     public long getLastOrderedMessageId()
     {
         return lastOrderedMessageId;
