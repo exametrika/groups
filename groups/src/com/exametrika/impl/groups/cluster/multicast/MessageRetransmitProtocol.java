@@ -47,6 +47,8 @@ public final class MessageRetransmitProtocol
     private boolean stabilizationPhase;
     private long flushId;
     private Set<UUID> retransmits;
+    private boolean setDataCalled;
+    private final List<IMessage> pendingReceivedMessages = new ArrayList<IMessage>();
     
     public MessageRetransmitProtocol(IFlushParticipant flushParticipant, IGroupMembershipManager membershipManager,  
         IMessageFactory messageFactory, ISender sender, ITimeService timeService,
@@ -81,6 +83,8 @@ public final class MessageRetransmitProtocol
         this.flush = flush;
         flushId++;
         retransmits = null;
+        setDataCalled = false;
+        pendingReceivedMessages.clear();
         if (flush.getOldMembership() != null)
             stabilizationPhase = true;
         else
@@ -170,12 +174,23 @@ public final class MessageRetransmitProtocol
             this.retransmits = retransmits;
         else
             completeStabilizationPhase(false);
+        
+        setDataCalled = true;
+        for (IMessage message : pendingReceivedMessages)
+            receive(message);
+        pendingReceivedMessages.clear();
     }
     
     public boolean receive(IMessage message)
     {
         if (message.getPart() instanceof RetransmitMessagePart)
         {
+            if (!setDataCalled)
+            {
+                pendingReceivedMessages.add(message);
+                return true;
+            }
+            
             RetransmitMessagePart part = message.getPart();
             if (!stabilizationPhase || part.getFlushId() != flushId)
                 return true;

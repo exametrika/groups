@@ -73,13 +73,15 @@ public final class FailureAtomicMulticastProtocol extends AbstractProtocol imple
     private final Map<IAddress, ReceiveQueue> receiveQueues = new LinkedHashMap<IAddress, ReceiveQueue>();
     private final SendQueue sendQueue;
     private final MessageRetransmitProtocol retransmitProtocol;
-    private final List<IMessage> pendingNewMessages = new ArrayList<IMessage>();
+    private final List<IMessage> pendingSentNewMessages = new ArrayList<IMessage>();
+    private final List<IMessage> pendingReceivedNewMessages = new ArrayList<IMessage>();
     private final OrderedQueue orderedQueue;
     private final TotalOrderProtocol totalOrderProtocol;
     private final GroupAddress groupAddress;
     private final UUID groupId;
     private IFlush flush;
     private boolean flushGranted;
+    private boolean groupFormed;
     private final QueueCapacityController capacityController;
     
     public FailureAtomicMulticastProtocol(String channelName, IMessageFactory messageFactory, 
@@ -229,15 +231,23 @@ public final class FailureAtomicMulticastProtocol extends AbstractProtocol imple
         if (totalOrderProtocol != null)
             totalOrderProtocol.endFlush();
         
+        sendQueue.endFlush();
+        groupFormed = true;
+        
         flush = null;
         
-        for (IMessage message : pendingNewMessages)
+        for (IMessage message : pendingSentNewMessages)
+            send(message);
+        
+        pendingSentNewMessages.clear();
+        
+        for (IMessage message : pendingReceivedNewMessages)
         {
             if (failureDetector.isHealthyMember(message.getSource().getId()))
                 receive(message);
         }
         
-        pendingNewMessages.clear();
+        pendingReceivedNewMessages.clear();
         capacityController.clearCapacity();
     }
 
@@ -354,6 +364,12 @@ public final class FailureAtomicMulticastProtocol extends AbstractProtocol imple
     @Override
     protected void doSend(ISender sender, IMessage message)
     {
+        if (!groupFormed)
+        {
+            pendingSentNewMessages.add(message);
+            return;
+        }
+        
         message = doSend(message);
         if (message != null)
             sender.send(message);
@@ -400,7 +416,7 @@ public final class FailureAtomicMulticastProtocol extends AbstractProtocol imple
             
             if (part.getMembershipId() > membershipId)
             {
-                pendingNewMessages.add(message);
+                pendingReceivedNewMessages.add(message);
                 capacityController.addCapacity(message.getSource(), message.getSize());
                 return;
             }

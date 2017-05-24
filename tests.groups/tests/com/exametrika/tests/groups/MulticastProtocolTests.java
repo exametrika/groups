@@ -9,6 +9,7 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -24,6 +25,7 @@ import com.exametrika.common.compartment.ICompartmentTimerProcessor;
 import com.exametrika.common.io.IDeserialization;
 import com.exametrika.common.io.ISerialization;
 import com.exametrika.common.io.impl.AbstractSerializer;
+import com.exametrika.common.messaging.IAddress;
 import com.exametrika.common.messaging.IChannel;
 import com.exametrika.common.messaging.IDeliveryHandler;
 import com.exametrika.common.messaging.IFeed;
@@ -115,7 +117,7 @@ public class MulticastProtocolTests
         createParameters();
         createGroup(Collections.<Integer>asSet());
          
-        TestFeed feed = new TestFeed();
+        TestFeed feed = new TestFeed(0);
         ISink sink = channels[0].register(GroupMemberships.CORE_GROUP_ADDRESS, feed);
         sink.setReady(true);
         
@@ -268,7 +270,7 @@ public class MulticastProtocolTests
     {
         IGroupMembership membership = null;
         ByteArray state = null;
-        Integer receivedCount = null;
+        Map<IAddress, List<Integer>> receivedMap = null;
         for (int i = 0; i < COUNT; i++)
         {
             if (skipIndexes.contains(i))
@@ -294,33 +296,55 @@ public class MulticastProtocolTests
             else
                 assertThat(nodeState, is(state));
             
-            int received = messageSenders.get(i).receivedMessages.size();
-            if (receivedCount == null)
-                receivedCount = received;
+            Map<IAddress, List<Integer>> received = buildReceivedMap(messageSenders.get(i).receivedMessagesMap);
+            if (receivedMap == null)
+                receivedMap = received;
             else
-                assertThat(receivedCount, is(received));
+                assertThat(receivedMap, is(received));
             
             assertThat(messageSenders.get(i).deliveredMessages.size(), is((int)messageSenders.get(i).count));
             for (TestMessageSender sender : messageSenders)
             {
                 if (!sender.failed)
                 {
-                    received = 0;
+                    int receivedCount = 0;
                     synchronized (sender)
                     {
-                        for (IMessage receivedMessage : sender.receivedMessages)
-                        {
-                            if (receivedMessage.getSource().equals(channels[i].getLiveNodeProvider().getLocalNode()))
-                                received++;
-                        }
+                        List<IMessage> receivedMessages = sender.receivedMessagesMap.get(channels[i].getLiveNodeProvider().getLocalNode());
+                        if (receivedMessages != null)
+                            receivedCount = receivedMessages.size();
                     }
-                    assertThat(received, is(messageSenders.get(i).deliveredMessages.size()));
+                    assertThat(receivedCount, is(messageSenders.get(i).deliveredMessages.size()));
                 }
             }
         }
         
-        assertTrue(receivedCount > 0);
+        assertTrue(!receivedMap.isEmpty());
         assertThat(membership.getGroup().getMembers().size(), is(COUNT - skipIndexes.size()));
+    }
+    
+    private Map<IAddress, List<Integer>> buildReceivedMap(Map<IAddress, List<IMessage>> received)
+    {
+        Map<IAddress, List<Integer>> receivedMap = new HashMap<IAddress, List<Integer>>();
+        for (Map.Entry<IAddress, List<IMessage>> entry : received.entrySet())
+        {
+            if (entry.getValue().isEmpty())
+                continue;
+            
+            List<Integer> receivedMessages = receivedMap.get(entry.getKey());
+            if (receivedMessages == null)
+            {
+                receivedMessages = new ArrayList<Integer>();
+                receivedMap.put(entry.getKey(), receivedMessages);
+            }
+            for (IMessage message : entry.getValue())
+            {
+                TestBufferMessagePart part = message.getPart();
+                receivedMessages.add((int)part.value);
+            }
+        }
+        
+        return receivedMap;
     }
     
     private void createFactoryParameters()
@@ -336,7 +360,7 @@ public class MulticastProtocolTests
             factoryParameters.transportChannelTimeout = 5000;
         }
         factoryParameters.discoveryPeriod = 200;
-        factoryParameters.groupFormationPeriod = 1000;
+        factoryParameters.groupFormationPeriod = 2000;
         factoryParameters.failureUpdatePeriod = 500;
         factoryParameters.failureHistoryPeriod = 10000;
         factoryParameters.maxShunCount = 3;
@@ -593,7 +617,7 @@ public class MulticastProtocolTests
         private long count;
         private boolean flowLocked;
         private RemoteFlowId flow;
-        private List<IMessage> receivedMessages = new ArrayList<IMessage>();
+        private Map<IAddress, List<IMessage>> receivedMessagesMap = new HashMap<IAddress, List<IMessage>>();
         private List<IMessage> deliveredMessages = new ArrayList<IMessage>();
         private boolean failed;
 
@@ -626,6 +650,13 @@ public class MulticastProtocolTests
             if (message.getPart() instanceof TestBufferMessagePart)
             {
                 TestBufferMessagePart part = message.getPart();
+                List<IMessage> receivedMessages = receivedMessagesMap.get(message.getSource());
+                if (receivedMessages == null)
+                {
+                    receivedMessages = new ArrayList<IMessage>();
+                    receivedMessagesMap.put(message.getSource(), receivedMessages);
+                }
+                
                 assertThat(part.value, is((long)receivedMessages.size()));
                 ByteArray buffer = stateTransferFactories.get(index).state;
                 long counter = Bytes.readLong(buffer.getBuffer(), buffer.getOffset());
@@ -656,18 +687,23 @@ public class MulticastProtocolTests
         }
     }
     
-    private static class TestFeed implements IFeed
+    private class TestFeed implements IFeed
     {
-        private long count;
+        private final int index;
+        
+        public TestFeed(int index)
+        {
+            this.index = index;
+        }
         
         @Override
         public void feed(ISink sink)
         {
-            while (true)
+            TestMessageSender sender = messageSenders.get(index);
+            if (sender.count < SEND_COUNT)
             {
-                IMessage message = sink.getMessageFactory().create(sink.getDestination(), new TestBufferMessagePart(0, count++));
-                if (!sink.send(message))
-                    break;
+                IMessage message = sink.getMessageFactory().create(sink.getDestination(), new TestBufferMessagePart(0, sender.count++));
+                sink.send(message);
             }
         }
     }

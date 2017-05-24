@@ -59,6 +59,7 @@ public final class SendQueue
     private final IMessageFactory messageFactory;
     private ICompartment compartment;
     private long lockCount;
+    private boolean groupFormed;
     private volatile ArrayList<MulticastSink> sinks = new ArrayList<MulticastSink>();
     private volatile boolean canWrite = true;
     
@@ -146,6 +147,11 @@ public final class SendQueue
         acknowledgedMessageIds.clear();
         for (INode node : nodes)
             acknowledgedMessageIds.put(node.getAddress(), lastCompletedMessageId);
+    }
+    
+    public void endFlush()
+    {
+        groupFormed = true;
     }
     
     public long acquireMessageId()
@@ -322,7 +328,7 @@ public final class SendQueue
     
     private boolean canWrite()
     {
-        return lockCount == 0 && !capacityController.isLocked() && canWrite;
+        return groupFormed && lockCount == 0 && !capacityController.isLocked() && canWrite;
     }
     
     private void setCompletionRequired()
