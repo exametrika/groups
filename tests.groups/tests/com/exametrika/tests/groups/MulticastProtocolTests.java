@@ -9,10 +9,11 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.File;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.junit.After;
 import org.junit.Test;
@@ -66,8 +67,8 @@ import com.exametrika.tests.groups.channel.TestGroupParameters;
 public class MulticastProtocolTests
 {
     private static final int COUNT = 10;
-    private static final long SEND_COUNT = Long.MAX_VALUE;
-    private Set<String> wellKnownAddresses = new HashSet<String>();
+    private static final long SEND_COUNT = 10;
+    private Map<String, Object> wellKnownAddresses = new ConcurrentHashMap<String, Object>();
     private TestGroupFactoryParameters factoryParameters;
     private List<TestGroupParameters> parameters = new ArrayList<TestGroupParameters>();
     private TestGroupChannel[] channels = new TestGroupChannel[COUNT];
@@ -255,8 +256,9 @@ public class MulticastProtocolTests
             if (!skipIndexes.contains(i))
             {
                 channel.start();
-                wellKnownAddresses.add(channel.getLiveNodeProvider().getLocalNode().getConnection(0));
+                wellKnownAddresses.put(channel.getLiveNodeProvider().getLocalNode().getConnection(0), new Object());
             }
+
             channel.getCompartment().addTimerProcessor(messageSenders.get(i));
             channels[i] = channel;
         }
@@ -299,6 +301,22 @@ public class MulticastProtocolTests
                 assertThat(receivedCount, is(received));
             
             assertThat(messageSenders.get(i).deliveredMessages.size(), is((int)messageSenders.get(i).count));
+            for (TestMessageSender sender : messageSenders)
+            {
+                if (!sender.failed)
+                {
+                    received = 0;
+                    synchronized (sender)
+                    {
+                        for (IMessage receivedMessage : sender.receivedMessages)
+                        {
+                            if (receivedMessage.getSource().equals(channels[i].getLiveNodeProvider().getLocalNode()))
+                                received++;
+                        }
+                    }
+                    assertThat(received, is(messageSenders.get(i).deliveredMessages.size()));
+                }
+            }
         }
         
         assertTrue(receivedCount > 0);
@@ -314,11 +332,11 @@ public class MulticastProtocolTests
             factoryParameters.heartbeatTrackPeriod = 100;
             factoryParameters.heartbeatPeriod = 100;
             factoryParameters.heartbeatStartPeriod = 300;
-            factoryParameters.heartbeatFailureDetectionPeriod = 1000;
-            factoryParameters.transportChannelTimeout = 1000;
+            factoryParameters.heartbeatFailureDetectionPeriod = 5000;
+            factoryParameters.transportChannelTimeout = 5000;
         }
         factoryParameters.discoveryPeriod = 200;
-        factoryParameters.groupFormationPeriod = 2000;
+        factoryParameters.groupFormationPeriod = 1000;
         factoryParameters.failureUpdatePeriod = 500;
         factoryParameters.failureHistoryPeriod = 10000;
         factoryParameters.maxShunCount = 3;
@@ -357,7 +375,7 @@ public class MulticastProtocolTests
             parameters.clientPart = true;
             parameters.serverPart = true;
             parameters.receiver = sender;
-            parameters.discoveryStrategy = new WellKnownAddressesDiscoveryStrategy(wellKnownAddresses);
+            parameters.discoveryStrategy = new WellKnownAddressesDiscoveryStrategy(wellKnownAddresses.keySet());
             parameters.stateTransferFactory = stateTransferFactory;
             parameters.deliveryHandler = sender;
             parameters.localFlowController = sender;
@@ -635,23 +653,6 @@ public class MulticastProtocolTests
             TestBufferMessagePart part = message.getPart();
             assertThat(part.value, is((long)deliveredMessages.size()));
             deliveredMessages.add(message);
-            
-            for (TestMessageSender sender : messageSenders)
-            {
-                if (!failed)
-                {
-                    int received = 0;
-                    synchronized (sender)
-                    {
-                        for (IMessage receivedMessage : sender.receivedMessages)
-                        {
-                            if (receivedMessage.getSource().equals(message.getSource()))
-                                received++;
-                        }
-                    }
-                    assertTrue(received >= deliveredMessages.size());
-                }
-            }
         }
     }
     
