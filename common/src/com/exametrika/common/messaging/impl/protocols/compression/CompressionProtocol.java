@@ -119,7 +119,7 @@ public final class CompressionProtocol extends AbstractProtocol
                 stream.getLength(), compressedLength));
         
         return messageFactory.create(message.getDestination(), new CompressionMessagePart(stream.getLength(),
-            new ByteArray(buffer, 0, compressedLength)), message.getFlags() | MessageFlags.NO_COMPRESS, message.getFiles());
+            new ByteArray(buffer, 0, compressedLength), message), message.getFlags() | MessageFlags.NO_COMPRESS, message.getFiles());
     }
 
     private IMessage decompress(IMessage message)

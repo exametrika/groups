@@ -40,6 +40,6 @@ public final class CompressionMessagePartSerializer extends AbstractSerializer
         int decompressedSize = deserialization.readInt();
         ByteArray compressedMessage = deserialization.readByteArray();
         
-        return new CompressionMessagePart(decompressedSize, compressedMessage);
+        return new CompressionMessagePart(decompressedSize, compressedMessage, null);
     }
 }

@@ -5,7 +5,6 @@ package com.exametrika.impl.groups.cluster.channel;
 
 import com.exametrika.api.groups.cluster.IGroupMembershipService;
 import com.exametrika.common.compartment.ICompartment;
-import com.exametrika.common.messaging.IChannel;
 import com.exametrika.common.messaging.IConnectionProvider;
 import com.exametrika.common.messaging.IMessageFactory;
 import com.exametrika.common.messaging.impl.SubChannel;
@@ -23,7 +22,7 @@ import com.exametrika.impl.groups.cluster.membership.CoreGroupMembershipTracker;
  * @threadsafety This class and its methods are thread safe.
  * @author medvedev
  */
-public class CoreGroupSubChannel extends SubChannel implements IChannel
+public class CoreGroupSubChannel extends SubChannel
 {
     private final CoreGroupMembershipManager membershipManager;
     private final CoreGroupMembershipTracker groupMembershipTracker;

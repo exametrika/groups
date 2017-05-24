@@ -15,7 +15,7 @@ import com.exametrika.common.utils.Collections;
  * @threadsafety This class and its methods are thread safe.
  * @author Medvedev-A
  */
-public final class UnicastAddress extends AbstractAddress
+public class UnicastAddress extends AbstractAddress
 {
     private final ArrayList<Object> addresses = new ArrayList<Object>();
     private final ArrayList<String> connections = new ArrayList<String>();

@@ -11,6 +11,7 @@ import java.util.Map;
 import com.exametrika.common.messaging.IAddress;
 import com.exametrika.common.messaging.ILiveNodeProvider;
 import com.exametrika.common.messaging.impl.protocols.AbstractProtocol;
+import com.exametrika.common.messaging.impl.transports.UnicastAddress;
 import com.exametrika.common.time.ITimeService;
 import com.exametrika.common.utils.Assert;
 
@@ -73,7 +74,7 @@ public final class CleanupManager implements ICleanupManager
     @Override
     public boolean canCleanup(IAddress node)
     {
-        Assert.notNull(node);
+        Assert.isInstanceOf(UnicastAddress.class, node);
         
         if (liveNodeProvider.isLive(node))
         {

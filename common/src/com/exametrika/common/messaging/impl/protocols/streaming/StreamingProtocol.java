@@ -27,6 +27,7 @@ import com.exametrika.common.messaging.IStreamSendHandler;
 import com.exametrika.common.messaging.impl.MessageFlags;
 import com.exametrika.common.messaging.impl.protocols.AbstractProtocol;
 import com.exametrika.common.messaging.impl.protocols.failuredetection.ICleanupManager;
+import com.exametrika.common.messaging.impl.transports.UnicastAddress;
 import com.exametrika.common.utils.Assert;
 import com.exametrika.common.utils.ByteArray;
 import com.exametrika.common.utils.Strings;
@@ -118,7 +119,7 @@ public final class StreamingProtocol extends AbstractProtocol
     @Override
     protected void doSend(ISender sender, IMessage message)
     {
-        if (!sendPart || !(message.getPart() instanceof IStreamSendHandler))
+        if (!(message.getDestination() instanceof UnicastAddress) || !sendPart || !(message.getPart() instanceof IStreamSendHandler))
         {
             super.doSend(sender, message);
             return;
@@ -183,7 +184,7 @@ public final class StreamingProtocol extends AbstractProtocol
     @Override
     protected boolean doSend(IFeed feed, ISink sink, IMessage message)
     {
-        if (!sendPart || !(message.getPart() instanceof IStreamSendHandler))
+        if (!(message.getDestination() instanceof UnicastAddress) || !sendPart || !(message.getPart() instanceof IStreamSendHandler))
             return sink.send(message);
         
         IStreamSendHandler handler = message.getPart();

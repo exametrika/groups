@@ -19,6 +19,7 @@ import com.exametrika.common.messaging.IFeed;
 import com.exametrika.common.messaging.IMessage;
 import com.exametrika.common.messaging.IMessageFactory;
 import com.exametrika.common.messaging.ISink;
+import com.exametrika.common.messaging.impl.message.IWrapperMessagePart;
 import com.exametrika.common.tasks.IFlowController;
 import com.exametrika.common.time.ITimeService;
 import com.exametrika.common.utils.Assert;
@@ -220,7 +221,7 @@ public final class SendQueue
                 IMessage message = deque.poll();
                 Assert.checkState(message != null);
                 
-                deliveryHandler.onDelivered(message.removePart());
+                deliver(message);
                 capacityController.removeCapacity(message.getSize());
             }
             
@@ -232,7 +233,7 @@ public final class SendQueue
         
         return minCompletedMessageId;
     }
-    
+
     public void lockFlow(RemoteFlowId flow)
     {
         Assert.isTrue(flow.getFlowId().equals(groupId));
@@ -332,6 +333,22 @@ public final class SendQueue
         
             completionRequired = true;
         }
+    }
+    
+    private void deliver(IMessage message)
+    {
+        message = message.removePart();
+        
+        if (message.getPart() instanceof TotalOrderMessagePart)
+            return;
+        else if (message.getPart() instanceof IWrapperMessagePart)
+        {
+            IWrapperMessagePart part = message.getPart();
+            message = part.getMessage();
+            Assert.notNull(message);
+        }
+        
+        deliveryHandler.onDelivered(message);
     }
 }
 

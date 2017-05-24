@@ -95,7 +95,7 @@ public final class MessageSerializers
         for (int i = 0; i < count; i++)
         {
             ByteArray buffer = deserialization.readRegion();
-            IMessagePart part = new SerializedMessagePart(deserialization.getRegistry(), Collections.singletonList(buffer), buffer.getLength());
+            IMessagePart part = new SerializedMessagePart(deserialization.getRegistry(), Collections.singletonList(buffer), buffer.getLength(), null);
             parts.add(part);
         }
         

@@ -309,7 +309,7 @@ public final class Message implements IMessage
         
         //return new SerializedMessagePart(serializationRegistry, outputStream.getBuffers(), outputStream.getLength());
         return new SerializedMessagePart(serializationRegistry, 
-            Collections.singletonList(new ByteArray(outputStream.getBuffer(), 0, outputStream.getLength())), outputStream.getLength());
+            Collections.singletonList(new ByteArray(outputStream.getBuffer(), 0, outputStream.getLength())), outputStream.getLength(), part);
     }
     
     private IMessagePart deserialize(IMessagePart part)
@@ -317,6 +317,9 @@ public final class Message implements IMessage
         if (part instanceof SerializedMessagePart)
         {
             SerializedMessagePart serializedPart = (SerializedMessagePart)part;
+            if (serializedPart.getMessagePart() != null)
+                return serializedPart.getMessagePart();
+            
             ByteArray buffer;
             if (serializedPart.getBuffers().size() > 1)
             {

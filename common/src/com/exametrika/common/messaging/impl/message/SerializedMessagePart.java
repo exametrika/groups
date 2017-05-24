@@ -24,6 +24,7 @@ public final class SerializedMessagePart implements IMessagePart
     private final ISerializationRegistry serializationRegistry;
     private final List<ByteArray> buffers;
     private final int size;
+    private final IMessagePart originalMessagePart;
 
     /**
      * Creates a new object.
@@ -31,8 +32,9 @@ public final class SerializedMessagePart implements IMessagePart
      * @param serializationRegistry serialization registry
      * @param buffers data buffers of serialized message part
      * @param size size of data buffers
+     * @param originalMessagePart original message part or null if not set
      */
-    public SerializedMessagePart(ISerializationRegistry serializationRegistry, List<ByteArray> buffers, int size)
+    public SerializedMessagePart(ISerializationRegistry serializationRegistry, List<ByteArray> buffers, int size, IMessagePart originalMessagePart)
     {
         Assert.notNull(serializationRegistry);
         Assert.notNull(buffers);
@@ -40,6 +42,7 @@ public final class SerializedMessagePart implements IMessagePart
         this.serializationRegistry = serializationRegistry;
         this.buffers = Immutables.wrap(buffers);
         this.size = size;
+        this.originalMessagePart = originalMessagePart;
     }
     
     /**
@@ -66,5 +69,10 @@ public final class SerializedMessagePart implements IMessagePart
     public int getSize()
     {
         return size;
+    }
+    
+    public IMessagePart getMessagePart()
+    {
+        return originalMessagePart;
     }
 }

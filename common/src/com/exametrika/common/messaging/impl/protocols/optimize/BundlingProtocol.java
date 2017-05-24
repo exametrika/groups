@@ -26,6 +26,7 @@ import com.exametrika.common.messaging.impl.message.Message;
 import com.exametrika.common.messaging.impl.message.MessageSerializers;
 import com.exametrika.common.messaging.impl.protocols.AbstractProtocol;
 import com.exametrika.common.messaging.impl.protocols.failuredetection.ICleanupManager;
+import com.exametrika.common.messaging.impl.transports.UnicastAddress;
 import com.exametrika.common.utils.Assert;
 import com.exametrika.common.utils.ByteArray;
 import com.exametrika.common.utils.Serializers;
@@ -109,7 +110,7 @@ public final class BundlingProtocol extends AbstractProtocol
     @Override
     protected void doSend(ISender sender, IMessage message)
     {
-        if (message.hasFlags(MessageFlags.PARALLEL))
+        if (!(message.getDestination() instanceof UnicastAddress) || message.hasFlags(MessageFlags.PARALLEL))
         {
             sender.send(message);
             return;

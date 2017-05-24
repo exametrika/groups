@@ -4,7 +4,6 @@
 package com.exametrika.impl.groups.cluster.channel;
 
 import com.exametrika.common.compartment.ICompartment;
-import com.exametrika.common.messaging.IChannel;
 import com.exametrika.common.messaging.IConnectionProvider;
 import com.exametrika.common.messaging.IMessageFactory;
 import com.exametrika.common.messaging.impl.SubChannel;
@@ -19,7 +18,7 @@ import com.exametrika.common.messaging.impl.transports.ITransport;
  * @threadsafety This class and its methods are thread safe.
  * @author medvedev
  */
-public class WorkerToCoreSubChannel extends SubChannel implements IChannel
+public class WorkerToCoreSubChannel extends SubChannel
 {
     public WorkerToCoreSubChannel(String channelName, LiveNodeManager liveNodeManager, ChannelObserver channelObserver, 
         ProtocolStack protocolStack, ITransport transport, IMessageFactory messageFactory, 
