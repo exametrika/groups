@@ -65,7 +65,7 @@ import com.exametrika.tests.groups.channel.TestGroupParameters;
  */
 public class MulticastProtocolTests
 {
-    private static final int COUNT = 2;// TODO:10;
+    private static final int COUNT = 10;
     private static final long SEND_COUNT = Long.MAX_VALUE;
     private Set<String> wellKnownAddresses = new HashSet<String>();
     private TestGroupFactoryParameters factoryParameters;
@@ -292,11 +292,13 @@ public class MulticastProtocolTests
             else
                 assertThat(nodeState, is(state));
             
-            int received = messageSenders.get(i).receivedCount;
+            int received = messageSenders.get(i).receivedMessages.size();
             if (receivedCount == null)
                 receivedCount = received;
             else
                 assertThat(receivedCount, is(received));
+            
+            assertThat(messageSenders.get(i).deliveredMessages.size(), is((int)messageSenders.get(i).count));
         }
         
         assertTrue(receivedCount > 0);
@@ -573,7 +575,9 @@ public class MulticastProtocolTests
         private long count;
         private boolean flowLocked;
         private RemoteFlowId flow;
-        private int receivedCount;
+        private List<IMessage> receivedMessages = new ArrayList<IMessage>();
+        private List<IMessage> deliveredMessages = new ArrayList<IMessage>();
+        private boolean failed;
 
         public TestMessageSender(int index)
         {
@@ -581,7 +585,7 @@ public class MulticastProtocolTests
         }
         
         @Override
-        public void onTimer(long currentTime)
+        public synchronized void onTimer(long currentTime)
         {
             if (!send)
                 return;
@@ -599,15 +603,16 @@ public class MulticastProtocolTests
         }
         
         @Override
-        public void receive(IMessage message)
+        public synchronized void receive(IMessage message)
         {
             if (message.getPart() instanceof TestBufferMessagePart)
             {
                 TestBufferMessagePart part = message.getPart();
+                assertThat(part.value, is((long)receivedMessages.size()));
                 ByteArray buffer = stateTransferFactories.get(index).state;
                 long counter = Bytes.readLong(buffer.getBuffer(), buffer.getOffset());
                 Bytes.writeLong(buffer.getBuffer(), buffer.getOffset(), counter + (part.index + 1) * part.value);
-                receivedCount++;
+                receivedMessages.add(message);
             }
         }
 
@@ -627,6 +632,26 @@ public class MulticastProtocolTests
         @Override
         public void onDelivered(IMessage message)
         {
+            TestBufferMessagePart part = message.getPart();
+            assertThat(part.value, is((long)deliveredMessages.size()));
+            deliveredMessages.add(message);
+            
+            for (TestMessageSender sender : messageSenders)
+            {
+                if (!failed)
+                {
+                    int received = 0;
+                    synchronized (sender)
+                    {
+                        for (IMessage receivedMessage : sender.receivedMessages)
+                        {
+                            if (receivedMessage.getSource().equals(message.getSource()))
+                                received++;
+                        }
+                    }
+                    assertTrue(received >= deliveredMessages.size());
+                }
+            }
         }
     }
     

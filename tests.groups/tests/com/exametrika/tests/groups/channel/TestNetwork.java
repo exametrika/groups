@@ -73,10 +73,10 @@ public class TestNetwork
     
     public void process(int roundCount, long timeIncrement)
     {
-        process(roundCount, timeIncrement, Collections.<TestProtocolStack>emptySet());
+        process(roundCount, timeIncrement, null, Collections.<TestProtocolStack>emptySet());
     }
     
-    public void process(int roundCount, long timeIncrement, Set<TestProtocolStack> ignoredNodes)
+    public void process(int roundCount, long timeIncrement, TestProtocolStack ignoredDestination, Set<TestProtocolStack> ignoredNodes)
     {
         for (int i = 0; i < roundCount; i++)
         {
@@ -84,7 +84,7 @@ public class TestNetwork
             while (true)
             {
                 List<TestProtocolStack> nodes = new ArrayList<TestProtocolStack>(this.nodes);
-                //TODO:java.util.Collections.shuffle(nodes, random);
+                java.util.Collections.shuffle(nodes, random);
                 boolean sent = false;
                 for (TestProtocolStack stack : nodes)
                 {
@@ -96,7 +96,10 @@ public class TestNetwork
                         TestProtocolStack destination = nodesMap.get(message.getDestination());
                         Assert.notNull(destination);
                         
-                        if (!ignoredNodes.contains(destination))
+                        if (ignoredNodes.isEmpty())
+                            destination.receive(message);
+                        else if (!(ignoredNodes.contains(destination) && (ignoredDestination == null ||
+                            destination.equals(ignoredDestination))))
                             destination.receive(message);
                         sent = true;
                     }

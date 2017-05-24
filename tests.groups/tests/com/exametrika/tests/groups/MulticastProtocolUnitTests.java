@@ -120,8 +120,8 @@ public class MulticastProtocolUnitTests
         TestFeed feed = new TestFeed(10, stack);
         stack.register(GroupMemberships.CORE_GROUP_ADDRESS, feed);
         process(10, 200);
-        checkReceived(network, stack, 0, 10);
-        checkDelivered(stack, 0, 10);
+        checkReceived(network, stack, 0, 5);
+        checkDelivered(stack, 0, 5);
     }
     
     @Test
@@ -144,7 +144,7 @@ public class MulticastProtocolUnitTests
         TestProtocolStack stack = network.getNodes().get(1);
         flush();
         sendMessages(stack, 10);
-        process(10, 200, com.exametrika.common.utils.Collections.asSet(network.getNodes().get(8),
+        process(10, 200, stack, com.exametrika.common.utils.Collections.asSet(network.getNodes().get(8),
             network.getNodes().get(9)));
         stack.setActive(false);
         updateFailureDetectors();
@@ -159,7 +159,7 @@ public class MulticastProtocolUnitTests
         TestProtocolStack stack = network.getNodes().get(1);
         flush();
         sendMessages(stack, 10);
-        process(10, 200, com.exametrika.common.utils.Collections.asSet(network.getNodes().get(8),
+        process(10, 200, null, com.exametrika.common.utils.Collections.asSet(network.getNodes().get(8),
             network.getNodes().get(9)));
         network.getNodes().get(8).setActive(false);
         network.getNodes().get(9).setActive(false);
@@ -191,7 +191,17 @@ public class MulticastProtocolUnitTests
     public void testNonDurableFlushSend()
     {
         createNetwork(false);
-        testReceiverFailure();
+        TestProtocolStack stack = network.getNodes().get(1);
+        flush();
+        sendMessages(stack, 10);
+        process(10, 200, null, com.exametrika.common.utils.Collections.asSet(network.getNodes().get(8),
+            network.getNodes().get(9)));
+        network.getNodes().get(8).setActive(false);
+        network.getNodes().get(9).setActive(false);
+        updateFailureDetectors();
+        flush();
+        process(10, 200);
+        checkReceived(network, stack, 0, 10);
     }
     
     @Test
@@ -230,8 +240,8 @@ public class MulticastProtocolUnitTests
         int maxUnacknowledgedMessageCount = 2;
         long maxIdleReceiveQueuePeriod = 10000;
         boolean ordered = durable;
-        int maxUnlockQueueCapacity = 200;
-        int minLockQueueCapacity = 500;
+        int maxUnlockQueueCapacity = 100;
+        int minLockQueueCapacity = 200;
         List<TestProtocolStack> nodes = new ArrayList<TestProtocolStack>();
         for (int i = 0; i < COUNT; i++)
         {
@@ -583,10 +593,10 @@ public class MulticastProtocolUnitTests
     
     private void process(int roundCount, long timeIncrement)
     {
-        process(roundCount, timeIncrement, Collections.<TestProtocolStack>emptySet());
+        process(roundCount, timeIncrement, null, Collections.<TestProtocolStack>emptySet());
     }
     
-    public void process(int roundCount, long timeIncrement, Set<TestProtocolStack> ignoredNodes)
+    public void process(int roundCount, long timeIncrement, TestProtocolStack ignoredDestination, Set<TestProtocolStack> ignoredNodes)
     {
         long currentTime = Times.getCurrentTime() + timeIncrement;
         for (TestProtocolStack stack : network.getNodes())
@@ -598,7 +608,7 @@ public class MulticastProtocolUnitTests
             protocol.process();
         }
         network.onTimer(currentTime);
-        network.process(roundCount, timeIncrement, ignoredNodes);   
+        network.process(roundCount, timeIncrement, ignoredDestination, ignoredNodes);   
     }
     
     private static class TestInfo
