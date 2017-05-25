@@ -303,9 +303,10 @@ public class MulticastProtocolTests
                 assertThat(receivedMap, is(received));
             
             assertThat(messageSenders.get(i).deliveredMessages.size(), is((int)messageSenders.get(i).count));
-            for (TestMessageSender sender : messageSenders)
+            for (int k = 0; k < messageSenders.size(); k++)
             {
-                if (!sender.failed)
+                TestMessageSender sender = messageSenders.get(k);
+                if (!skipIndexes.contains(k))
                 {
                     int receivedCount = 0;
                     synchronized (sender)
@@ -619,7 +620,6 @@ public class MulticastProtocolTests
         private RemoteFlowId flow;
         private Map<IAddress, List<IMessage>> receivedMessagesMap = new HashMap<IAddress, List<IMessage>>();
         private List<IMessage> deliveredMessages = new ArrayList<IMessage>();
-        private boolean failed;
 
         public TestMessageSender(int index)
         {
