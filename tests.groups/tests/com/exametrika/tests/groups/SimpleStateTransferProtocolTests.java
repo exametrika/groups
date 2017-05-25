@@ -240,7 +240,16 @@ public class SimpleStateTransferProtocolTests
         
         snapshotSequencer.waitAll(2, 5000, 0);
         IGroup group = channelFactory.messageSenders.get(2).membership.getGroup();
-        int index = group.getMembers().indexOf(group.getCoordinator());
+        int index = -1;
+        for (int i = 0; i < channels.length; i++)
+        {
+            if (channels[i].getMembershipService().getLocalNode().equals(group.getCoordinator()))
+            {
+                index = i;
+                break;
+            }
+        }
+        
         Threads.sleep(1000);
         IOs.close(channels[index]);
         
@@ -267,8 +276,16 @@ public class SimpleStateTransferProtocolTests
         
         flushSequencer.waitAll(COUNT - 2, 5000, 0);
         IGroup group = channelFactory.messageSenders.get(2).membership.getGroup();
-        int index = group.getMembers().indexOf(group.getCoordinator());
-        
+        int index = -1;
+        for (int i = 0; i < channels.length; i++)
+        {
+            if (channels[i].getMembershipService().getLocalNode().equals(group.getCoordinator()))
+            {
+                index = i;
+                break;
+            }
+        }
+                
         IOs.close(channels[index]);
         
         Threads.sleep(10000);

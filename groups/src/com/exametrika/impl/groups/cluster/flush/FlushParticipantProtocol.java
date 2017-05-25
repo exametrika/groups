@@ -301,6 +301,7 @@ public final class FlushParticipantProtocol extends AbstractProtocol implements 
 
     private void grantFlush(IFlushParticipant participant)
     {
+        Assert.notNull(notGrantedParticipants);
         Assert.isTrue(notGrantedParticipants.remove(participant));
 
         if (notGrantedParticipants.isEmpty())

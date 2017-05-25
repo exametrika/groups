@@ -364,7 +364,7 @@ public final class FailureAtomicMulticastProtocol extends AbstractProtocol imple
     @Override
     protected void doSend(ISender sender, IMessage message)
     {
-        if (!groupFormed)
+        if (!groupFormed && message.getDestination() instanceof GroupAddress)
         {
             pendingSentNewMessages.add(message);
             return;

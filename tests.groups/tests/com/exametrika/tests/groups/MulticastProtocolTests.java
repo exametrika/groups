@@ -96,7 +96,7 @@ public class MulticastProtocolTests
          
         Threads.sleep(10000);
         
-        checkMembership(Collections.<Integer>asSet());
+        checkMembership(Collections.<Integer>asSet(), true);
     }
 
     @Test
@@ -109,7 +109,7 @@ public class MulticastProtocolTests
          
         Threads.sleep(10000);
         
-        checkMembership(Collections.<Integer>asSet());
+        checkMembership(Collections.<Integer>asSet(), true);
     }
     @Test
     public void testPullableSender() throws Exception
@@ -123,7 +123,7 @@ public class MulticastProtocolTests
         
         Threads.sleep(10000);
         
-        checkMembership(Collections.<Integer>asSet());
+        checkMembership(Collections.<Integer>asSet(), true);
     }
     
     @Test
@@ -138,7 +138,7 @@ public class MulticastProtocolTests
          
         Threads.sleep(10000);
         
-        checkMembership(Collections.<Integer>asSet());
+        checkMembership(Collections.<Integer>asSet(), true);
         boolean locked = false;
         for (TestMessageSender sender : messageSenders)
         {
@@ -164,7 +164,7 @@ public class MulticastProtocolTests
          
         Threads.sleep(10000);
         
-        checkMembership(Collections.<Integer>asSet());
+        checkMembership(Collections.<Integer>asSet(), true);
         boolean locked = false;
         for (TestMessageSender sender : messageSenders)
         {
@@ -184,7 +184,7 @@ public class MulticastProtocolTests
          
         Threads.sleep(10000);
          
-        checkMembership(Collections.<Integer>asSet(0, 1));
+        checkMembership(Collections.<Integer>asSet(0, 1), true);
         
         channels[0].start();
         channels[1].start();
@@ -193,7 +193,7 @@ public class MulticastProtocolTests
         
         Threads.sleep(10000);
         
-        checkMembership(Collections.<Integer>asSet(COUNT - 2, COUNT - 1));
+        checkMembership(Collections.<Integer>asSet(COUNT - 2, COUNT - 1), false);
     }
     
     @Test
@@ -206,19 +206,28 @@ public class MulticastProtocolTests
          
         Threads.sleep(10000);
          
-        checkMembership(Collections.<Integer>asSet(0, 1));
+        checkMembership(Collections.<Integer>asSet(0, 1), true);
 
         channels[0].start();
         channels[1].start();
         
         IGroup group = flushParticipants.get(2).flush.getNewMembership().getGroup();
-        int index = group.getMembers().indexOf(group.getCoordinator());
+        int index = -1;
+        for (int i = 0; i < channels.length; i++)
+        {
+            if (channels[i].getMembershipService().getLocalNode().equals(group.getCoordinator()))
+            {
+                index = i;
+                break;
+            }
+        }
+        
         Threads.sleep(1000);
         IOs.close(channels[index]);
         
         Threads.sleep(10000);
         
-        checkMembership(Collections.<Integer>asSet(index));
+        checkMembership(Collections.<Integer>asSet(index), false);
     }
     
     @Test
@@ -231,7 +240,7 @@ public class MulticastProtocolTests
          
         Threads.sleep(10000);
          
-        checkMembership(Collections.<Integer>asSet(0, 1));
+        checkMembership(Collections.<Integer>asSet(0, 1), true);
 
         failOnFlush();
         
@@ -240,13 +249,21 @@ public class MulticastProtocolTests
         
         flushSequencer.waitAll(COUNT - 2, 5000, 0);
         IGroup group = flushParticipants.get(2).flush.getNewMembership().getGroup();
-        int index = group.getMembers().indexOf(group.getCoordinator());
+        int index = -1;
+        for (int i = 0; i < channels.length; i++)
+        {
+            if (channels[i].getMembershipService().getLocalNode().equals(group.getCoordinator()))
+            {
+                index = i;
+                break;
+            }
+        }
         
         IOs.close(channels[index]);
         
-        Threads.sleep(10000);
+        Threads.sleep(10000000);//TODO:
         
-        checkMembership(Collections.<Integer>asSet(index));
+        checkMembership(Collections.<Integer>asSet(index), false);
     }
     
     private void createGroup(Set<Integer> skipIndexes)
@@ -266,7 +283,7 @@ public class MulticastProtocolTests
         }
     }
 
-    private void checkMembership(Set<Integer> skipIndexes)
+    private void checkMembership(Set<Integer> skipIndexes, boolean checkMessages)
     {
         IGroupMembership membership = null;
         ByteArray state = null;
@@ -296,31 +313,36 @@ public class MulticastProtocolTests
             else
                 assertThat(nodeState, is(state));
             
-            Map<IAddress, List<Integer>> received = buildReceivedMap(messageSenders.get(i).receivedMessagesMap);
-            if (receivedMap == null)
-                receivedMap = received;
-            else
-                assertThat(receivedMap, is(received));
-            
-            assertThat(messageSenders.get(i).deliveredMessages.size(), is((int)messageSenders.get(i).count));
-            for (int k = 0; k < messageSenders.size(); k++)
+            if (checkMessages)
             {
-                TestMessageSender sender = messageSenders.get(k);
-                if (!skipIndexes.contains(k))
+                Map<IAddress, List<Integer>> received = buildReceivedMap(messageSenders.get(i).receivedMessagesMap);
+                if (receivedMap == null)
+                    receivedMap = received;
+                else
+                    assertThat(receivedMap, is(received));
+                
+                assertThat(messageSenders.get(i).deliveredMessages.size(), is((int)messageSenders.get(i).count));
+                for (int k = 0; k < messageSenders.size(); k++)
                 {
-                    int receivedCount = 0;
-                    synchronized (sender)
+                    TestMessageSender sender = messageSenders.get(k);
+                    if (!skipIndexes.contains(k))
                     {
-                        List<IMessage> receivedMessages = sender.receivedMessagesMap.get(channels[i].getLiveNodeProvider().getLocalNode());
-                        if (receivedMessages != null)
-                            receivedCount = receivedMessages.size();
+                        int receivedCount = 0;
+                        synchronized (sender)
+                        {
+                            List<IMessage> receivedMessages = sender.receivedMessagesMap.get(channels[i].getLiveNodeProvider().getLocalNode());
+                            if (receivedMessages != null)
+                                receivedCount = receivedMessages.size();
+                        }
+                        assertThat(receivedCount, is(messageSenders.get(i).deliveredMessages.size()));
                     }
-                    assertThat(receivedCount, is(messageSenders.get(i).deliveredMessages.size()));
                 }
             }
         }
         
-        assertTrue(!receivedMap.isEmpty());
+        if (checkMessages)
+            assertTrue(!receivedMap.isEmpty());
+        
         assertThat(membership.getGroup().getMembers().size(), is(COUNT - skipIndexes.size()));
     }
     

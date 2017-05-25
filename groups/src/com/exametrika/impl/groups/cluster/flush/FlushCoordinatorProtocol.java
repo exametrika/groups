@@ -200,7 +200,13 @@ public final class FlushCoordinatorProtocol extends AbstractProtocol implements 
             memberIds = getNodeIdsByAddress(respondingMembers);
         
         if (memberIds != null)
+        {
+            if (logger.isLogEnabled(LogLevel.DEBUG))
+                logger.log(LogLevel.DEBUG, marker, messages.responseTimeout(
+                    Strings.wrap(respondingMembers.toString(), 4, 120)));
+            
             failureDetector.addFailedMembers(memberIds);
+        }
     }
     
     @Override
@@ -215,7 +221,7 @@ public final class FlushCoordinatorProtocol extends AbstractProtocol implements 
             if (!part.getLeftMembers().isEmpty())
                 failureDetector.addLeftMembers(part.getLeftMembers());
 
-            if (!flushCoordinator || phase == Phase.READY)
+            if (!flushCoordinator || phase == Phase.READY || phase == Phase.UNKNOWN)
                 return;
 
             if (!respondingMembers.contains(message.getSource()))
@@ -661,6 +667,8 @@ public final class FlushCoordinatorProtocol extends AbstractProtocol implements 
         ILocalizedMessage processFlush(String participants);
         @DefaultMessage("End phase of flush has been started on participants:\n{0}.")
         ILocalizedMessage endFlush(String participants);
+        @DefaultMessage("Flush wait for responses timed out. Not responded members:\n{0}.")
+        ILocalizedMessage responseTimeout(String respondingMembers);
         @DefaultMessage("Requesting current flush state on participants:\n{0}.")
         ILocalizedMessage requestFlushState(String participants);
         @DefaultMessage("Flush completed.")
