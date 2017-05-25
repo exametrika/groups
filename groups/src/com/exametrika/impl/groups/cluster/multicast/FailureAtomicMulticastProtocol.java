@@ -447,7 +447,7 @@ public final class FailureAtomicMulticastProtocol extends AbstractProtocol imple
             {
                 boolean noDelay = message.hasFlags(MessageFlags.NO_DELAY);
                 send(messageFactory.create(message.getSource(), new AcknowledgeSendMessagePart(receiveQueue.getLastReceivedMessageId(), true),
-                    MessageFlags.HIGH_PRIORITY | (noDelay ? MessageFlags.NO_DELAY : 0)));
+                    (noDelay ? MessageFlags.NO_DELAY : 0)));
                 receiveQueue.acknowledge();
             }
             
@@ -521,7 +521,8 @@ public final class FailureAtomicMulticastProtocol extends AbstractProtocol imple
             
             return null;
         }
-        else if (!(message.getPart() instanceof AcknowledgeSendMessagePart))
+        else if (!(message.getPart() instanceof AcknowledgeSendMessagePart) && 
+            !message.hasOneOfFlags(MessageFlags.HIGH_PRIORITY | MessageFlags.PARALLEL | MessageFlags.LOW_PRIORITY))
         {
             ReceiveQueue receiveQueue = receiveQueues.get(message.getDestination());
             if (receiveQueue != null && receiveQueue.isAcknowledgementRequired())
@@ -580,7 +581,7 @@ public final class FailureAtomicMulticastProtocol extends AbstractProtocol imple
                 if (!failureDetector.isHealthyMember(node.getId()))
                     continue;
                 
-                send(messageFactory.create(node.getAddress(), part, MessageFlags.HIGH_PRIORITY));
+                send(messageFactory.create(node.getAddress(), part));
             }
         }
         
@@ -597,8 +598,7 @@ public final class FailureAtomicMulticastProtocol extends AbstractProtocol imple
             if (receiveQueue.isAcknowledgementRequired() && 
                 currentTime >= receiveQueue.getFirstUnacknowledgedReceiveTime() + maxUnacknowledgedPeriod)
             {
-                send(messageFactory.create(entry.getKey(), new AcknowledgeSendMessagePart(receiveQueue.getLastReceivedMessageId(), true),
-                    MessageFlags.HIGH_PRIORITY));
+                send(messageFactory.create(entry.getKey(), new AcknowledgeSendMessagePart(receiveQueue.getLastReceivedMessageId(), true)));
                 receiveQueue.acknowledge();
             }
             else if (!receiveQueue.isAcknowledgementRequired() && receiveQueue.isEmpty() && 
