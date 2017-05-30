@@ -124,7 +124,7 @@ public final class SendQueue
     
     public void setLastOldMembershipMessageId()
     {
-        lastOldMembershipMessageId = startMessageId + deque.size() - 1;
+        lastOldMembershipMessageId = lastSendMessageId;
     }
     
     public int getQueueCapacity()
@@ -159,8 +159,10 @@ public final class SendQueue
         return nextSendMessageId++;
     }
     
-    public void offer(IMessage message)
+    public void offer(IMessage message, long messageId)
     {
+        Assert.isTrue(messageId == startMessageId + deque.size());
+        
         if (lastSendMessageId == startMessageId + deque.size() - 1)
             bundleCreationTime = timeService.getCurrentTime();
         

@@ -55,13 +55,13 @@ public final class DataLossFeedbackProvider implements IFeedbackProvider, IDataL
     @Override
     public void register(ISerializationRegistry registry)
     {
-        registry.register(new NodeFeedbackDataSerializer());
+        registry.register(new DataLossFeedbackDataSerializer());
     }
 
     @Override
     public void unregister(ISerializationRegistry registry)
     {
-        registry.unregister(NodeFeedbackDataSerializer.ID);
+        registry.unregister(DataLossFeedbackDataSerializer.ID);
     }
 
     @Override

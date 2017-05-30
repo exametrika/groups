@@ -261,7 +261,7 @@ public class MulticastProtocolTests
         
         IOs.close(channels[index]);
         
-        Threads.sleep(10000000);//TODO:
+        Threads.sleep(10000);
         
         checkMembership(Collections.<Integer>asSet(index), false);
     }

@@ -188,7 +188,7 @@ public final class FailureAtomicMulticastProtocol extends AbstractProtocol imple
         boolean started = false;
         if (this.flush == null)
         {
-            sendBundle(0);
+            sendBundle(true, 0);
             sendQueue.setLastOldMembershipMessageId();
             started = true;
         }
@@ -268,7 +268,7 @@ public final class FailureAtomicMulticastProtocol extends AbstractProtocol imple
     public void onTimer(long currentTime)
     {
         if (currentTime > sendQueue.getBundleCreationTime() + maxBundlingPeriod)
-            sendBundle(0);
+            sendBundle(false, 0);
         
         if (sendQueue.isCompletionRequired() && currentTime > sendQueue.getLastCompletionSendTime() + 
             (maxBundlingPeriod + maxUnacknowledgedPeriod))
@@ -512,12 +512,12 @@ public final class FailureAtomicMulticastProtocol extends AbstractProtocol imple
             FailureAtomicMessagePart part = new FailureAtomicMessagePart(messageId, order);
             message = message.addPart(part, true);
 
-            sendQueue.offer(message);
+            sendQueue.offer(message, messageId);
 
             if (message.hasFlags(MessageFlags.NO_DELAY) || message.getSize() > maxBundlingMessageSize ||
                 sendQueue.getQueueCapacity() > maxBundleSize || 
                 timeService.getCurrentTime() > sendQueue.getBundleCreationTime() + maxBundlingPeriod)
-                sendBundle(message.getFlags());
+                sendBundle(false, message.getFlags());
             
             return null;
         }
@@ -535,9 +535,13 @@ public final class FailureAtomicMulticastProtocol extends AbstractProtocol imple
         return message;
     }
     
-    private void sendBundle(int flags)
+    private void sendBundle(boolean onStartFlush, int flags)
     {
-        IGroupMembership membership = membershipManager.getPreparedMembership();
+        IGroupMembership membership;
+        if (onStartFlush)
+            membership = membershipManager.getMembership();
+        else
+            membership = membershipManager.getPreparedMembership();
         if (membership == null)
             return;
         
@@ -545,7 +549,9 @@ public final class FailureAtomicMulticastProtocol extends AbstractProtocol imple
         if (bundledMessages == null)
             return;
         
-        long minCompletedMessageId = sendQueue.complete();
+        long minCompletedMessageId = 0;
+        if (flush == null)
+            minCompletedMessageId = sendQueue.complete();
         
         ByteOutputStream stream = new ByteOutputStream(0x1000);
         ISerialization serialization = new Serialization(serializationRegistry, true, stream);
