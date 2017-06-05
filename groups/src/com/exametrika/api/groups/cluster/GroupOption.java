@@ -19,7 +19,9 @@ public enum GroupOption
     /** Implements simple state transfer. */
     SIMPLE_STATE_TRANSFER,
     /** Implements async state transfer. */
-    ASYNC_STATE_TRANSFER;
+    ASYNC_STATE_TRANSFER,
+    /** Implements group state equality check.*/
+    CHECK_STATE;
     
     public static Set<GroupOption> validate(Set<GroupOption> options)
     {

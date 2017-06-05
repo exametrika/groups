@@ -7,37 +7,37 @@ import com.exametrika.common.messaging.IMessagePart;
 import com.exametrika.common.utils.Assert;
 
 /**
- * The {@link StateChecksumResponseMessagePart} is a group state checksum response message part.
+ * The {@link StateHashResponseMessagePart} is a group state hash response message part.
  * 
  * @threadsafety This class and its methods are thread safe.
  * @author Medvedev-A
  */
-public final class StateChecksumResponseMessagePart implements IMessagePart
+public final class StateHashResponseMessagePart implements IMessagePart
 {
-    private final long checksum;
+    private final String hash;
 
-    public StateChecksumResponseMessagePart(long checksum)
+    public StateHashResponseMessagePart(String hash)
     {
-        Assert.notNull(checksum);
+        Assert.notNull(hash);
         
-        this.checksum = checksum;
+        this.hash = hash;
     }
     
-    public long getChecksum()
+    public String getHash()
     {
-        return checksum;
+        return hash;
     }
     
     @Override
     public int getSize()
     {
-        return 8;
+        return hash.length() * 2;
     }
     
     @Override 
     public String toString()
     {
-        return Long.toString(checksum);
+        return hash;
     }
 }
 

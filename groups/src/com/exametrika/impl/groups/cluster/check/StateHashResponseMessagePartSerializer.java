@@ -10,33 +10,33 @@ import com.exametrika.common.io.ISerialization;
 import com.exametrika.common.io.impl.AbstractSerializer;
 
 /**
- * The {@link StateChecksumResponseMessagePartSerializer} is a serializer for {@link StateChecksumResponseMessagePart}.
+ * The {@link StateHashResponseMessagePartSerializer} is a serializer for {@link StateHashResponseMessagePart}.
  * 
  * @threadsafety This class and its methods are thread safe.
  * @author Medvedev-A
  */
-public final class StateChecksumResponseMessagePartSerializer extends AbstractSerializer
+public final class StateHashResponseMessagePartSerializer extends AbstractSerializer
 {
     public static final UUID ID = UUID.fromString("602e1d95-1912-4318-8f75-046a3cf333c7");
  
-    public StateChecksumResponseMessagePartSerializer()
+    public StateHashResponseMessagePartSerializer()
     {
-        super(ID, StateChecksumResponseMessagePart.class);
+        super(ID, StateHashResponseMessagePart.class);
     }
 
     @Override
     public void serialize(ISerialization serialization, Object object)
     {
-        StateChecksumResponseMessagePart part = (StateChecksumResponseMessagePart)object;
+        StateHashResponseMessagePart part = (StateHashResponseMessagePart)object;
 
-        serialization.writeLong(part.getChecksum());
+        serialization.writeString(part.getHash());
     }
     
     @Override
     public Object deserialize(IDeserialization deserialization, UUID id)
     {
-        long checksum = deserialization.readLong();
+        String hash = deserialization.readString();
         
-        return new StateChecksumResponseMessagePart(checksum);
+        return new StateHashResponseMessagePart(hash);
     }
 }

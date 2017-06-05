@@ -404,6 +404,7 @@ public class MulticastProtocolTests
         factoryParameters.maxUnacknowledgedMessageCount = 100;
         factoryParameters.maxIdleReceiveQueuePeriod = 600000;
         factoryParameters.maxUnlockQueueCapacity = 100000;
+        factoryParameters.checkStatePeriod = 300000;
     }
     
     private void createParameters()

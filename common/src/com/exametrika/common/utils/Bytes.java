@@ -3,6 +3,7 @@
  */
 package com.exametrika.common.utils;
 
+import java.security.MessageDigest;
 import java.util.UUID;
 
 
@@ -152,6 +153,23 @@ public final class Bytes
         {
             writeChar(data, offset, value.charAt(i));
             offset += 2;
+        }
+    }
+    
+    public static String md5Hash(ByteArray value)
+    {
+        Assert.notNull(value);
+        
+        try 
+        {
+            MessageDigest digest = MessageDigest.getInstance("MD5");
+            digest.update(value.getBuffer(), value.getOffset(), value.getLength());
+            
+            return Strings.digestToString(digest.digest());
+        }
+        catch (Exception e)
+        {
+            throw new RuntimeException(e);
         }
     }
     

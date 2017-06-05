@@ -13,6 +13,8 @@ import com.exametrika.api.groups.cluster.NodeFactoryParameters;
  */
 public class TestGroupFactoryParameters extends NodeFactoryParameters
 {
+    public long failureGenerationProcessPeriod = 1000;
+    
     public TestGroupFactoryParameters()
     {
         super(false);

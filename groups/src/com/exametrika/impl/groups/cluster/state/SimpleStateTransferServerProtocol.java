@@ -17,7 +17,10 @@ import com.exametrika.common.messaging.IReceiver;
 import com.exametrika.common.messaging.impl.protocols.AbstractProtocol;
 import com.exametrika.common.utils.Assert;
 import com.exametrika.common.utils.ByteArray;
+import com.exametrika.common.utils.Bytes;
+import com.exametrika.common.utils.ICompletionHandler;
 import com.exametrika.impl.groups.MessageFlags;
+import com.exametrika.impl.groups.cluster.check.IGroupStateHashProvider;
 import com.exametrika.impl.groups.cluster.failuredetection.IGroupFailureDetector;
 import com.exametrika.impl.groups.cluster.flush.IFlush;
 import com.exametrika.impl.groups.cluster.flush.IFlushParticipant;
@@ -32,7 +35,7 @@ import com.exametrika.spi.groups.cluster.state.IStateTransferFactory;
  * @threadsafety This class and its methods are not thread safe.
  * @author Medvedev-A
  */
-public final class SimpleStateTransferServerProtocol extends AbstractProtocol implements IFlushParticipant
+public final class SimpleStateTransferServerProtocol extends AbstractProtocol implements IFlushParticipant, IGroupStateHashProvider
 {
     private static final IMessages messages = Messages.get(IMessages.class);
     private final IGroupMembershipManager membershipManager;
@@ -116,6 +119,16 @@ public final class SimpleStateTransferServerProtocol extends AbstractProtocol im
     public void endFlush()
     {
         flush = null;
+    }
+    
+    @Override
+    public void computeStateHash(ICompletionHandler<String> completionHandler)
+    {
+        Assert.notNull(completionHandler);
+        
+        ByteArray state = server.saveSnapshot(true);
+        String hash = Bytes.md5Hash(state);
+        completionHandler.onSucceeded(hash);
     }
     
     @Override

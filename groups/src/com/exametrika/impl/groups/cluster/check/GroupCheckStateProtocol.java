@@ -20,6 +20,7 @@ import com.exametrika.common.messaging.IMessageFactory;
 import com.exametrika.common.messaging.IReceiver;
 import com.exametrika.common.messaging.impl.protocols.AbstractProtocol;
 import com.exametrika.common.utils.Assert;
+import com.exametrika.common.utils.ICompletionHandler;
 import com.exametrika.impl.groups.MessageFlags;
 import com.exametrika.impl.groups.cluster.failuredetection.IFailureDetectionListener;
 import com.exametrika.impl.groups.cluster.failuredetection.IGroupFailureDetector;
@@ -40,7 +41,7 @@ public final class GroupCheckStateProtocol extends AbstractProtocol implements I
 {
     private static final IMessages messages = Messages.get(IMessages.class);
     private final IGroupMembershipManager membershipManager;
-    private final IGroupStateChecksumProvider stateChecksumProvider;
+    private IGroupStateHashProvider stateHashProvider;
     private final IDataLossFeedbackService dataLossFeedbackService;
     private final long checkStatePeriod;
     private final UUID groupId;
@@ -48,25 +49,22 @@ public final class GroupCheckStateProtocol extends AbstractProtocol implements I
     private final String groupDomain;
     private IGroupFailureDetector failureDetector;
     private Set<IAddress> respondingNodes = new HashSet<IAddress>();
-    private Long checksum;
+    private String stateHash;
     private long lastCheckTime;
     
     public GroupCheckStateProtocol(String channelName, IMessageFactory messageFactory, 
-        IGroupMembershipManager membershipManager, IGroupStateChecksumProvider stateChecksumProvider,
-        IDataLossFeedbackService dataLossFeedbackService, long checkStatePeriod, UUID groupId,
-        GroupAddress groupAddress, String groupDomain)
+        IGroupMembershipManager membershipManager, IDataLossFeedbackService dataLossFeedbackService, 
+        long checkStatePeriod, UUID groupId, GroupAddress groupAddress, String groupDomain)
     {
         super(channelName, messageFactory);
         
         Assert.notNull(membershipManager);
-        Assert.notNull(stateChecksumProvider);
         Assert.notNull(dataLossFeedbackService);
         Assert.notNull(groupId);
         Assert.notNull(groupAddress);
         Assert.notNull(groupDomain);
         
         this.membershipManager = membershipManager;
-        this.stateChecksumProvider = stateChecksumProvider;
         this.dataLossFeedbackService = dataLossFeedbackService;
         this.checkStatePeriod = checkStatePeriod;
         this.groupId = groupId;
@@ -82,16 +80,24 @@ public final class GroupCheckStateProtocol extends AbstractProtocol implements I
         this.failureDetector = failureDetector;
     }
     
+    public void setStateHashProvider(IGroupStateHashProvider stateHashProvider)
+    {
+        Assert.notNull(stateHashProvider);
+        Assert.isNull(this.stateHashProvider);
+        
+        this.stateHashProvider = stateHashProvider;
+    }
+    
     @Override
     public void register(ISerializationRegistry registry)
     {
-        registry.register(new StateChecksumResponseMessagePartSerializer());
+        registry.register(new StateHashResponseMessagePartSerializer());
     }
     
     @Override
     public void unregister(ISerializationRegistry registry)
     {
-        registry.unregister(StateChecksumResponseMessagePartSerializer.ID);
+        registry.unregister(StateHashResponseMessagePartSerializer.ID);
     }
     
     @Override
@@ -114,25 +120,25 @@ public final class GroupCheckStateProtocol extends AbstractProtocol implements I
             com.exametrika.common.utils.Collections.isEmpty(respondingNodes))
         {
             lastCheckTime = currentTime;
-            checksum = null;
+            stateHash = null;
             List<INode> healthyNodes = failureDetector.getHealthyMembers();
             respondingNodes = new HashSet<IAddress>();
             for (INode node : healthyNodes)
                 respondingNodes.add(node.getAddress());
             
-            send(messageFactory.create(groupAddress, MessageFlags.STATE_CHECKSUM_REQUEST));
+            send(messageFactory.create(groupAddress, MessageFlags.STATE_HASH_REQUEST));
         }
     }
     
     @Override
-    protected void doReceive(IReceiver receiver, IMessage message)
+    protected void doReceive(IReceiver receiver, final IMessage message)
     {
-        if (message.getPart() instanceof StateChecksumResponseMessagePart)
+        if (message.getPart() instanceof StateHashResponseMessagePart)
         {
-            StateChecksumResponseMessagePart part = message.getPart();
-            if (checksum == null)
-                checksum = part.getChecksum();
-            else if (checksum != part.getChecksum())
+            StateHashResponseMessagePart part = message.getPart();
+            if (stateHash == null)
+                stateHash = part.getHash();
+            else if (stateHash.equals(part.getHash()))
             {
                 if (logger.isLogEnabled(LogLevel.ERROR))
                     logger.log(LogLevel.ERROR, marker, messages.stateNotEqual(message.getSource()));
@@ -143,8 +149,28 @@ public final class GroupCheckStateProtocol extends AbstractProtocol implements I
             
             respondingNodes.remove(message.getSource());
         }
-        else if (message.hasFlags(MessageFlags.STATE_CHECKSUM_REQUEST))
-            send(messageFactory.create(message.getSource(), new StateChecksumResponseMessagePart(stateChecksumProvider.getStateChecksum())));
+        else if (message.hasFlags(MessageFlags.STATE_HASH_REQUEST))
+        {
+            stateHashProvider.computeStateHash(new ICompletionHandler<String>()
+            {
+                @Override
+                public void onSucceeded(String result)
+                {
+                    sendResponse(result);
+                }
+                
+                @Override
+                public void onFailed(Throwable error)
+                {
+                    sendResponse("");
+                }
+                
+                private void sendResponse(String result)
+                {
+                    send(messageFactory.create(message.getSource(), new StateHashResponseMessagePart(result)));
+                }
+            });
+        }
         else
             receiver.receive(message);
     }

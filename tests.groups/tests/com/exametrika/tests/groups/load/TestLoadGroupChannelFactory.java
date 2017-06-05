@@ -1,28 +1,45 @@
 package com.exametrika.tests.groups.load;
 
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
+import com.exametrika.common.io.ISerializationRegistry;
 import com.exametrika.common.messaging.IChannel;
+import com.exametrika.common.messaging.ILiveNodeProvider;
+import com.exametrika.common.messaging.IMessageFactory;
+import com.exametrika.common.messaging.impl.ChannelParameters;
+import com.exametrika.common.messaging.impl.protocols.AbstractProtocol;
 import com.exametrika.common.messaging.impl.protocols.ProtocolStack;
+import com.exametrika.common.messaging.impl.protocols.failuredetection.IFailureObserver;
 import com.exametrika.common.messaging.impl.transports.tcp.TcpTransport;
 import com.exametrika.common.utils.Assert;
 import com.exametrika.impl.groups.cluster.discovery.WellKnownAddressesDiscoveryStrategy;
+import com.exametrika.impl.groups.cluster.flush.FlushParticipantProtocol;
 import com.exametrika.impl.groups.cluster.membership.GroupMemberships;
 import com.exametrika.tests.groups.channel.TestGroupChannel;
 import com.exametrika.tests.groups.channel.TestGroupChannelFactory;
 import com.exametrika.tests.groups.channel.TestGroupFactoryParameters;
 import com.exametrika.tests.groups.channel.TestGroupParameters;
+import com.exametrika.tests.groups.fail.TestFailureGenerationProtocol;
+import com.exametrika.tests.groups.fail.TestFailureSpec;
 
 public class TestLoadGroupChannelFactory extends TestGroupChannelFactory
 {
+    private List<TestFailureSpec> failureSpecs;
+
     public TestLoadGroupChannelFactory(TestGroupFactoryParameters factoryParameters)
     {
         super(factoryParameters);
     }
     
-    public IChannel create(int index, TestLoadSpec loadSpec)
+    public IChannel create(int index, TestLoadSpec loadSpec, List<TestFailureSpec> failureSpecs)
     {
+        Assert.notNull(loadSpec);
+        Assert.notNull(failureSpecs);
+        
+        this.failureSpecs = failureSpecs;
+        
         TestLoadMessageSender sender = new TestLoadMessageSender(index, loadSpec, GroupMemberships.CORE_GROUP_ADDRESS);
         
         TestLoadStateStore stateStore = new TestLoadStateStore(TestLoadMessageSender.createBuffer(index, getStateLength(loadSpec)));
@@ -51,9 +68,26 @@ public class TestLoadGroupChannelFactory extends TestGroupChannelFactory
     }
     
     @Override
+    protected void createProtocols(ChannelParameters parameters, String channelName, IMessageFactory messageFactory, 
+        ISerializationRegistry serializationRegistry, ILiveNodeProvider liveNodeProvider, List<IFailureObserver> failureObservers, 
+        List<AbstractProtocol> protocols)
+    {
+        super.createProtocols(parameters, channelName, messageFactory, serializationRegistry, liveNodeProvider, 
+            failureObservers, protocols);
+        
+        TestFailureGenerationProtocol failureGenerationProtocol = new TestFailureGenerationProtocol(channelName, messageFactory,
+            failureSpecs, ((TestGroupFactoryParameters)factoryParameters).failureGenerationProcessPeriod, failureDetectionProtocol);
+        protocols.add(failureGenerationProtocol);
+    }
+    
+    @Override
     protected void wireProtocols(IChannel channel, TcpTransport transport, ProtocolStack protocolStack)
     {
         super.wireProtocols(channel, transport, protocolStack);
+        
+        FlushParticipantProtocol flushParticipantProtocol = protocolStack.find(FlushParticipantProtocol.class);
+        TestFailureGenerationProtocol failureGenerationProtocol = protocolStack.find(TestFailureGenerationProtocol.class);
+        flushParticipantProtocol.getParticipants().add(failureGenerationProtocol);
     }
     
     private int getStateLength(TestLoadSpec loadSpec)

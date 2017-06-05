@@ -24,6 +24,6 @@ public interface MessageFlags extends com.exametrika.common.messaging.impl.Messa
     /** Message is a worker group discovery request. */
     int GROUP_DISCOVERY_REQUEST = 1 << 23;
     
-    /** Message is a group state checksum request. */
-    int STATE_CHECKSUM_REQUEST = 1 << 24;
+    /** Message is a group state hash request. */
+    int STATE_HASH_REQUEST = 1 << 24;
 }

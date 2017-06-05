@@ -36,6 +36,7 @@ public class NodeFactoryParameters extends ChannelFactoryParameters
     public long maxUnacknowledgedPeriod = 100;
     public int maxUnacknowledgedMessageCount = 100;
     public long maxIdleReceiveQueuePeriod = 600000;
+    public long checkStatePeriod = 600000;
     
     public NodeFactoryParameters()
     {

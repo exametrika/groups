@@ -31,6 +31,7 @@ import com.exametrika.common.messaging.impl.protocols.failuredetection.LiveNodeM
 import com.exametrika.common.messaging.impl.transports.ConnectionManager;
 import com.exametrika.common.messaging.impl.transports.tcp.TcpTransport;
 import com.exametrika.common.utils.Assert;
+import com.exametrika.impl.groups.cluster.check.GroupCheckStateProtocol;
 import com.exametrika.impl.groups.cluster.discovery.CoreGroupDiscoveryProtocol;
 import com.exametrika.impl.groups.cluster.exchange.GroupDataExchangeProtocol;
 import com.exametrika.impl.groups.cluster.exchange.IDataExchangeProvider;
@@ -53,6 +54,7 @@ import com.exametrika.impl.groups.cluster.state.AsyncStateTransferServerProtocol
 import com.exametrika.impl.groups.cluster.state.SimpleStateTransferClientProtocol;
 import com.exametrika.impl.groups.cluster.state.SimpleStateTransferServerProtocol;
 import com.exametrika.spi.groups.cluster.channel.IChannelReconnector;
+import com.exametrika.tests.groups.mocks.DataLossFeedbackProviderMock;
 
 /**
  * The {@link TestGroupChannelFactory} is a test group channel factory.
@@ -65,8 +67,8 @@ public class TestGroupChannelFactory extends ChannelFactory
     private CoreGroupMembershipTracker membershipTracker;
     private CoreGroupMembershipManager membershipManager;
     
-    private CoreGroupFailureDetectionProtocol failureDetectionProtocol;
-    private TestGroupParameters nodeParameters;
+    protected CoreGroupFailureDetectionProtocol failureDetectionProtocol;
+    protected TestGroupParameters nodeParameters;
     
     private AsyncStateTransferClientProtocol stateTransferClientProtocol;
     private AsyncStateTransferServerProtocol stateTransferServerProtocol;
@@ -127,6 +129,13 @@ public class TestGroupChannelFactory extends ChannelFactory
         membershipListeners.add(discoveryProtocol);
         membershipManager.setNodeDiscoverer(discoveryProtocol);
         
+        GroupCheckStateProtocol checkStateProtocol = new GroupCheckStateProtocol(channelName, messageFactory, membershipManager, 
+            new DataLossFeedbackProviderMock(), nodeFactoryParameters.checkStatePeriod, GroupMemberships.CORE_GROUP_ID,
+            GroupMemberships.CORE_GROUP_ADDRESS, GroupMemberships.CORE_DOMAIN);
+        protocols.add(checkStateProtocol);
+        failureDetectionListeners.add(checkStateProtocol);
+        checkStateProtocol.setFailureDetector(failureDetectionProtocol);
+        
         FlowControlProtocol flowControlProtocol = new FlowControlProtocol(channelName, messageFactory, membershipManager);
         protocols.add(flowControlProtocol);
         failureDetectionListeners.add(flowControlProtocol);
@@ -147,6 +156,8 @@ public class TestGroupChannelFactory extends ChannelFactory
             protocols.add(stateTransferServerProtocol);
             flushParticipants.add(stateTransferClientProtocol);
             flushParticipants.add(stateTransferServerProtocol);
+            
+            checkStateProtocol.setStateHashProvider(stateTransferServerProtocol);
         }
         else
         {
@@ -165,6 +176,8 @@ public class TestGroupChannelFactory extends ChannelFactory
             protocols.add(stateTransferServerProtocol);
             flushParticipants.add(stateTransferServerProtocol);
             stateTransferServerProtocol.setFlowController(flowControlProtocol);
+            
+            checkStateProtocol.setStateHashProvider(stateTransferServerProtocol);
         }
         
         FailureAtomicMulticastProtocol multicastProtocol = new FailureAtomicMulticastProtocol(channelName, 

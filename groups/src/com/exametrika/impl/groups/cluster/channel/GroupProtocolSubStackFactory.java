@@ -23,6 +23,8 @@ import com.exametrika.common.messaging.IMessageFactory;
 import com.exametrika.common.messaging.impl.protocols.AbstractProtocol;
 import com.exametrika.common.messaging.impl.protocols.failuredetection.IFailureObserver;
 import com.exametrika.common.utils.Assert;
+import com.exametrika.impl.groups.cluster.check.GroupCheckStateProtocol;
+import com.exametrika.impl.groups.cluster.check.IGroupStateHashProvider;
 import com.exametrika.impl.groups.cluster.discovery.WorkerGroupDiscoveryProtocol;
 import com.exametrika.impl.groups.cluster.failuredetection.IFailureDetectionListener;
 import com.exametrika.impl.groups.cluster.failuredetection.WorkerGroupFailureDetectionProtocol;
@@ -138,12 +140,24 @@ public class GroupProtocolSubStackFactory implements IGroupProtocolSubStackFacto
         preparedMembershipListeners.add(discoveryProtocol);
         membershipListeners.add(discoveryProtocol);
         
+        GroupCheckStateProtocol checkStateProtocol = null;
+        if (group.getOptions().contains(GroupOption.CHECK_STATE))
+        {
+            checkStateProtocol = new GroupCheckStateProtocol(channelName, messageFactory, membershipManager, 
+                dataLossFeedbackProvider, factoryParameters.checkStatePeriod, group.getId(),
+                (GroupAddress)group.getAddress(), group.getCoordinator().getDomain());
+            protocols.add(checkStateProtocol);
+            failureDetectionListeners.add(checkStateProtocol);
+            checkStateProtocol.setFailureDetector(failureDetectionProtocol);
+        }
+        
         FlowControlProtocol flowControlProtocol = new FlowControlProtocol(channelName, messageFactory, membershipManager);
         protocols.add(flowControlProtocol);
         failureDetectionListeners.add(flowControlProtocol);
         flowControlProtocol.setFailureDetector(failureDetectionProtocol);
         
         List<IFlushParticipant> flushParticipants = new ArrayList<IFlushParticipant>();
+        IGroupStateHashProvider stateHashProvider = null;
         if (group.getOptions().contains(GroupOption.SIMPLE_STATE_TRANSFER))
         {
             SimpleStateTransferClientProtocol stateTransferClientProtocol = new SimpleStateTransferClientProtocol(channelName,
@@ -158,6 +172,8 @@ public class GroupProtocolSubStackFactory implements IGroupProtocolSubStackFacto
             protocols.add(stateTransferServerProtocol);
             flushParticipants.add(stateTransferClientProtocol);
             flushParticipants.add(stateTransferServerProtocol);
+            
+            stateHashProvider = stateTransferServerProtocol;
         }
         else if (group.getOptions().contains(GroupOption.ASYNC_STATE_TRANSFER))
         {
@@ -179,9 +195,14 @@ public class GroupProtocolSubStackFactory implements IGroupProtocolSubStackFacto
             flushParticipants.add(stateTransferServerProtocol);
             stateTransferServerProtocol.setCompartment(compartment);
             stateTransferServerProtocol.setFlowController(flowControlProtocol);
+            
+            stateHashProvider = stateTransferServerProtocol;
         }
         else
             Assert.error();
+        
+        if (group.getOptions().contains(GroupOption.CHECK_STATE))
+            checkStateProtocol.setStateHashProvider(stateHashProvider);
         
         boolean durable = group.getOptions().contains(GroupOption.DURABLE);
         boolean ordered = group.getOptions().contains(GroupOption.ORDERED);

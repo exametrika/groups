@@ -27,6 +27,7 @@ import com.exametrika.common.tasks.IFlowController;
 import com.exametrika.common.utils.Assert;
 import com.exametrika.common.utils.ICompletionHandler;
 import com.exametrika.impl.groups.MessageFlags;
+import com.exametrika.impl.groups.cluster.check.IGroupStateHashProvider;
 import com.exametrika.impl.groups.cluster.failuredetection.IGroupFailureDetector;
 import com.exametrika.impl.groups.cluster.flush.IFlush;
 import com.exametrika.impl.groups.cluster.flush.IFlushParticipant;
@@ -44,7 +45,7 @@ import com.exametrika.spi.groups.cluster.state.IStateTransferFactory;
  * @threadsafety This class and its methods are not thread safe.
  * @author Medvedev-A
  */
-public final class AsyncStateTransferServerProtocol extends AbstractProtocol implements IFlushParticipant
+public final class AsyncStateTransferServerProtocol extends AbstractProtocol implements IFlushParticipant, IGroupStateHashProvider
 {
     private static final IMessages messages = Messages.get(IMessages.class);
     private final IGroupMembershipManager membershipManager;
@@ -219,6 +220,13 @@ public final class AsyncStateTransferServerProtocol extends AbstractProtocol imp
     {
         flush = null;
         processing = false;
+    }
+    
+    @Override
+    public void computeStateHash(ICompletionHandler<String> completionHandler)
+    {
+        ComputeStateHashTask task = new ComputeStateHashTask(server, completionHandler);
+        compartment.execute(task);
     }
     
     @Override

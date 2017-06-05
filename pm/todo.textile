@@ -1,5 +1,3 @@
-* исправить MulticastProtocolTests.testCoordinatorFailureAfterFlush
-* подключить flow control к pending сообщениям мультикаста (receive и send)
 * сделать PerfTest'ы мультикаста
   - посылает один, посылают все с максимальной скоростью
   - прямая посылка с учетом flowcontrol, pullable send
