@@ -3,6 +3,8 @@
  */
 package com.exametrika.tests.groups.fail;
 
+import java.text.MessageFormat;
+
 import com.exametrika.common.utils.Assert;
 
 public class TestFailureSpec
@@ -84,5 +86,12 @@ public class TestFailureSpec
     public long getFailurePeriod()
     {
         return failurePeriod;
+    }
+    
+    @Override
+    public String toString()
+    {
+        return MessageFormat.format("target: {0), quantity: {1}, event: {2}, period: {3}", 
+            failureTarget, failureQuantityType, failureEventType, failurePeriodType);
     }
 }

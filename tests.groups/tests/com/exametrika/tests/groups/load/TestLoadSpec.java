@@ -3,6 +3,8 @@
  */
 package com.exametrika.tests.groups.load;
 
+import java.text.MessageFormat;
+
 import com.exametrika.common.utils.Assert;
 
 public final class TestLoadSpec
@@ -99,5 +101,12 @@ public final class TestLoadSpec
     public SendSourceType getSendSourceType()
     {
         return sendSourceType;
+    }
+    
+    @Override
+    public String toString()
+    {
+        return MessageFormat.format("message size: {0), state size: {1}, frequency: {2}, type: {3}, source: {4}", 
+            messageSizeType, stateSizeType, sendFrequencyType, sendType, sendSourceType);
     }
 }

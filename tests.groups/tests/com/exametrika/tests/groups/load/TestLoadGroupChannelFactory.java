@@ -1,10 +1,13 @@
 package com.exametrika.tests.groups.load;
 
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
 import com.exametrika.common.io.ISerializationRegistry;
+import com.exametrika.common.l10n.SystemException;
 import com.exametrika.common.messaging.IChannel;
 import com.exametrika.common.messaging.ILiveNodeProvider;
 import com.exametrika.common.messaging.IMessageFactory;
@@ -21,6 +24,7 @@ import com.exametrika.tests.groups.channel.TestGroupChannel;
 import com.exametrika.tests.groups.channel.TestGroupChannelFactory;
 import com.exametrika.tests.groups.channel.TestGroupFactoryParameters;
 import com.exametrika.tests.groups.channel.TestGroupParameters;
+import com.exametrika.tests.groups.fail.TestChannelReconnector;
 import com.exametrika.tests.groups.fail.TestFailureGenerationProtocol;
 import com.exametrika.tests.groups.fail.TestFailureSpec;
 
@@ -33,7 +37,7 @@ public class TestLoadGroupChannelFactory extends TestGroupChannelFactory
         super(factoryParameters);
     }
     
-    public IChannel create(int index, TestLoadSpec loadSpec, List<TestFailureSpec> failureSpecs)
+    public IChannel create(int index, int count, TestLoadSpec loadSpec, List<TestFailureSpec> failureSpecs)
     {
         Assert.notNull(loadSpec);
         Assert.notNull(failureSpecs);
@@ -46,17 +50,34 @@ public class TestLoadGroupChannelFactory extends TestGroupChannelFactory
         TestLoadStateTransferFactory stateTransferFactory = new TestLoadStateTransferFactory(stateStore);
         sender.setStateTransferFactory(stateTransferFactory);
         
+        int portRangeStart = 17000;
+        String hostName;
+        try
+        {
+            hostName = InetAddress.getLocalHost().getHostName();
+        }
+        catch (UnknownHostException e)
+        {
+            throw new SystemException(e);
+        }
+        
         Set<String> wellKnownAddresses = new HashSet<String>();
+        for (int i = 0; i < count; i++)
+            wellKnownAddresses.add("tcp://" + hostName + ":" + (portRangeStart + i));
+        
         TestGroupParameters parameters = new TestGroupParameters();
         parameters.channelName = "test" + index;
         parameters.clientPart = true;
         parameters.serverPart = true;
+        parameters.portRangeStart = portRangeStart + index;
+        parameters.portRangeStart = parameters.portRangeEnd;
         parameters.receiver = sender;
         parameters.discoveryStrategy = new WellKnownAddressesDiscoveryStrategy(wellKnownAddresses);
         parameters.stateTransferFactory = stateTransferFactory;
         parameters.deliveryHandler = sender;
         parameters.localFlowController = sender;
         parameters.serializationRegistrars.add(new TestLoadMessagePartSerializer());
+        parameters.channelReconnector = new TestChannelReconnector(((TestGroupFactoryParameters)factoryParameters).reconnectPeriod, this, parameters);
         
         TestGroupChannel channel = createChannel(parameters);
         sender.setChannel(channel);
