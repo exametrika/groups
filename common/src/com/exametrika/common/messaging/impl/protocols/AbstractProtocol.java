@@ -48,6 +48,7 @@ public abstract class AbstractProtocol implements ISender, IReceiver, IPullableS
     private IPullableSender pullableSender;
     protected ITimeService timeService;
     protected IConnectionProvider connectionProvider;
+    private boolean enabled = true;
     
     /**
      * Creates an object.
@@ -158,6 +159,16 @@ public abstract class AbstractProtocol implements ISender, IReceiver, IPullableS
         this.connectionProvider = connectionProvider;
     }
     
+    public boolean isEnabled()
+    {
+        return enabled;
+    }
+    
+    public void setEnabled(boolean enabled)
+    {
+        this.enabled = enabled;
+    }
+    
     @Override
     public final void send(IMessage message)
     {
@@ -169,7 +180,10 @@ public abstract class AbstractProtocol implements ISender, IReceiver, IPullableS
         
         try
         {
-            doSend(sender, message);
+            if (isEnabled())
+                doSend(sender, message);
+            else
+                sender.send(message);
         }
         catch (ThreadInterruptedException e)
         {
@@ -196,7 +210,10 @@ public abstract class AbstractProtocol implements ISender, IReceiver, IPullableS
         
         try
         {
-            doReceive(receiver, message);
+            if (isEnabled())
+                doReceive(receiver, message);
+            else
+                receiver.receive(message);
         }
         catch (ThreadInterruptedException e)
         {

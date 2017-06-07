@@ -1,7 +1,7 @@
 /**
  * Copyright 2010 Andrey Medvedev. All rights reserved.
  */
-package com.exametrika.tests.groups.fail;
+package com.exametrika.tests.groups.load;
 
 import java.util.ArrayList;
 import java.util.HashSet;

@@ -13,7 +13,7 @@ import com.exametrika.common.messaging.ILiveNodeProvider;
 import com.exametrika.common.messaging.IMessageFactory;
 import com.exametrika.common.messaging.impl.ChannelParameters;
 import com.exametrika.common.messaging.impl.protocols.AbstractProtocol;
-import com.exametrika.common.messaging.impl.protocols.ProtocolStack;
+import com.exametrika.common.messaging.impl.protocols.composite.ProtocolStack;
 import com.exametrika.common.messaging.impl.protocols.failuredetection.IFailureObserver;
 import com.exametrika.common.messaging.impl.transports.tcp.TcpTransport;
 import com.exametrika.common.utils.Assert;
@@ -24,9 +24,6 @@ import com.exametrika.tests.groups.channel.TestGroupChannel;
 import com.exametrika.tests.groups.channel.TestGroupChannelFactory;
 import com.exametrika.tests.groups.channel.TestGroupFactoryParameters;
 import com.exametrika.tests.groups.channel.TestGroupParameters;
-import com.exametrika.tests.groups.fail.TestChannelReconnector;
-import com.exametrika.tests.groups.fail.TestFailureGenerationProtocol;
-import com.exametrika.tests.groups.fail.TestFailureSpec;
 
 public class TestLoadGroupChannelFactory extends TestGroupChannelFactory
 {

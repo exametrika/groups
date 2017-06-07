@@ -1,7 +1,7 @@
 /**
  * Copyright 2010 Andrey Medvedev. All rights reserved.
  */
-package com.exametrika.tests.groups;
+package com.exametrika.tests.groups.integration;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
@@ -33,7 +33,7 @@ import com.exametrika.common.messaging.IMessage;
 import com.exametrika.common.messaging.IMessagePart;
 import com.exametrika.common.messaging.IReceiver;
 import com.exametrika.common.messaging.ISink;
-import com.exametrika.common.messaging.impl.protocols.ProtocolStack;
+import com.exametrika.common.messaging.impl.protocols.composite.ProtocolStack;
 import com.exametrika.common.messaging.impl.transports.tcp.TcpTransport;
 import com.exametrika.common.tasks.IFlowController;
 import com.exametrika.common.tests.Sequencer;

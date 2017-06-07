@@ -1,4 +1,4 @@
-package com.exametrika.tests.groups.fail;
+package com.exametrika.tests.groups.load;
 
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;

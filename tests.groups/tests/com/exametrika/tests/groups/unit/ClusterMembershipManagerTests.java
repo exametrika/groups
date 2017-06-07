@@ -1,7 +1,7 @@
 /**
  * Copyright 2010 Andrey Medvedev. All rights reserved.
  */
-package com.exametrika.tests.groups;
+package com.exametrika.tests.groups.unit;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.not;

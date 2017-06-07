@@ -1,7 +1,7 @@
 /**
  * Copyright 2010 Andrey Medvedev. All rights reserved.
  */
-package com.exametrika.tests.groups;
+package com.exametrika.tests.groups.integration;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
@@ -32,7 +32,7 @@ import com.exametrika.common.messaging.impl.ChannelFactory;
 import com.exametrika.common.messaging.impl.ChannelFactoryParameters;
 import com.exametrika.common.messaging.impl.ChannelParameters;
 import com.exametrika.common.messaging.impl.protocols.AbstractProtocol;
-import com.exametrika.common.messaging.impl.protocols.ProtocolStack;
+import com.exametrika.common.messaging.impl.protocols.composite.ProtocolStack;
 import com.exametrika.common.messaging.impl.protocols.failuredetection.HeartbeatProtocol;
 import com.exametrika.common.messaging.impl.protocols.failuredetection.IFailureObserver;
 import com.exametrika.common.messaging.impl.protocols.failuredetection.INodeTrackingStrategy;

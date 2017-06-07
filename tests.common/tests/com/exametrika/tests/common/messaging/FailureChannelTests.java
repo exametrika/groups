@@ -24,7 +24,7 @@ import com.exametrika.common.messaging.impl.ChannelFactoryParameters;
 import com.exametrika.common.messaging.impl.MessageFlags;
 import com.exametrika.common.messaging.impl.ChannelParameters;
 import com.exametrika.common.messaging.impl.protocols.AbstractProtocol;
-import com.exametrika.common.messaging.impl.protocols.ProtocolStack;
+import com.exametrika.common.messaging.impl.protocols.composite.ProtocolStack;
 import com.exametrika.common.messaging.impl.transports.UnicastAddress;
 import com.exametrika.common.messaging.impl.transports.tcp.TcpConnection;
 import com.exametrika.common.tests.Sequencer;

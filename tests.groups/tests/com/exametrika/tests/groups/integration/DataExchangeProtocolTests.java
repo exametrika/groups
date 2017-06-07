@@ -1,16 +1,21 @@
 /**
  * Copyright 2010 Andrey Medvedev. All rights reserved.
  */
-package com.exametrika.tests.groups;
+package com.exametrika.tests.groups.integration;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.junit.After;
@@ -30,7 +35,7 @@ import com.exametrika.common.messaging.impl.ChannelFactoryParameters;
 import com.exametrika.common.messaging.impl.ChannelParameters;
 import com.exametrika.common.messaging.impl.message.MessageFactory;
 import com.exametrika.common.messaging.impl.protocols.AbstractProtocol;
-import com.exametrika.common.messaging.impl.protocols.ProtocolStack;
+import com.exametrika.common.messaging.impl.protocols.composite.ProtocolStack;
 import com.exametrika.common.messaging.impl.protocols.failuredetection.ChannelObserver;
 import com.exametrika.common.messaging.impl.protocols.failuredetection.HeartbeatProtocol;
 import com.exametrika.common.messaging.impl.protocols.failuredetection.IFailureObserver;
@@ -47,6 +52,9 @@ import com.exametrika.common.utils.Threads;
 import com.exametrika.common.utils.Times;
 import com.exametrika.impl.groups.cluster.discovery.CoreGroupDiscoveryProtocol;
 import com.exametrika.impl.groups.cluster.discovery.WellKnownAddressesDiscoveryStrategy;
+import com.exametrika.impl.groups.cluster.exchange.GroupDataExchangeProtocol;
+import com.exametrika.impl.groups.cluster.exchange.IDataExchangeProvider;
+import com.exametrika.impl.groups.cluster.exchange.IExchangeData;
 import com.exametrika.impl.groups.cluster.failuredetection.CoreGroupFailureDetectionProtocol;
 import com.exametrika.impl.groups.cluster.failuredetection.GroupNodeTrackingStrategy;
 import com.exametrika.impl.groups.cluster.failuredetection.IFailureDetectionListener;
@@ -63,16 +71,16 @@ import com.exametrika.impl.groups.cluster.membership.LocalNodeProvider;
 import com.exametrika.spi.groups.cluster.channel.IChannelReconnector;
 import com.exametrika.spi.groups.cluster.discovery.IDiscoveryStrategy;
 import com.exametrika.tests.common.messaging.ReceiverMock;
-import com.exametrika.tests.groups.CoreGroupDiscoveryProtocolTests.GroupJoinStrategyMock;
 import com.exametrika.tests.groups.channel.TestGroupChannel;
+import com.exametrika.tests.groups.integration.CoreGroupDiscoveryProtocolTests.GroupJoinStrategyMock;
 import com.exametrika.tests.groups.mocks.PropertyProviderMock;
 
 /**
- * The {@link FlushProtocolTests} are tests for flush.
+ * The {@link DataExchangeProtocolTests} are tests for flush.
  * 
  * @author Medvedev-A
  */
-public class FlushProtocolTests
+public class DataExchangeProtocolTests
 {
     private static final int COUNT = 10;
     private TestGroupChannel[] channels = new TestGroupChannel[COUNT];
@@ -86,54 +94,6 @@ public class FlushProtocolTests
     }
     
     @Test
-    public void testGroupFormation()
-    {
-        Set<String> wellKnownAddresses = new ConcurrentHashMap<String, String>().keySet("");
-        TestChannelFactory channelFactory = new TestChannelFactory(new WellKnownAddressesDiscoveryStrategy(wellKnownAddresses));
-        createGroup(wellKnownAddresses, channelFactory, Collections.<Integer>asSet());
-         
-        Threads.sleep(10000);
-         
-        checkMembership(channelFactory, Collections.<Integer>asSet());
-    }
-
-    @Test
-    public void testGroupFormationNonCoordinatorFailure() throws Exception
-    {
-        Set<String> wellKnownAddresses = new ConcurrentHashMap<String, String>().keySet("");
-        TestChannelFactory channelFactory = new TestChannelFactory(new WellKnownAddressesDiscoveryStrategy(wellKnownAddresses));
-        failOnFlush(channelFactory);
-        createGroup(wellKnownAddresses, channelFactory, Collections.<Integer>asSet());
-         
-        sequencer.waitAll(COUNT, 5000, 0);
-        int coordinatorNodeIndex = findNodeIndex(0, channelFactory.flushParticipants.get(0).flush.getNewMembership().getGroup().getCoordinator());
-        int[] nodes = selectNodes(0, COUNT, 2, coordinatorNodeIndex);
-        CoreGroupFailureDetectionProtocolTests.failChannel(channels[nodes[0]]);
-        IOs.close(channels[nodes[1]]);
-        
-        Threads.sleep(10000);
-         
-        checkMembership(channelFactory, Collections.asSet(nodes[0], nodes[1]));
-    }
-    
-    @Test
-    public void testGroupFormationCoordinatorFailure() throws Exception
-    {
-        Set<String> wellKnownAddresses = new ConcurrentHashMap<String, String>().keySet("");
-        TestChannelFactory channelFactory = new TestChannelFactory(new WellKnownAddressesDiscoveryStrategy(wellKnownAddresses));
-        failOnFlush(channelFactory);
-        createGroup(wellKnownAddresses, channelFactory, Collections.<Integer>asSet());
-         
-        sequencer.waitAll(COUNT, 5000, 0);
-        int coordinatorNodeIndex = findNodeIndex(0, channelFactory.flushParticipants.get(0).flush.getNewMembership().getGroup().getCoordinator());
-        IOs.close(channels[coordinatorNodeIndex]);
-        
-        Threads.sleep(10000);
-         
-        checkMembership(channelFactory, Collections.asSet(coordinatorNodeIndex));
-    }
-
-    @Test
     public void testChangeMembership() throws Exception
     {
         Set<String> wellKnownAddresses = new ConcurrentHashMap<String, String>().keySet("");
@@ -142,8 +102,9 @@ public class FlushProtocolTests
          
         Threads.sleep(10000);
          
-        checkMembership(channelFactory, Collections.<Integer>asSet(0, 1));
+        checkMembership(channelFactory, Collections.<Integer>asSet(0, 1), 0);
         
+        changeExchangeData(channelFactory);
         channels[0].start();
         channels[1].start();
         
@@ -154,7 +115,7 @@ public class FlushProtocolTests
         
         Threads.sleep(10000);
         
-        checkMembership(channelFactory, Collections.<Integer>asSet(COUNT - 1, COUNT - 2));
+        checkMembership(channelFactory, Collections.<Integer>asSet(COUNT - 1, COUNT - 2), 1);
     }
     
     @Test
@@ -166,8 +127,9 @@ public class FlushProtocolTests
          
         Threads.sleep(10000);
          
-        checkMembership(channelFactory, Collections.<Integer>asSet(0, 1));
+        checkMembership(channelFactory, Collections.<Integer>asSet(0, 1), 0);
 
+        changeExchangeData(channelFactory);
         failOnFlush(channelFactory);
         int coordinatorNodeIndex = findNodeIndex(2, channels[2].getMembershipService().getMembership().getGroup().getCoordinator());
         int[] nodes = selectNodes(2, COUNT, 4, coordinatorNodeIndex);
@@ -187,7 +149,7 @@ public class FlushProtocolTests
         
         Threads.sleep(10000);
         
-        checkMembership(channelFactory, Collections.<Integer>asSet(nodes[0], nodes[1], nodes[2], nodes[3]));
+        checkMembership(channelFactory, Collections.<Integer>asSet(nodes[0], nodes[1], nodes[2], nodes[3]), 1);
     }
     
     @Test
@@ -199,8 +161,9 @@ public class FlushProtocolTests
          
         Threads.sleep(10000);
          
-        checkMembership(channelFactory, Collections.<Integer>asSet(0, 1));
+        checkMembership(channelFactory, Collections.<Integer>asSet(0, 1), 0);
 
+        changeExchangeData(channelFactory);
         failOnFlush(channelFactory);
         int coordinatorNodeIndex = findNodeIndex(2, channels[2].getMembershipService().getMembership().getGroup().getCoordinator());
         int[] nodes = selectNodes(2, COUNT, 2, coordinatorNodeIndex);
@@ -218,7 +181,7 @@ public class FlushProtocolTests
         
         Threads.sleep(10000);
         
-        checkMembership(channelFactory, Collections.<Integer>asSet(nodes[0], nodes[1], coordinatorNodeIndex));
+        checkMembership(channelFactory, Collections.<Integer>asSet(nodes[0], nodes[1], coordinatorNodeIndex), 1);
     }
     
     private void createGroup(Set<String> wellKnownAddresses, TestChannelFactory channelFactory, Set<Integer> skipIndexes)
@@ -240,7 +203,7 @@ public class FlushProtocolTests
         }
     }
 
-    private void checkMembership(TestChannelFactory channelFactory, Set<Integer> skipIndexes)
+    private void checkMembership(TestChannelFactory channelFactory, Set<Integer> skipIndexes, long exchangeId)
     {
         IGroupMembership membership = null;
         for (int i = 0; i < COUNT; i++)
@@ -268,8 +231,27 @@ public class FlushProtocolTests
             assertThat(participant.endFlush, is(true));
             assertThat(participant.isCoordinator, is(channels[i].getMembershipService().getLocalNode().equals(
                 membership.getGroup().getCoordinator())));
+            
+            checkDataExchange(channelFactory, membership, i, exchangeId, skipIndexes);
         }
         assertThat(membership.getGroup().getMembers().size(), is(COUNT - skipIndexes.size()));
+    }
+    
+    private void checkDataExchange(TestChannelFactory channelFactory, IGroupMembership membership,
+        int index, long exchangeId, Set<Integer> skipIndexes)
+    {
+        TestDataExchangeProvider exchangeProvider = channelFactory.exchangeProviders.get(index);
+        for (INode node : membership.getGroup().getMembers())
+        {
+            if (channels[index].getMembershipService().getLocalNode().equals(node))
+                assertTrue(exchangeProvider.remoteData.get(node) == null);
+            else
+            {
+                TestExchangeData exchangeData = exchangeProvider.remoteData.get(node);
+                assertTrue(exchangeData != null);
+                assertTrue(exchangeData.getId() == exchangeId);
+            }
+        }
     }
     
     private int findNodeIndex(int startWith, INode node)
@@ -308,6 +290,12 @@ public class FlushProtocolTests
             participant.failOnFlush = true;
     }
 
+    private void changeExchangeData(TestChannelFactory factory)
+    {
+        for (TestDataExchangeProvider provider : factory.exchangeProviders)
+            provider.changeData = true;
+    }
+    
     private class FlushParticipantMock implements IFlushParticipant, ICompartmentTimerProcessor
     {
         private boolean isCoordinator;
@@ -394,6 +382,65 @@ public class FlushProtocolTests
         return factoryParameters;
     }
     
+    private static class TestExchangeData implements IExchangeData, Serializable
+    {
+        private final long id;
+
+        public TestExchangeData(long id)
+        {
+            this.id = id;
+        }
+        
+        @Override
+        public long getId()
+        {
+            return id;
+        }
+
+        @Override
+        public int getSize()
+        {
+            return 8;
+        }
+        
+        @Override
+        public String toString()
+        {
+            return Long.toString(id);
+        }
+    }
+    
+    private static class TestDataExchangeProvider implements IDataExchangeProvider
+    {
+        public static final UUID ID = UUID.fromString("d30e852f-9ed1-479a-96ac-7d0587fa5c06");
+        private TestExchangeData localData;
+        private Map<INode, TestExchangeData> remoteData = new HashMap<INode, TestExchangeData>();
+        private boolean changeData;
+        
+        @Override
+        public UUID getId()
+        {
+            return ID;
+        }
+
+        @Override
+        public IExchangeData getData()
+        {
+            if (localData == null || changeData)
+            {
+                localData = new TestExchangeData(changeData ? 1 : 0);
+                changeData = false;
+            }
+            return localData;
+        }
+
+        @Override
+        public void setData(INode source, IExchangeData data)
+        {
+            remoteData.put(source, (TestExchangeData)data);
+        }
+    }
+    
     private class TestChannelFactory extends ChannelFactory
     {
         private final IDiscoveryStrategy discoveryStrategy;
@@ -403,10 +450,12 @@ public class FlushProtocolTests
         private long failureHistoryPeriod = 10000;
         private int maxShunCount = 3;
         private long flushTimeout = 10000;
+        private long dataExchangePeriod = 200;
         private List<FlushParticipantMock> flushParticipants = new ArrayList<FlushParticipantMock>();
         private CoreGroupMembershipTracker membershipTracker;
         private CoreGroupMembershipManager membershipManager;
         private boolean failOnFlush;
+        private List<TestDataExchangeProvider> exchangeProviders = new ArrayList<TestDataExchangeProvider>();
         
         public TestChannelFactory(IDiscoveryStrategy discoveryStrategy)
         {
@@ -453,6 +502,14 @@ public class FlushProtocolTests
             failureDetectionListeners.add(flushCoordinatorProtocol);
             protocols.add(flushCoordinatorProtocol);
 
+            TestDataExchangeProvider exchangeProvider = new TestDataExchangeProvider();
+            exchangeProviders.add(exchangeProvider);
+            GroupDataExchangeProtocol dataExchangeProtocol = new GroupDataExchangeProtocol(channelName, messageFactory, membershipManager,
+                failureDetectionProtocol, Arrays.<IDataExchangeProvider>asList(exchangeProvider), dataExchangePeriod);
+            membershipListeners.add(dataExchangeProtocol);
+            protocols.add(dataExchangeProtocol);
+            failureDetectionListeners.add(dataExchangeProtocol);
+            
             GroupJoinStrategyMock joinStrategy = new GroupJoinStrategyMock(); 
             CoreGroupDiscoveryProtocol discoveryProtocol = new CoreGroupDiscoveryProtocol(channelName, messageFactory, membershipManager, 
                 failureDetectionProtocol, discoveryStrategy, liveNodeProvider, discoveryPeriod, 

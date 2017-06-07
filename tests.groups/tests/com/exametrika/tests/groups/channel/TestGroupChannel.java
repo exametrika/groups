@@ -9,7 +9,7 @@ import com.exametrika.common.compartment.ICompartment;
 import com.exametrika.common.messaging.IConnectionProvider;
 import com.exametrika.common.messaging.IMessageFactory;
 import com.exametrika.common.messaging.impl.Channel;
-import com.exametrika.common.messaging.impl.protocols.ProtocolStack;
+import com.exametrika.common.messaging.impl.protocols.composite.ProtocolStack;
 import com.exametrika.common.messaging.impl.protocols.failuredetection.ChannelObserver;
 import com.exametrika.common.messaging.impl.protocols.failuredetection.LiveNodeManager;
 import com.exametrika.common.messaging.impl.transports.ITransport;

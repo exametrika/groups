@@ -31,7 +31,7 @@ public class NodeChannel extends CompositeChannel implements INodeChannel, IChan
     protected final ClusterMembershipManager membershipManager;
     private final List<IGracefulExitStrategy> gracefulExitStrategies;
     private final long gracefulExitTimeout;
-    private final  IChannelReconnector channelReconnector;
+    private final IChannelReconnector channelReconnector;
     private final Object condition = new Object();
     private boolean canClose;
     private boolean startWait;

@@ -1,7 +1,7 @@
 /**
  * Copyright 2017 Andrey Medvedev. All rights reserved.
  */
-package com.exametrika.tests.groups.fail;
+package com.exametrika.tests.groups.load;
 
 import java.text.MessageFormat;
 

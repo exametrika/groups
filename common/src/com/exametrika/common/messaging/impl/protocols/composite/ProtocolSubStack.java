@@ -102,7 +102,10 @@ public class ProtocolSubStack extends AbstractProtocol
     public void onTimer(long currentTime)
     {
         for (AbstractProtocol protocol : protocols)
-            protocol.onTimer(currentTime);
+        {
+            if (protocol.isEnabled())
+                protocol.onTimer(currentTime);
+        }
     }
     
     @Override

@@ -1,7 +1,7 @@
 /**
  * Copyright 2007 Andrey Medvedev. All rights reserved.
  */
-package com.exametrika.common.messaging.impl.protocols;
+package com.exametrika.common.messaging.impl.protocols.composite;
 
 import java.util.List;
 
@@ -17,6 +17,7 @@ import com.exametrika.common.log.LogLevel;
 import com.exametrika.common.log.Loggers;
 import com.exametrika.common.messaging.IConnectionProvider;
 import com.exametrika.common.messaging.ILiveNodeProvider;
+import com.exametrika.common.messaging.impl.protocols.AbstractProtocol;
 import com.exametrika.common.messaging.impl.protocols.failuredetection.CleanupManager;
 import com.exametrika.common.time.ITimeService;
 import com.exametrika.common.utils.Assert;
@@ -127,7 +128,10 @@ public final class ProtocolStack implements ILifecycle, ICompartmentTimerProcess
     public void onTimer(long currentTime)
     {
         for (AbstractProtocol protocol : protocols)
-            protocol.onTimer(currentTime);
+        {
+            if (protocol.isEnabled())
+                protocol.onTimer(currentTime);
+        }
         
         cleanupManager.onTimer(currentTime);
     }
