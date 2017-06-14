@@ -91,7 +91,7 @@ public class TestFailureSpec
     @Override
     public String toString()
     {
-        return MessageFormat.format("target: {0), quantity: {1}, event: {2}, period: {3}", 
+        return MessageFormat.format("target: {0}, quantity: {1}, event: {2}, period: {3}", 
             failureTarget, failureQuantityType, failureEventType, failurePeriodType);
     }
 }

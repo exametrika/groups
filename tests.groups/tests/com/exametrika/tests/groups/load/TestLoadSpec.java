@@ -106,7 +106,7 @@ public final class TestLoadSpec
     @Override
     public String toString()
     {
-        return MessageFormat.format("message size: {0), state size: {1}, frequency: {2}, type: {3}, source: {4}", 
+        return MessageFormat.format("message size: {0}, state size: {1}, frequency: {2}, type: {3}, source: {4}", 
             messageSizeType, stateSizeType, sendFrequencyType, sendType, sendSourceType);
     }
 }
