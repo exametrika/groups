@@ -14,12 +14,14 @@ import com.exametrika.api.groups.cluster.GroupOption;
 import com.exametrika.common.messaging.impl.SubChannel;
 import com.exametrika.common.utils.Collections;
 import com.exametrika.common.utils.Enums;
+import com.exametrika.common.utils.Pair;
 import com.exametrika.common.utils.SyncCompletionHandler;
 import com.exametrika.common.utils.Threads;
 import com.exametrika.impl.groups.cluster.channel.CoreNodeChannel;
 import com.exametrika.impl.groups.cluster.management.CommandManager;
 import com.exametrika.impl.groups.cluster.membership.AddGroupsCommand;
 import com.exametrika.impl.groups.cluster.membership.GroupDefinition;
+import com.exametrika.impl.groups.cluster.membership.RemoveGroupsCommand;
 
 public class ClusterMembershipTests extends AbstractClusterTests
 {
@@ -64,12 +66,27 @@ public class ClusterMembershipTests extends AbstractClusterTests
         commandManager.execute(addGroupsCommand, completionHandler);
         completionHandler.await(5000);
         
-        checkGroupsMembership();
-        // TODO:
-        // создать 3 группы через команды, проверить что есть в членстве по аналогии с узлами
-        // создать нового воркера - стартовать последнего, остановить старого - первого, 
-        // создать новую - четвертую, изменить вторую и удалить третью группы, проверить
-        // создание и удаление через команды
+        checkGroupsMembership(buildGroupDefinitionsMap(Arrays.asList(group1, group2, group3)));
+        
+        workerChannels.get(WORKER_NODE_COUNT - 1).start();
+        workerChannels.get(0).stop();
+        Threads.sleep(2000);
+        
+        checkWorkerNodesMembership(Collections.asSet(0));
+        
+        GroupDefinition group21 = new GroupDefinition("test", UUID.randomUUID(), "group2", 
+            Enums.of(GroupOption.DURABLE, GroupOption.ASYNC_STATE_TRANSFER), null, 4, null);
+        addGroupsCommand = new AddGroupsCommand(Arrays.asList(group21, group4));
+        completionHandler = new SyncCompletionHandler();
+        commandManager.execute(addGroupsCommand, completionHandler);
+        completionHandler.await(5000);
+        
+        RemoveGroupsCommand removeGroupsCommand = new RemoveGroupsCommand(Arrays.asList(new Pair<String, UUID>("test", group3.getId())));
+        completionHandler = new SyncCompletionHandler();
+        commandManager.execute(removeGroupsCommand, completionHandler);
+        completionHandler.await(5000);
+        
+        checkGroupsMembership(buildGroupDefinitionsMap(Arrays.asList(group1, group21, group4)));
     }
     
     private CommandManager findCommandManager(CoreNodeChannel coreNode)

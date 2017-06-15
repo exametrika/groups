@@ -10,15 +10,20 @@ import static org.junit.Assert.assertTrue;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 
 import com.exametrika.api.groups.cluster.CoreNodeParameters;
 import com.exametrika.api.groups.cluster.IClusterMembership;
 import com.exametrika.api.groups.cluster.IClusterMembershipService;
 import com.exametrika.api.groups.cluster.IDomainMembership;
+import com.exametrika.api.groups.cluster.IGroup;
 import com.exametrika.api.groups.cluster.IGroupMembership;
+import com.exametrika.api.groups.cluster.IGroupsMembership;
 import com.exametrika.api.groups.cluster.INode;
 import com.exametrika.api.groups.cluster.INodesMembership;
 import com.exametrika.api.groups.cluster.IWorkerNodeChannel;
@@ -33,6 +38,7 @@ import com.exametrika.impl.groups.cluster.channel.CoreNodeChannelFactory;
 import com.exametrika.impl.groups.cluster.channel.WorkerNodeChannel;
 import com.exametrika.impl.groups.cluster.channel.WorkerNodeChannelFactory;
 import com.exametrika.impl.groups.cluster.discovery.WellKnownAddressesDiscoveryStrategy;
+import com.exametrika.impl.groups.cluster.membership.GroupDefinition;
 import com.exametrika.impl.groups.cluster.membership.GroupMemberships;
 import com.exametrika.impl.groups.cluster.membership.WorkerToCoreMembership;
 import com.exametrika.impl.groups.cluster.state.EmptySimpleStateStore;
@@ -135,6 +141,44 @@ public abstract class AbstractClusterTests
                 IWorkerNodeChannel channel = workerChannels.get(i);
                 IClusterMembershipService membershipService = channel.getMembershipService();
                 assertTrue(!nodes.contains(membershipService.getLocalNode()));
+            }
+        }
+    }
+    
+    protected Map<UUID, GroupDefinition> buildGroupDefinitionsMap(List<GroupDefinition> groupDefinitions)
+    {
+        Map<UUID, GroupDefinition> map = new HashMap<UUID, GroupDefinition>();
+        for (GroupDefinition groupDefinition : groupDefinitions)
+            map.put(groupDefinition.getId(), groupDefinition);
+        
+        return map;
+    }
+    
+    protected void checkGroupsMembership(Map<UUID, GroupDefinition> groupDefinitions)
+    {
+        List<IGroup> groups = null;
+        synchronized (workerChannels)
+        {
+            for (int i = 0; i < workerChannels.size(); i++)
+            {
+                IWorkerNodeChannel channel = workerChannels.get(i);
+                IClusterMembershipService membershipService = channel.getMembershipService();
+                IClusterMembership membership = membershipService.getMembership();
+                IDomainMembership domainMembership = membership.findDomain("test");
+                IGroupsMembership groupsMembership = domainMembership.findElement(IGroupsMembership.class);
+                if (groups == null)
+                    groups = groupsMembership.getGroups();
+                else
+                    assertThat(groupsMembership.getGroups(), is(groups));
+            }
+            
+            assertThat(groups.size(), is(groupDefinitions.size()));
+            for (IGroup group : groups)
+            {
+                GroupDefinition groupDefinition = groupDefinitions.get(group.getId());
+                assertThat(group.getName(), is(groupDefinition.getName()));
+                assertThat(group.getOptions(), is(groupDefinition.getOptions()));
+                assertThat(group.getMembers().size(), is(groupDefinition.getNodeCount()));
             }
         }
     }

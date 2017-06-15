@@ -1,10 +1,11 @@
-* доделать тесты Membership
+* доделать тесты групп
 * протестировать
   - standalone test (простой и перфтест) протестировать
   - ClusterDiscoveryTests
   - ClusterFeedbackTests
   - ClusterFailureDetectionTests
   - ClusterCommandsTests
+  - ClusterMembershipTests
 ------------
 При тестировании тестировать под отладчиком, а также проверять race cinditiins по каждому протоколу
 
@@ -93,8 +94,8 @@ Check:
   - проверить, что команда выполнилась на всех кор узлах
   - проверить что completionhandler сработал
 
-Membership:
-* CoreCoordinatorClusterMembershipProtocol, CoreClusterMembershipProtocol, 
+-Membership-:
++ CoreCoordinatorClusterMembershipProtocol, CoreClusterMembershipProtocol, 
   WorkerClusterMembershipProtocol
   - создать кластер, проверить
   - создать группы, проверить
