@@ -32,5 +32,4 @@ public final class WorkerControllerNodeTrackingStrategy implements INodeTracking
     {
         return failureDetectionProtocol.getWorkerNodes();
     }
-    
 }

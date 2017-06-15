@@ -126,6 +126,16 @@ public abstract class AbstractClusterTests
                 
                 assertTrue(nodes.contains(membershipService.getLocalNode()));
             }
+            
+            for (int i = 0; i < workerChannels.size(); i++)
+            {
+                if (ignoredNodes == null || !ignoredNodes.contains(i))
+                    continue;
+                
+                IWorkerNodeChannel channel = workerChannels.get(i);
+                IClusterMembershipService membershipService = channel.getMembershipService();
+                assertTrue(!nodes.contains(membershipService.getLocalNode()));
+            }
         }
     }
     

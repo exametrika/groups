@@ -1,8 +1,10 @@
-* доделать тесты FailureDetection
+* доделать тесты Membership
 * протестировать
   - standalone test (простой и перфтест) протестировать
   - ClusterDiscoveryTests
   - ClusterFeedbackTests
+  - ClusterFailureDetectionTests
+  - ClusterCommandsTests
 ------------
 При тестировании тестировать под отладчиком, а также проверять race cinditiins по каждому протоколу
 
@@ -62,10 +64,8 @@ Check:
   - проверить, что изменения состояния воркера передаются не чаще заданного времени обмена
   - проверить что провайдеры отрабатывают изменения членства кластера
 
-FailureDetection:
-* юнит тесты WorkerNodeTrackingStrategy, WorkerControllerNodeTrackingStrategy, 
-  GroupNodeTrackingStrategy
-* WorkerClusterFailureDetectionProtocol
+-FailureDetection-:
++ WorkerClusterFailureDetectionProtocol
   - reconnect on controller failure after orphan period expired
     * создать кластер
     * закрыть контроллер и выждать
@@ -78,7 +78,7 @@ FailureDetection:
     * маркиповать на одном воркере узел, как failed
     * послать от его имени сообщение
     * проверить, что для него выполнен реконнект
-* CoreClusterFailureDetectionProtocol, CoreCoordinatorClusterFailureDetectionProtocol
++ CoreClusterFailureDetectionProtocol, CoreCoordinatorClusterFailureDetectionProtocol
   - падение координатора
     * закрыть воркер и координатор кластера
     * проверить, что обновление членства клвстера прошло и failure listeners сработали на контроллере
@@ -87,8 +87,8 @@ FailureDetection:
     * закрыть его контроллер
     * проверить отработку изменения членства кластера
 
-Management:
-* CommandManager
+-Management-:
++ CommandManager
   - создать тестовую команду c хендлером и выполнить ее на произвольном кор узле
   - проверить, что команда выполнилась на всех кор узлах
   - проверить что completionhandler сработал

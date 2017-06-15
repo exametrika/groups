@@ -3,6 +3,7 @@
  */
 package com.exametrika.impl.groups.cluster.membership;
 
+import java.io.Serializable;
 import java.util.Set;
 import java.util.UUID;
 
@@ -16,7 +17,7 @@ import com.exametrika.common.utils.Immutables;
  * @threadsafety This class and its methods are thread safe.
  * @author Medvedev-A
  */
-public final class GroupDefinition
+public final class GroupDefinition implements Serializable
 {
     private final String domain;
     private final UUID id;

@@ -198,15 +198,24 @@ public final class DefaultGroupMappingStrategy implements IGroupMappingStrategy,
     @Override
     public boolean supports(ICommand command)
     {
-        // TODO Auto-generated method stub
-        return false;
+        return command instanceof AddGroupsCommand || command instanceof RemoveGroupsCommand;
     }
 
     @Override
     public void execute(ICommand command)
     {
-        // TODO Auto-generated method stub
-        // - add/remove group definition
+        if (command instanceof AddGroupsCommand)
+        {
+            AddGroupsCommand addGroupsCommand = (AddGroupsCommand)command;
+            for (GroupDefinition groupDefinition : addGroupsCommand.getGroupDefinitions())
+                addGroupDefinition(groupDefinition);
+        }
+        else if (command instanceof AddGroupsCommand)
+        {
+            RemoveGroupsCommand removeGroupsCommand = (RemoveGroupsCommand)command;
+            for (Pair<String, UUID> group : removeGroupsCommand.getGroups())
+                removeGroupDefinition(group.getKey(), group.getValue());
+        }
     }
     
     private ChangedGroupInfo ensureChangedGroup(DomainInfo domain, Map<UUID, ChangedGroupInfo> changedGroups, UUID groupId, IGroup group)
