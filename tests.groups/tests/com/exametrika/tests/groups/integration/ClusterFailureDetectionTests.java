@@ -50,14 +50,14 @@ public class ClusterFailureDetectionTests extends AbstractClusterTests
         startWorkerNodes(null);
         Threads.sleep(2000);
         
-        checkWorkerNodesMembership(null);
+        checkClusterWorkerNodesMembership(null);
         
         workerChannels.get(0).stop();
         workerChannels.get(1).stop();
         
         Threads.sleep(2000);
         
-        checkWorkerNodesMembership(Collections.asSet(0, 1));
+        checkClusterWorkerNodesMembership(Collections.asSet(0, 1));
     }
     
     @Test
@@ -69,7 +69,7 @@ public class ClusterFailureDetectionTests extends AbstractClusterTests
         startWorkerNodes(null);
         Threads.sleep(2000);
         
-        checkWorkerNodesMembership(null);
+        checkClusterWorkerNodesMembership(null);
         
         WorkerNodeChannel worker1 = workerChannels.get(0);
         worker1.stop();
@@ -79,7 +79,7 @@ public class ClusterFailureDetectionTests extends AbstractClusterTests
         controller.stop();
         Threads.sleep(2000);
         
-        checkWorkerNodesMembership(Collections.asSet(0, 1));
+        checkClusterWorkerNodesMembership(Collections.asSet(0, 1));
     }
     
     @Test
@@ -91,7 +91,7 @@ public class ClusterFailureDetectionTests extends AbstractClusterTests
         startWorkerNodes(null);
         Threads.sleep(2000);
         
-        checkWorkerNodesMembership(null);
+        checkClusterWorkerNodesMembership(null);
         
         WorkerNodeChannel worker1 = workerChannels.get(0);
         worker1.stop();
@@ -101,7 +101,7 @@ public class ClusterFailureDetectionTests extends AbstractClusterTests
         coordinator.stop();
         Threads.sleep(2000);
         
-        checkWorkerNodesMembership(Collections.asSet(0, 1));
+        checkClusterWorkerNodesMembership(Collections.asSet(0, 1));
     }
     
     @Test
@@ -113,7 +113,7 @@ public class ClusterFailureDetectionTests extends AbstractClusterTests
         startWorkerNodes(null);
         Threads.sleep(2000);
         
-        checkWorkerNodesMembership(null);
+        checkClusterWorkerNodesMembership(null);
         
         WorkerNodeChannel worker1 = workerChannels.get(0);
         CoreNodeChannel controller = coreChannels.get(findController(worker1.getMembershipService().getLocalNode()));       
@@ -132,7 +132,7 @@ public class ClusterFailureDetectionTests extends AbstractClusterTests
         startWorkerNodes(null);
         Threads.sleep(2000);
         
-        checkWorkerNodesMembership(null);
+        checkClusterWorkerNodesMembership(null);
         
         WorkerNodeChannel worker1 = workerChannels.get(0);
         worker1.stop();
@@ -157,7 +157,7 @@ public class ClusterFailureDetectionTests extends AbstractClusterTests
         startWorkerNodes(null);
         Threads.sleep(2000);
         
-        checkWorkerNodesMembership(null);
+        checkClusterWorkerNodesMembership(null);
         
         WorkerNodeChannel worker1 = workerChannels.get(0);
         CoreNodeChannel controller = coreChannels.get(findController(worker1.getMembershipService().getLocalNode()));       

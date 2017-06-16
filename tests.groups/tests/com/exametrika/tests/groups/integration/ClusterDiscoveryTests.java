@@ -36,7 +36,7 @@ public class ClusterDiscoveryTests extends AbstractClusterTests
         startWorkerNodes(null);
         Threads.sleep(2000);
         
-        checkWorkerNodesMembership(null);
+        checkClusterWorkerNodesMembership(null);
     }
     
     @Test
@@ -54,7 +54,7 @@ public class ClusterDiscoveryTests extends AbstractClusterTests
         coreChannels.get(1).start();
         
         Threads.sleep(2000);
-        checkWorkerNodesMembership(null);
+        checkClusterWorkerNodesMembership(null);
         
         coreChannels.get(1).stop();
         
@@ -65,7 +65,7 @@ public class ClusterDiscoveryTests extends AbstractClusterTests
         coreChannels.get(2).start();
         
         Threads.sleep(2000);
-        checkWorkerNodesMembership(null);
+        checkClusterWorkerNodesMembership(null);
     }
     
     @Test
@@ -83,7 +83,7 @@ public class ClusterDiscoveryTests extends AbstractClusterTests
         
         Threads.sleep(2000);
         
-        checkWorkerNodesMembership(null);
+        checkClusterWorkerNodesMembership(null);
     }
     
     @Test
@@ -100,6 +100,6 @@ public class ClusterDiscoveryTests extends AbstractClusterTests
         
         Threads.sleep(2000);
         
-        checkWorkerNodesMembership(null);
+        checkClusterWorkerNodesMembership(null);
     }
 }

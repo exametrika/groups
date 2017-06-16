@@ -51,7 +51,7 @@ public class ClusterCommandsTests extends AbstractClusterTests
         startWorkerNodes(null);
         Threads.sleep(2000);
         
-        checkWorkerNodesMembership(null);
+        checkClusterWorkerNodesMembership(null);
         
         addCommandHandlers();
         

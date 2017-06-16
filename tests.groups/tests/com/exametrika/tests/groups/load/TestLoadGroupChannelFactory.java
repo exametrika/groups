@@ -93,7 +93,7 @@ public class TestLoadGroupChannelFactory extends TestGroupChannelFactory
         super.createProtocols(parameters, channelName, messageFactory, serializationRegistry, liveNodeProvider, 
             failureObservers, protocols);
         
-        TestFailureGenerationProtocol failureGenerationProtocol = new TestFailureGenerationProtocol(channelName, messageFactory,
+        TestGroupFailureGenerationProtocol failureGenerationProtocol = new TestGroupFailureGenerationProtocol(channelName, messageFactory,
             failureSpecs, ((TestGroupFactoryParameters)factoryParameters).failureGenerationProcessPeriod, failureDetectionProtocol);
         protocols.add(failureGenerationProtocol);
     }
@@ -104,7 +104,7 @@ public class TestLoadGroupChannelFactory extends TestGroupChannelFactory
         super.wireProtocols(channel, transport, protocolStack);
         
         FlushParticipantProtocol flushParticipantProtocol = protocolStack.find(FlushParticipantProtocol.class);
-        TestFailureGenerationProtocol failureGenerationProtocol = protocolStack.find(TestFailureGenerationProtocol.class);
+        TestGroupFailureGenerationProtocol failureGenerationProtocol = protocolStack.find(TestGroupFailureGenerationProtocol.class);
         flushParticipantProtocol.getParticipants().add(failureGenerationProtocol);
     }
     

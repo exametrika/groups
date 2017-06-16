@@ -245,7 +245,7 @@ public class ClusterFeedbackTests extends AbstractClusterTests
         startWorkerNodes(null);
         Threads.sleep(2000);
         
-        checkWorkerNodesMembership(null);
+        checkClusterWorkerNodesMembership(null);
         
         WorkerNodeChannel workerNode = workerChannels.get(0);
         INode localNode = workerNode.getMembershipService().getLocalNode();

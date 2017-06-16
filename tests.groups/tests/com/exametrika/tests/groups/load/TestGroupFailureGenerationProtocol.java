@@ -20,12 +20,12 @@ import com.exametrika.impl.groups.cluster.flush.IFlush;
 import com.exametrika.impl.groups.cluster.flush.IFlushParticipant;
 
 /**
- * The {@link TestFailureGenerationProtocol} is a protocol which generates failures for group nodes.
+ * The {@link TestGroupFailureGenerationProtocol} is a group protocol which generates failures for group nodes.
  * 
  * @threadsafety This class and its methods are thread safe.
  * @author medvedev
  */
-public class TestFailureGenerationProtocol extends AbstractProtocol implements IFlushParticipant
+public class TestGroupFailureGenerationProtocol extends AbstractProtocol implements IFlushParticipant
 {
     private final List<TestFailureSpec> failureSpecs;
     private final long processPeriod;
@@ -38,7 +38,7 @@ public class TestFailureGenerationProtocol extends AbstractProtocol implements I
     private long lastProcessTime;
     private long[] nextFailureTimes;
    
-    public TestFailureGenerationProtocol(String channelName, IMessageFactory messageFactory, List<TestFailureSpec> failureSpecs,
+    public TestGroupFailureGenerationProtocol(String channelName, IMessageFactory messageFactory, List<TestFailureSpec> failureSpecs,
         long processPeriod, IGroupFailureDetector failureDetector)
     {
         super(channelName, messageFactory);

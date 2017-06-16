@@ -1,16 +1,24 @@
-* доделать тесты групп
+* cделать ClusterMulticastTest, взяв за основу MulticastProtocolTests
+  - возможно можно задействовать check protocol для проверки состояния группы
+  - кроме падений узлов группы включить падения координатора кластера и контроллеров узлов группы
+* сделать cluster standalone/perf tests
+  - сделать кластерный вариант TestFailureGenerationProtocol, с возможностью остановки кор координатора, произвольного кор узла, воркер координатора, произвольного воркер узла или люьрго узла кластера
+  - сделать тестовую фабрику кор/воркер узлов с внедренным failure generation протоколом
+  - включить state check в кор группу тоже (сейчас только воркер группы и по запросу)
+  - сделать cluster perf tests по аналогии с кор группой
+  - сделать standalone tests по аналогии с кор группой
 * протестировать
-  - standalone test (простой и перфтест) протестировать
+  * При тестировании тестировать под отладчиком, а также проверять race conditions по каждому протоколу
+  - standalone test (простой и перфтест) протестировать (+check протокол)
   - ClusterDiscoveryTests
   - ClusterFeedbackTests
   - ClusterFailureDetectionTests
   - ClusterCommandsTests
-  - ClusterMembershipTests
+  - ClusterMembershipTests (Channel, Membership, тесты групп)
 ------------
-При тестировании тестировать под отладчиком, а также проверять race cinditiins по каждому протоколу
 
-Channel:
-* worker node gracefull exit
+-Channel-:
++ worker node gracefull exit
   - добавляем воркера в две группы, выполеяем gracefull выход воркера, смотрим что на координаторе кластера появилось соотв. состояние, проверяем, что узел был исключен из всех своих групп (на него было инсталлировано соотв. членство) и после этого вышел из кластера (канал закрыт остальные получиои членство коастера без этого узла)
 * NodeChannel
   - gracefulClose (таймаут, деинсталляция членства, закрытие канала).
@@ -101,21 +109,20 @@ Check:
   - создать группы, проверить
   - создать нового воркера, удалить старого, создать, изменить и удалить группы, проверить
 
-Тесты групп:
-* WorkerGroupDiscoveryProtocol
+-Тесты групп-:
++ WorkerGroupDiscoveryProtocol
   - создать кластер с группой
   - добавить воркера, проверить, что на координаторе группы узел найден
   - проверить инсталояцию членства группы с узлом
-* WorkerGroupFailureDetectionProtocol, GroupFailureDetectionProtocol
++ WorkerGroupFailureDetectionProtocol, GroupFailureDetectionProtocol
   - создать кластер с группой
   - закрыть воркера
   - проверить что на узлах группы он помечен как failed
   - проверить инсталояцию членства группы без узла
-* WorkerGroupMembershipProtocol, GroupProtocolSubStack
++ WorkerGroupMembershipProtocol, GroupProtocolSubStack
 - создать кластер
 - создать три группы, проверить что на них инсталлировано членство групп
 - добавить новую, удалить и изменить старые, проверить их членства групп, провепить через некоторое время что для удаленной удален ее подстек протоколов
-- TODO:
 
 Cluster flow control, flush, state, multicast тесты:
 * взять за основу тесты кор группы и прогнать их на одной из групп воркеров

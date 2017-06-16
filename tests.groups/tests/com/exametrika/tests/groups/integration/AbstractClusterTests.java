@@ -31,6 +31,8 @@ import com.exametrika.api.groups.cluster.NodeParameters;
 import com.exametrika.api.groups.cluster.WorkerNodeParameters;
 import com.exametrika.common.l10n.SystemException;
 import com.exametrika.common.messaging.ICompositeChannel;
+import com.exametrika.common.messaging.impl.SubChannel;
+import com.exametrika.common.tests.Tests;
 import com.exametrika.common.utils.Assert;
 import com.exametrika.impl.groups.cluster.channel.CoreGroupSubChannel;
 import com.exametrika.impl.groups.cluster.channel.CoreNodeChannel;
@@ -39,7 +41,10 @@ import com.exametrika.impl.groups.cluster.channel.WorkerNodeChannel;
 import com.exametrika.impl.groups.cluster.channel.WorkerNodeChannelFactory;
 import com.exametrika.impl.groups.cluster.discovery.WellKnownAddressesDiscoveryStrategy;
 import com.exametrika.impl.groups.cluster.membership.GroupDefinition;
+import com.exametrika.impl.groups.cluster.membership.GroupMembershipManager;
 import com.exametrika.impl.groups.cluster.membership.GroupMemberships;
+import com.exametrika.impl.groups.cluster.membership.GroupProtocolSubStack;
+import com.exametrika.impl.groups.cluster.membership.WorkerGroupMembershipProtocol;
 import com.exametrika.impl.groups.cluster.membership.WorkerToCoreMembership;
 import com.exametrika.impl.groups.cluster.state.EmptySimpleStateStore;
 import com.exametrika.spi.groups.cluster.channel.IChannelReconnector;
@@ -110,7 +115,7 @@ public abstract class AbstractClusterTests
             channel.stop();
     }
     
-    protected void checkWorkerNodesMembership(Set<Integer> ignoredNodes)
+    protected void checkClusterWorkerNodesMembership(Set<Integer> ignoredNodes)
     {
         List<INode> nodes = null;
         synchronized (workerChannels)
@@ -154,8 +159,10 @@ public abstract class AbstractClusterTests
         return map;
     }
     
-    protected void checkGroupsMembership(Map<UUID, GroupDefinition> groupDefinitions)
+    protected void checkClusterGroupsMembership(Map<UUID, GroupDefinition> groupDefinitions,
+        Set<Integer> ignoredNodes)
     {
+        Set<INode> nodes = new HashSet<INode>();
         List<IGroup> groups = null;
         synchronized (workerChannels)
         {
@@ -175,12 +182,106 @@ public abstract class AbstractClusterTests
             assertThat(groups.size(), is(groupDefinitions.size()));
             for (IGroup group : groups)
             {
+                nodes.addAll(group.getMembers());
                 GroupDefinition groupDefinition = groupDefinitions.get(group.getId());
                 assertThat(group.getName(), is(groupDefinition.getName()));
                 assertThat(group.getOptions(), is(groupDefinition.getOptions()));
                 assertThat(group.getMembers().size(), is(groupDefinition.getNodeCount()));
             }
         }
+        
+        for (int i = 0; i < workerChannels.size(); i++)
+        {
+            IWorkerNodeChannel channel = workerChannels.get(i);
+            if (ignoredNodes != null && ignoredNodes.contains(i))
+                assertTrue(!nodes.contains(channel.getMembershipService().getLocalNode()));
+            else
+                assertTrue(nodes.contains(channel.getMembershipService().getLocalNode()));
+        }
+    }
+    
+    protected void checkWorkerGroupsMembership(Map<UUID, GroupDefinition> groupDefinitions, Set<Integer> ignoredNodes) throws Throwable
+    {
+        Set<INode> nodes = new HashSet<INode>();
+        synchronized (workerChannels)
+        {
+            IWorkerNodeChannel channel = workerChannels.get(0);
+            IClusterMembershipService membershipService = channel.getMembershipService();
+            IClusterMembership membership = membershipService.getMembership();
+            IDomainMembership domainMembership = membership.findDomain("test");
+            IGroupsMembership groupsMembership = domainMembership.findElement(IGroupsMembership.class);
+            List<IGroup> groups = groupsMembership.getGroups();
+            
+            for (IGroup group : groups)
+            {
+                nodes.addAll(group.getMembers());
+                IGroupMembership groupMembership = null;
+                for (INode node : group.getMembers())
+                {
+                    WorkerNodeChannel workerChannel = findWorker(node);
+                    IGroupMembership workerGroupMembership = findGroupMembership(workerChannel, group.getId());
+                    if (groupMembership == null)
+                        groupMembership = workerGroupMembership;
+                    else
+                        checkGroupMembership(groupMembership, workerGroupMembership);
+                        
+                    assertTrue(groupMembership.getGroup().findMember(workerChannel.getMembershipService().getLocalNode().getId()) != null);
+                }
+                
+                checkGroup(groupMembership.getGroup(), group);
+            }
+        }
+        
+        for (int i = 0; i < workerChannels.size(); i++)
+        {
+            IWorkerNodeChannel channel = workerChannels.get(i);
+            if (ignoredNodes != null && ignoredNodes.contains(i))
+                assertTrue(!nodes.contains(channel.getMembershipService().getLocalNode()));
+            else
+                assertTrue(nodes.contains(channel.getMembershipService().getLocalNode()));
+        }
+        
+        checkClusterWorkerNodesMembership(ignoredNodes);
+        checkClusterGroupsMembership(groupDefinitions, ignoredNodes);
+    }
+    
+    private void checkGroup(IGroup first, IGroup second)
+    {
+        assertThat(first.getId(), is(second.getId()));
+        assertThat(first.getName(), is(second.getName()));
+        assertThat(first.getAddress(), is(second.getAddress()));
+        assertThat(first.getOptions(), is(second.getOptions()));
+        assertThat(first.isPrimary(), is(second.isPrimary()));
+        assertThat(first.getMembers(), is(second.getMembers()));
+    }
+
+    private void checkGroupMembership(IGroupMembership first, IGroupMembership second)
+    {
+        assertThat(first.getId(), is(second.getId()));
+        checkGroup(first.getGroup(), second.getGroup());
+    }
+
+    protected WorkerNodeChannel findWorker(INode node)
+    {
+        for (WorkerNodeChannel worker : workerChannels)
+        {
+            if (worker.getMembershipService().getLocalNode().equals(node))
+                return worker;
+        }
+        
+        return null;
+    }
+    
+    protected IGroupMembership findGroupMembership(WorkerNodeChannel workerNode, UUID groupId) throws Throwable
+    {
+        WorkerGroupMembershipProtocol groupMembershipProtocol = ((SubChannel)workerNode.getMainSubChannel()
+            ).getProtocolStack().find(WorkerGroupMembershipProtocol.class);
+        Map<UUID, GroupProtocolSubStack> groupsStacks = Tests.get(groupMembershipProtocol, "groupStacks");
+        GroupProtocolSubStack stack = groupsStacks.get(groupId);
+        if (stack == null)
+            return null;
+        GroupMembershipManager groupMembershipManager = Tests.get(stack, "membershipManager");
+        return groupMembershipManager.getMembership();
     }
     
     protected void checkWorkerReconnections(Set<Integer> ignoredNodes)
