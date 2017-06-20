@@ -57,16 +57,16 @@ import com.exametrika.spi.groups.cluster.channel.IChannelReconnector;
  */
 public class GroupProtocolSubStackFactory implements IGroupProtocolSubStackFactory
 {
-    private final String channelName;
-    private final IMessageFactory messageFactory;
+    protected final String channelName;
+    protected final IMessageFactory messageFactory;
     private GroupFeedbackProvider groupFeedbackProvider;
     private DataLossFeedbackProvider dataLossFeedbackProvider;
     private final LocalNodeProvider localNodeProvider;
     private final IClusterMembershipService clusterMembershipService;
     private IFailureObserver failureObserver;
     private final ISerializationRegistry serializationRegistry;
-    private final WorkerNodeFactoryParameters factoryParameters;
-    private final WorkerNodeParameters parameters;
+    protected final WorkerNodeFactoryParameters factoryParameters;
+    protected final WorkerNodeParameters parameters;
     private ICompartment compartment;
     private IChannelReconnector channelReconnector;
 
@@ -236,6 +236,8 @@ public class GroupProtocolSubStackFactory implements IGroupProtocolSubStackFacto
         WorkerGroupStateUpdater groupStateUpdater = new WorkerGroupStateUpdater(groupFeedbackProvider);
         flushParticipants.add(groupStateUpdater);
         
+        createProtocols(failureDetectionProtocol, protocols, flushParticipants);
+        
         protocols.add(discoveryProtocol);
         protocols.add(failureDetectionProtocol);
         protocols.add(new LastGroupProtocol(channelName, messageFactory, group.getId()));
@@ -244,5 +246,10 @@ public class GroupProtocolSubStackFactory implements IGroupProtocolSubStackFacto
             dataLossFeedbackProvider, factoryParameters.maxGroupMembershipHistorySize, clusterMembershipListeners, compartmentProcessors);
         preparedMembershipListeners.add(groupProtocolSubStack);
         return groupProtocolSubStack;
+    }
+
+    protected void createProtocols(WorkerGroupFailureDetectionProtocol failureDetectionProtocol,
+        List<AbstractProtocol> protocols, List<IFlushParticipant> flushParticipants)
+    {
     }
 }

@@ -29,7 +29,8 @@ public class TestGroupFailureGenerationProtocol extends AbstractProtocol impleme
 {
     private final List<TestFailureSpec> failureSpecs;
     private final long processPeriod;
-    private final IGroupFailureDetector failureDetector;
+    private IGroupFailureDetector failureDetector;
+    private final boolean coreNode;
     private final Random random = new Random();
     private boolean coordinator;
     private IFlush flush;
@@ -39,17 +40,24 @@ public class TestGroupFailureGenerationProtocol extends AbstractProtocol impleme
     private long[] nextFailureTimes;
    
     public TestGroupFailureGenerationProtocol(String channelName, IMessageFactory messageFactory, List<TestFailureSpec> failureSpecs,
-        long processPeriod, IGroupFailureDetector failureDetector)
+        long processPeriod, boolean coreNode)
     {
         super(channelName, messageFactory);
         
         Assert.notNull(failureSpecs);
-        Assert.notNull(failureDetector);
         
         this.failureSpecs = failureSpecs;
         this.processPeriod = processPeriod;
-        this.failureDetector = failureDetector;
+        this.coreNode = coreNode;
         this.nextFailureTimes = new long[failureSpecs.size()];
+    }
+    
+    public void setFailureDetector(IGroupFailureDetector failureDetector)
+    {
+        Assert.notNull(failureDetector);
+        Assert.isNull(this.failureDetector);
+        
+        this.failureDetector = failureDetector;
     }
     
     @Override
@@ -156,11 +164,16 @@ public class TestGroupFailureGenerationProtocol extends AbstractProtocol impleme
                 INode node = null;
                 switch(failureSpec.getFailureTarget())
                 {
+                case RANDOM_GROUP_NODE:
                 case RANDOM_NODE:
                     node = healthyNodes.remove(random.nextInt(healthyNodes.size()));
                     break;
-                case COORDINATOR:
+                case GROUP_COORDINATOR:
                     node = failureDetector.getCurrentCoordinator();
+                    break;
+                case RANDOM_CORE_NODE:
+                    if (coreNode)
+                        node = healthyNodes.remove(random.nextInt(healthyNodes.size()));
                     break;
                 }
                 

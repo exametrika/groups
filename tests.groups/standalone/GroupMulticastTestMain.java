@@ -21,7 +21,7 @@ import com.exametrika.tests.groups.load.TestLoadSpec.SendSourceType;
 import com.exametrika.tests.groups.load.TestLoadSpec.SendType;
 import com.exametrika.tests.groups.load.TestLoadSpec.SizeType;
 
-public class MulticastTestMain
+public class GroupMulticastTestMain
 {
     public static void main(String[] args) throws Throwable
     {
@@ -31,11 +31,11 @@ public class MulticastTestMain
         TestLoadSpec loadSpec = new TestLoadSpec(SizeType.SMALL, 0, SizeType.SMALL, 0, SendFrequencyType.MAXIMUM, 0d, 
             SendType.DIRECT, SendSourceType.SINGLE_NODE);
         List<TestFailureSpec> failureSpecs = Arrays.asList(
-            new TestFailureSpec(FailureTarget.RANDOM_NODE, FailureQuantityType.SINGLE, 0, FailureEventType.RANDOM, 
+            new TestFailureSpec(FailureTarget.RANDOM_GROUP_NODE, FailureQuantityType.SINGLE, 0, FailureEventType.RANDOM, 
                 FailurePeriodType.RANDOM, 10000),
-            new TestFailureSpec(FailureTarget.COORDINATOR, FailureQuantityType.SINGLE, 0, FailureEventType.RANDOM, 
+            new TestFailureSpec(FailureTarget.GROUP_COORDINATOR, FailureQuantityType.SINGLE, 0, FailureEventType.RANDOM, 
                 FailurePeriodType.RANDOM, 60000),
-            new TestFailureSpec(FailureTarget.COORDINATOR, FailureQuantityType.SINGLE, 0, FailureEventType.START_FLUSH, 
+            new TestFailureSpec(FailureTarget.GROUP_COORDINATOR, FailureQuantityType.SINGLE, 0, FailureEventType.START_FLUSH, 
                 FailurePeriodType.RANDOM, 300000));
         
         IChannel channel = createChannel(index, count, loadSpec, failureSpecs);

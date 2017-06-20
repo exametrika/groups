@@ -59,7 +59,6 @@ public final class GroupCheckStateProtocol extends AbstractProtocol implements I
         super(channelName, messageFactory);
         
         Assert.notNull(membershipManager);
-        Assert.notNull(dataLossFeedbackService);
         Assert.notNull(groupId);
         Assert.notNull(groupAddress);
         Assert.notNull(groupDomain);
@@ -138,13 +137,16 @@ public final class GroupCheckStateProtocol extends AbstractProtocol implements I
             StateHashResponseMessagePart part = message.getPart();
             if (stateHash == null)
                 stateHash = part.getHash();
-            else if (stateHash.equals(part.getHash()))
+            else if (!stateHash.equals(part.getHash()))
             {
                 if (logger.isLogEnabled(LogLevel.ERROR))
                     logger.log(LogLevel.ERROR, marker, messages.stateNotEqual(message.getSource()));
                 
-                IDataLossState state = new DataLossState(groupDomain, groupId);
-                dataLossFeedbackService.updateDataLossState(state);
+                if (dataLossFeedbackService != null)
+                {
+                    IDataLossState state = new DataLossState(groupDomain, groupId);
+                    dataLossFeedbackService.updateDataLossState(state);
+                }
             }
             
             respondingNodes.remove(message.getSource());

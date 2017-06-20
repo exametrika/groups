@@ -60,11 +60,6 @@ public class WorkerToCoreSubChannelFactory extends AbstractChannelFactory
     private GroupFeedbackProvider groupFeedbackProvider;
     private DataLossFeedbackProvider dataLossFeedbackProvider;
     
-    public WorkerToCoreSubChannelFactory()
-    {
-        this(new WorkerNodeFactoryParameters());
-    }
-    
     public WorkerToCoreSubChannelFactory(WorkerNodeFactoryParameters factoryParameters)
     {
         super(factoryParameters);

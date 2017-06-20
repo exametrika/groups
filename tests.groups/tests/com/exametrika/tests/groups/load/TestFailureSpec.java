@@ -18,8 +18,11 @@ public class TestFailureSpec
     
     public enum FailureTarget
     {
-        RANDOM_NODE,
-        COORDINATOR
+        RANDOM_GROUP_NODE,
+        GROUP_COORDINATOR,
+        RANDOM_CORE_NODE,
+        RANDOM_WORKER_NODE,
+        RANDOM_NODE
     }
     
     public enum FailureQuantityType

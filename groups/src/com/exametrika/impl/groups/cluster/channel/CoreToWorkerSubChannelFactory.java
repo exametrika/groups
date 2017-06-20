@@ -54,11 +54,6 @@ public class CoreToWorkerSubChannelFactory extends AbstractChannelFactory
     private IFailureObserver coreToWorkerFailureObserver;
     private Set<IFailureDetectionListener> failureDetectionListeners;
     
-    public CoreToWorkerSubChannelFactory()
-    {
-        this(new CoreNodeFactoryParameters());
-    }
-    
     public CoreToWorkerSubChannelFactory(CoreNodeFactoryParameters factoryParameters)
     {
         super(factoryParameters);

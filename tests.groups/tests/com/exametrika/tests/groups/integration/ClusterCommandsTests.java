@@ -15,7 +15,6 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import com.exametrika.common.messaging.impl.SubChannel;
 import com.exametrika.common.tests.Tests;
 import com.exametrika.common.utils.SyncCompletionHandler;
 import com.exametrika.common.utils.Threads;
@@ -76,11 +75,6 @@ public class ClusterCommandsTests extends AbstractClusterTests
             this.commandHandlers.add(comnandHandler);
             commandHandlers.add(comnandHandler);
         }
-    }
-    
-    private CommandManager findCommandManager(CoreNodeChannel coreNode)
-    {
-        return ((SubChannel)coreNode.getMainSubChannel()).getProtocolStack().find(CommandManager.class);
     }
     
     public static class TestCommand implements ICommand, Serializable

@@ -40,6 +40,8 @@ import com.exametrika.impl.groups.cluster.channel.CoreNodeChannelFactory;
 import com.exametrika.impl.groups.cluster.channel.WorkerNodeChannel;
 import com.exametrika.impl.groups.cluster.channel.WorkerNodeChannelFactory;
 import com.exametrika.impl.groups.cluster.discovery.WellKnownAddressesDiscoveryStrategy;
+import com.exametrika.impl.groups.cluster.management.CommandManager;
+import com.exametrika.impl.groups.cluster.membership.GroupAddress;
 import com.exametrika.impl.groups.cluster.membership.GroupDefinition;
 import com.exametrika.impl.groups.cluster.membership.GroupMembershipManager;
 import com.exametrika.impl.groups.cluster.membership.GroupMemberships;
@@ -65,6 +67,9 @@ public abstract class AbstractClusterTests
     protected List<WorkerNodeChannel> workerChannels;
     protected Set<Integer> reconnections = new HashSet<Integer>();
     protected Set<Integer> wellKnownAddressesIndexes;
+    protected TestLoadSpec loadSpec = new TestLoadSpec(SizeType.SMALL, 0, SizeType.SMALL, 0, SendFrequencyType.MAXIMUM, 0d, 
+        SendType.DIRECT, SendSourceType.SINGLE_NODE);;
+    protected GroupAddress groupAddress = GroupMemberships.CORE_GROUP_ADDRESS;
 
     protected void createCluster(int coreNodeCount, int workerNodeCount)
     {
@@ -113,6 +118,11 @@ public abstract class AbstractClusterTests
             channel.stop();
         for (ICompositeChannel channel : workerChannels)
             channel.stop();
+    }
+
+    protected CommandManager findCommandManager(CoreNodeChannel coreNode)
+    {
+        return ((SubChannel)coreNode.getMainSubChannel()).getProtocolStack().find(CommandManager.class);
     }
     
     protected void checkClusterWorkerNodesMembership(Set<Integer> ignoredNodes)
@@ -347,25 +357,28 @@ public abstract class AbstractClusterTests
     protected CoreNodeParameters createCoreNodeParameters(int index, int count)
     {
         int portRangeStart = 17000;
-        CoreNodeParameters parameters = new CoreNodeParameters();
+        CoreNodeParameters parameters = createCoreNodeParameters();
         setNodeParameters(parameters, portRangeStart, index, count);
         parameters.stateStore = new EmptySimpleStateStore();
+        return parameters;
+    }
+
+    protected CoreNodeParameters createCoreNodeParameters()
+    {
+        CoreNodeParameters parameters = new CoreNodeParameters();
         return parameters;
     }
     
     protected WorkerNodeParameters createWorkerNodeParameters(int index, int count)
     {
-        TestLoadSpec loadSpec = new TestLoadSpec(SizeType.SMALL, 0, SizeType.SMALL, 0, SendFrequencyType.MAXIMUM, 0d, 
-            SendType.DIRECT, SendSourceType.SINGLE_NODE);
-        
-        TestLoadMessageSender sender = new TestLoadMessageSender(index, loadSpec, GroupMemberships.CORE_GROUP_ADDRESS);
+        TestLoadMessageSender sender = new TestLoadMessageSender(index, loadSpec, groupAddress);
         
         TestLoadStateStore stateStore = new TestLoadStateStore(TestLoadMessageSender.createBuffer(index, getStateLength(loadSpec)));
         TestLoadStateTransferFactory stateTransferFactory = new TestLoadStateTransferFactory(stateStore);
         sender.setStateTransferFactory(stateTransferFactory);
         
         int portRangeStart = 17000;
-        WorkerNodeParameters parameters = new WorkerNodeParameters();
+        WorkerNodeParameters parameters = createWorkerNodeParameters();
         setNodeParameters(parameters, portRangeStart, index, count);
         parameters.stateTransferFactory = stateTransferFactory;
         parameters.receiver = sender;
@@ -374,6 +387,12 @@ public abstract class AbstractClusterTests
         parameters.localFlowController = sender;
         parameters.serializationRegistrars.add(new TestLoadMessagePartSerializer());
         parameters.channelReconnector = new TestWorkerReconnector(index, count);
+        return parameters;
+    }
+
+    protected WorkerNodeParameters createWorkerNodeParameters()
+    {
+        WorkerNodeParameters parameters = new WorkerNodeParameters();
         return parameters;
     }
     
@@ -418,23 +437,38 @@ public abstract class AbstractClusterTests
     {
     }
     
-    private CoreNodeChannel createCoreChannel(CoreNodeParameters parameters)
+    protected CoreNodeChannel createCoreChannel(CoreNodeParameters parameters)
     {
-        CoreNodeChannelFactory factory = new CoreNodeChannelFactory();
+        CoreNodeChannelFactory factory = createCoreNodeFactory();
         ICompositeChannel channel = factory.createChannel(parameters);
         disableCoreNodeProtocols(channel);
         return (CoreNodeChannel)channel;
     }
 
-    private WorkerNodeChannel createWorkerChannel(WorkerNodeParameters parameters)
+    protected CoreNodeChannelFactory createCoreNodeFactory()
     {
-        WorkerNodeChannelFactory factory = new WorkerNodeChannelFactory();
+        CoreNodeChannelFactory factory = new CoreNodeChannelFactory();
+        return factory;
+    }
+
+    protected WorkerNodeChannel createWorkerChannel(WorkerNodeParameters parameters)
+    {
+        WorkerNodeChannelFactory factory = createWorkerNodeFactory();
         ICompositeChannel channel = factory.createChannel(parameters);
+        TestLoadMessageSender sender = (TestLoadMessageSender)parameters.receiver;
+        sender.setChannel(channel.getMainSubChannel());
+        channel.getCompartment().addTimerProcessor(sender);
         disableWorkerNodeProtocols(channel);
         return (WorkerNodeChannel)channel;
     }
+
+    protected WorkerNodeChannelFactory createWorkerNodeFactory()
+    {
+        WorkerNodeChannelFactory factory = new WorkerNodeChannelFactory();
+        return factory;
+    }
     
-    private int getStateLength(TestLoadSpec loadSpec)
+    protected int getStateLength(TestLoadSpec loadSpec)
     {
         switch (loadSpec.getStateSizeType())
         {
@@ -451,7 +485,7 @@ public abstract class AbstractClusterTests
         }
     }
     
-    private class TestWorkerReconnector implements IChannelReconnector
+    protected class TestWorkerReconnector implements IChannelReconnector
     {
         private int index;
         private int count;

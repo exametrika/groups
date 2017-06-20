@@ -18,6 +18,7 @@ import com.exametrika.common.messaging.impl.protocols.failuredetection.IFailureO
 import com.exametrika.common.messaging.impl.transports.tcp.TcpTransport;
 import com.exametrika.common.utils.Assert;
 import com.exametrika.impl.groups.cluster.discovery.WellKnownAddressesDiscoveryStrategy;
+import com.exametrika.impl.groups.cluster.failuredetection.CoreGroupFailureDetectionProtocol;
 import com.exametrika.impl.groups.cluster.flush.FlushParticipantProtocol;
 import com.exametrika.impl.groups.cluster.membership.GroupMemberships;
 import com.exametrika.tests.groups.channel.TestGroupChannel;
@@ -74,7 +75,7 @@ public class TestLoadGroupChannelFactory extends TestGroupChannelFactory
         parameters.deliveryHandler = sender;
         parameters.localFlowController = sender;
         parameters.serializationRegistrars.add(new TestLoadMessagePartSerializer());
-        parameters.channelReconnector = new TestChannelReconnector(((TestGroupFactoryParameters)factoryParameters).reconnectPeriod, this, parameters);
+        parameters.channelReconnector = new TestGroupChannelReconnector(((TestGroupFactoryParameters)factoryParameters).reconnectPeriod, this, parameters);
         
         TestGroupChannel channel = createChannel(parameters);
         sender.setChannel(channel);
@@ -94,7 +95,7 @@ public class TestLoadGroupChannelFactory extends TestGroupChannelFactory
             failureObservers, protocols);
         
         TestGroupFailureGenerationProtocol failureGenerationProtocol = new TestGroupFailureGenerationProtocol(channelName, messageFactory,
-            failureSpecs, ((TestGroupFactoryParameters)factoryParameters).failureGenerationProcessPeriod, failureDetectionProtocol);
+            failureSpecs, ((TestGroupFactoryParameters)factoryParameters).failureGenerationProcessPeriod, true);
         protocols.add(failureGenerationProtocol);
     }
     
@@ -106,6 +107,9 @@ public class TestLoadGroupChannelFactory extends TestGroupChannelFactory
         FlushParticipantProtocol flushParticipantProtocol = protocolStack.find(FlushParticipantProtocol.class);
         TestGroupFailureGenerationProtocol failureGenerationProtocol = protocolStack.find(TestGroupFailureGenerationProtocol.class);
         flushParticipantProtocol.getParticipants().add(failureGenerationProtocol);
+        
+        CoreGroupFailureDetectionProtocol failureDetectionProtocol = protocolStack.find(CoreGroupFailureDetectionProtocol.class);
+        failureGenerationProtocol.setFailureDetector(failureDetectionProtocol);
     }
     
     private int getStateLength(TestLoadSpec loadSpec)

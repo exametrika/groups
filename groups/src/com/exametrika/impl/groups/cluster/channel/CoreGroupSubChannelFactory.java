@@ -35,6 +35,7 @@ import com.exametrika.common.messaging.impl.protocols.failuredetection.LiveNodeM
 import com.exametrika.common.messaging.impl.transports.ConnectionManager;
 import com.exametrika.common.messaging.impl.transports.tcp.TcpTransport;
 import com.exametrika.common.utils.Assert;
+import com.exametrika.impl.groups.cluster.check.GroupCheckStateProtocol;
 import com.exametrika.impl.groups.cluster.discovery.CoreCoordinatorClusterDiscoveryProtocol;
 import com.exametrika.impl.groups.cluster.discovery.CoreGroupDiscoveryProtocol;
 import com.exametrika.impl.groups.cluster.discovery.IWorkerNodeDiscoverer;
@@ -111,11 +112,6 @@ public class CoreGroupSubChannelFactory extends AbstractChannelFactory
     private CoreClusterFailureDetectionProtocol clusterFailureDetectionProtocol;
     private IFailureObserver coreToWorkerFailureObserver;
     private Set<IFailureDetectionListener> coreToWorkerFailureDetectionListeners;
-    
-    public CoreGroupSubChannelFactory()
-    {
-        this(new CoreNodeFactoryParameters());
-    }
     
     public CoreGroupSubChannelFactory(CoreNodeFactoryParameters factoryParameters)
     {
@@ -241,6 +237,17 @@ public class CoreGroupSubChannelFactory extends AbstractChannelFactory
             commandHandlers);
         protocols.add(commandManager);
         
+        GroupCheckStateProtocol checkStateProtocol = null;
+        if (nodeFactoryParameters.checkState)
+        {
+            checkStateProtocol = new GroupCheckStateProtocol(channelName, messageFactory, membershipManager, 
+                null, nodeFactoryParameters.checkStatePeriod, GroupMemberships.CORE_GROUP_ID,
+                GroupMemberships.CORE_GROUP_ADDRESS, GroupMemberships.CORE_DOMAIN);
+            protocols.add(checkStateProtocol);
+            failureDetectionListeners.add(checkStateProtocol);
+            checkStateProtocol.setFailureDetector(failureDetectionProtocol);
+        }
+        
         FlowControlProtocol flowControlProtocol = new FlowControlProtocol(channelName, messageFactory, membershipManager);
         protocols.add(flowControlProtocol);
         failureDetectionListeners.add(flowControlProtocol);
@@ -276,6 +283,9 @@ public class CoreGroupSubChannelFactory extends AbstractChannelFactory
             messageFactory, membershipManager, failureDetectionProtocol, stateTransferFactory, 
             GroupMemberships.CORE_GROUP_ID, nodeFactoryParameters.saveSnapshotPeriod);
         protocols.add(stateTransferServerProtocol);
+        
+        if (checkStateProtocol != null)
+            checkStateProtocol.setStateHashProvider(stateTransferServerProtocol);
         
         FailureAtomicMulticastProtocol multicastProtocol = new FailureAtomicMulticastProtocol(channelName, 
             messageFactory, membershipManager, failureDetectionProtocol, nodeFactoryParameters.maxBundlingMessageSize, 

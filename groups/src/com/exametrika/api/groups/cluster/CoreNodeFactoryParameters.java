@@ -11,6 +11,8 @@ package com.exametrika.api.groups.cluster;
  */
 public class CoreNodeFactoryParameters extends NodeFactoryParameters
 {
+    public boolean checkState;
+    
     public CoreNodeFactoryParameters()
     {
         super(false);

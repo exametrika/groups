@@ -32,6 +32,7 @@ import com.exametrika.impl.groups.cluster.failuredetection.WorkerClusterFailureD
 import com.exametrika.impl.groups.cluster.feedback.DataLossFeedbackProvider;
 import com.exametrika.impl.groups.cluster.feedback.GroupFeedbackProvider;
 import com.exametrika.impl.groups.cluster.membership.ClusterMembershipManager;
+import com.exametrika.impl.groups.cluster.membership.IGroupProtocolSubStackFactory;
 import com.exametrika.impl.groups.cluster.membership.IWorkerControllerObserver;
 import com.exametrika.impl.groups.cluster.membership.LocalNodeProvider;
 import com.exametrika.impl.groups.cluster.membership.WorkerGroupMembershipProtocol;
@@ -45,20 +46,15 @@ import com.exametrika.spi.groups.cluster.channel.IChannelReconnector;
  */
 public class WorkerGroupSubChannelFactory extends AbstractChannelFactory
 {
-    private LocalNodeProvider localNodeProvider;
-    private Set<IClusterMembershipListener> clusterMembershipListeners;
-    private ClusterMembershipManager clusterMembershipManager;
-    private IChannelReconnector channelReconnector;
-    private WorkerClusterFailureDetectionProtocol failureDetectionProtocol;
-    private List<IWorkerControllerObserver> controllerObservers;
-    private GroupProtocolSubStackFactory protocolSubStackFactory;
-    private GroupFeedbackProvider groupFeedbackProvider;
-    private DataLossFeedbackProvider dataLossFeedbackProvider;
-    
-    public WorkerGroupSubChannelFactory()
-    {
-        this(new WorkerNodeFactoryParameters());
-    }
+    protected LocalNodeProvider localNodeProvider;
+    protected Set<IClusterMembershipListener> clusterMembershipListeners;
+    protected ClusterMembershipManager clusterMembershipManager;
+    protected IChannelReconnector channelReconnector;
+    protected WorkerClusterFailureDetectionProtocol failureDetectionProtocol;
+    protected List<IWorkerControllerObserver> controllerObservers;
+    protected IGroupProtocolSubStackFactory protocolSubStackFactory;
+    protected GroupFeedbackProvider groupFeedbackProvider;
+    protected DataLossFeedbackProvider dataLossFeedbackProvider;
     
     public WorkerGroupSubChannelFactory(WorkerNodeFactoryParameters factoryParameters)
     {
@@ -131,30 +127,47 @@ public class WorkerGroupSubChannelFactory extends AbstractChannelFactory
         clusterMembershipListeners.add(failureDetectionProtocol);
         failureObservers.add(failureDetectionProtocol);
         
-        protocolSubStackFactory = new GroupProtocolSubStackFactory(channelName, messageFactory, localNodeProvider, 
-            clusterMembershipManager, serializationRegistry,
-            nodeFactoryParameters, nodeParameters);
+        protocolSubStackFactory = createGroupProtocolSubStackFactory(messageFactory, channelName, serializationRegistry, 
+            nodeParameters, nodeFactoryParameters);
         WorkerGroupMembershipProtocol workerGroupMembershipProtocol = new WorkerGroupMembershipProtocol(channelName, 
             messageFactory, clusterMembershipManager, protocolSubStackFactory, nodeFactoryParameters.groupSubStackRemoveDelay, 
             nodeFactoryParameters.maxSubStackPendingMessageCount);
         protocols.add(workerGroupMembershipProtocol);
         clusterMembershipListeners.add(workerGroupMembershipProtocol);
     }
+
+    protected IGroupProtocolSubStackFactory createGroupProtocolSubStackFactory(IMessageFactory messageFactory,
+        String channelName, ISerializationRegistry serializationRegistry, WorkerNodeParameters nodeParameters,
+        WorkerNodeFactoryParameters nodeFactoryParameters)
+    {
+        return new GroupProtocolSubStackFactory(channelName, messageFactory, localNodeProvider, 
+            clusterMembershipManager, serializationRegistry,
+            nodeFactoryParameters, nodeParameters);
+    }
     
     @Override
     protected void wireProtocols(IChannel channel, TcpTransport transport, ProtocolStack protocolStack)
     {
-        protocolSubStackFactory.setCompartment(channel.getCompartment());
-        protocolSubStackFactory.setFailureObserver(transport);
+        if (protocolSubStackFactory instanceof GroupProtocolSubStackFactory)
+        {
+            GroupProtocolSubStackFactory groupProtocolSubStackFactory = (GroupProtocolSubStackFactory)protocolSubStackFactory;
+            groupProtocolSubStackFactory.setCompartment(channel.getCompartment());
+            groupProtocolSubStackFactory.setFailureObserver(transport);
+        }
     }
     
     protected void wireSubChannel()
     {
         failureDetectionProtocol.setChannelReconnector(channelReconnector);
         controllerObservers.add(failureDetectionProtocol);
-        protocolSubStackFactory.setChannelReconnector(channelReconnector);
-        protocolSubStackFactory.setDataLossFeedbackProvider(dataLossFeedbackProvider);
-        protocolSubStackFactory.setGroupFeedbackProvider(groupFeedbackProvider);
+        
+        if (protocolSubStackFactory instanceof GroupProtocolSubStackFactory)
+        {
+            GroupProtocolSubStackFactory groupProtocolSubStackFactory = (GroupProtocolSubStackFactory)protocolSubStackFactory;
+            groupProtocolSubStackFactory.setChannelReconnector(channelReconnector);
+            groupProtocolSubStackFactory.setDataLossFeedbackProvider(dataLossFeedbackProvider);
+            groupProtocolSubStackFactory.setGroupFeedbackProvider(groupFeedbackProvider);
+        }
     }
     
     @Override

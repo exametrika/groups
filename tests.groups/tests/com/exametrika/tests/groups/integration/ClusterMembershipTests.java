@@ -19,13 +19,11 @@ import com.exametrika.api.groups.cluster.IDomainMembership;
 import com.exametrika.api.groups.cluster.IGroupsMembership;
 import com.exametrika.api.groups.cluster.INode;
 import com.exametrika.api.groups.cluster.IWorkerNodeChannel;
-import com.exametrika.common.messaging.impl.SubChannel;
 import com.exametrika.common.utils.Collections;
 import com.exametrika.common.utils.Enums;
 import com.exametrika.common.utils.Pair;
 import com.exametrika.common.utils.SyncCompletionHandler;
 import com.exametrika.common.utils.Threads;
-import com.exametrika.impl.groups.cluster.channel.CoreNodeChannel;
 import com.exametrika.impl.groups.cluster.channel.WorkerNodeChannel;
 import com.exametrika.impl.groups.cluster.management.CommandManager;
 import com.exametrika.impl.groups.cluster.membership.AddGroupsCommand;
@@ -166,10 +164,5 @@ public class ClusterMembershipTests extends AbstractClusterTests
         Threads.sleep(2000);
         
         checkWorkerGroupsMembership(buildGroupDefinitionsMap(Arrays.asList(group1)), Collections.asSet(0));
-    }
-    
-    private CommandManager findCommandManager(CoreNodeChannel coreNode)
-    {
-        return ((SubChannel)coreNode.getMainSubChannel()).getProtocolStack().find(CommandManager.class);
     }
 }

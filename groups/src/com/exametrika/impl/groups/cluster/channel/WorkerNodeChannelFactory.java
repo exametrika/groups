@@ -15,6 +15,8 @@ import com.exametrika.api.groups.cluster.WorkerNodeParameters;
 import com.exametrika.common.compartment.ICompartment;
 import com.exametrika.common.messaging.IChannel;
 import com.exametrika.common.messaging.ICompositeChannel;
+import com.exametrika.common.messaging.impl.AbstractChannelFactory;
+import com.exametrika.common.messaging.impl.ChannelFactoryParameters;
 import com.exametrika.common.messaging.impl.ChannelParameters;
 import com.exametrika.common.messaging.impl.CompositeChannelFactory;
 import com.exametrika.common.messaging.impl.protocols.failuredetection.ChannelObserver;
@@ -45,7 +47,13 @@ public class WorkerNodeChannelFactory extends CompositeChannelFactory
     
     public WorkerNodeChannelFactory(WorkerNodeFactoryParameters factoryParameters)
     {
-        super(Arrays.asList(new WorkerGroupSubChannelFactory(), new WorkerToCoreSubChannelFactory()), 0, factoryParameters);
+        super(createSubChannelFactories(factoryParameters), 0, factoryParameters);
+    }
+
+    public WorkerNodeChannelFactory(List<AbstractChannelFactory> subChannelFactories, int mainSubChannelIndex, 
+        ChannelFactoryParameters factoryParameters)
+    {
+        super(subChannelFactories, mainSubChannelIndex, factoryParameters);
     }
     
     public ICompositeChannel createChannel(WorkerNodeParameters parameters)
@@ -122,5 +130,10 @@ public class WorkerNodeChannelFactory extends CompositeChannelFactory
         return new WorkerNodeChannel(channelName, liveNodeManager, channelObserver, subChannels, 
             subChannels.get(mainSubChannelIndex), compartment, membershipManager, gracefulExitStrategies,
             nodeFactoryParameters.gracefulExitTimeout, feedbackService, nodeParameters.channelReconnector);
+    }
+    
+    private static List<AbstractChannelFactory> createSubChannelFactories(WorkerNodeFactoryParameters factoryParameters)
+    {
+        return Arrays.asList(new WorkerGroupSubChannelFactory(factoryParameters), new WorkerToCoreSubChannelFactory(factoryParameters));
     }
 }

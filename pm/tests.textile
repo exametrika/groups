@@ -1,20 +1,21 @@
+* сделать cluster standalone/perf tests
+  + сделать кластерный вариант TestFailureGenerationProtocol, с возможностью остановки кор координатора, произвольного кор узла, воркер координатора, произвольного воркер узла или люьрго узла кластера
+  + сделать тестовую фабрику кор/воркер узлов с внедренным failure generation протоколом
+  + включить state check в кор группу тоже (сейчас только воркер группы и по запросу)
+  + сделать cluster perf tests по аналогии с кор группой
+  + сделать standalone tests по аналогии с кор группой
 * cделать ClusterMulticastTest, взяв за основу MulticastProtocolTests
   - возможно можно задействовать check protocol для проверки состояния группы
   - кроме падений узлов группы включить падения координатора кластера и контроллеров узлов группы
-* сделать cluster standalone/perf tests
-  - сделать кластерный вариант TestFailureGenerationProtocol, с возможностью остановки кор координатора, произвольного кор узла, воркер координатора, произвольного воркер узла или люьрго узла кластера
-  - сделать тестовую фабрику кор/воркер узлов с внедренным failure generation протоколом
-  - включить state check в кор группу тоже (сейчас только воркер группы и по запросу)
-  - сделать cluster perf tests по аналогии с кор группой
-  - сделать standalone tests по аналогии с кор группой
 * протестировать
   * При тестировании тестировать под отладчиком, а также проверять race conditions по каждому протоколу
-  - standalone test (простой и перфтест) протестировать (+check протокол)
   - ClusterDiscoveryTests
   - ClusterFeedbackTests
   - ClusterFailureDetectionTests
   - ClusterCommandsTests
   - ClusterMembershipTests (Channel, Membership, тесты групп)
+  - GroupMulticastPerfTests, ClusterMulticastPerfTests (+check протокол)
+  - standaline group test, standalone cluster test
 ------------
 
 -Channel-:

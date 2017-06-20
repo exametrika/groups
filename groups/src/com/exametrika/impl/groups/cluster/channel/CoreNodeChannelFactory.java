@@ -14,6 +14,8 @@ import com.exametrika.api.groups.cluster.IClusterMembershipListener;
 import com.exametrika.common.compartment.ICompartment;
 import com.exametrika.common.messaging.IChannel;
 import com.exametrika.common.messaging.ICompositeChannel;
+import com.exametrika.common.messaging.impl.AbstractChannelFactory;
+import com.exametrika.common.messaging.impl.ChannelFactoryParameters;
 import com.exametrika.common.messaging.impl.ChannelParameters;
 import com.exametrika.common.messaging.impl.CompositeChannelFactory;
 import com.exametrika.common.messaging.impl.protocols.failuredetection.ChannelObserver;
@@ -42,7 +44,13 @@ public class CoreNodeChannelFactory extends CompositeChannelFactory
     
     public CoreNodeChannelFactory(CoreNodeFactoryParameters factoryParameters)
     {
-        super(Arrays.asList(new CoreGroupSubChannelFactory(), new CoreToWorkerSubChannelFactory()), 0, factoryParameters);
+        super(createSubChannelFactories(factoryParameters), 0, factoryParameters);
+    }
+
+    public CoreNodeChannelFactory(List<AbstractChannelFactory> subChannelFactories, int mainSubChannelIndex, 
+        ChannelFactoryParameters factoryParameters)
+    {
+        super(subChannelFactories, mainSubChannelIndex, factoryParameters);
     }
     
     public ICompositeChannel createChannel(CoreNodeParameters parameters)
@@ -115,5 +123,10 @@ public class CoreNodeChannelFactory extends CompositeChannelFactory
         return new CoreNodeChannel(channelName, liveNodeManager, channelObserver, subChannels, 
             subChannels.get(mainSubChannelIndex), compartment, membershipManager, gracefulExitStrategies,
             nodeFactoryParameters.gracefulExitTimeout, nodeParameters.channelReconnector);
+    }
+    
+    private static List<AbstractChannelFactory> createSubChannelFactories(CoreNodeFactoryParameters factoryParameters)
+    {
+        return Arrays.asList(new CoreGroupSubChannelFactory(factoryParameters), new CoreToWorkerSubChannelFactory(factoryParameters));
     }
 }
