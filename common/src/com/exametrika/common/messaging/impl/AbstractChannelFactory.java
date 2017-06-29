@@ -45,6 +45,7 @@ import com.exametrika.common.messaging.impl.protocols.failuredetection.INodeTrac
 import com.exametrika.common.messaging.impl.protocols.failuredetection.LiveNodeManager;
 import com.exametrika.common.messaging.impl.protocols.optimize.BundlingProtocol;
 import com.exametrika.common.messaging.impl.protocols.optimize.LocalSendOptimizationProtocol;
+import com.exametrika.common.messaging.impl.protocols.optimize.PiggybackProtocol;
 import com.exametrika.common.messaging.impl.protocols.streaming.StreamingProtocol;
 import com.exametrika.common.messaging.impl.protocols.trace.InterceptorProtocol;
 import com.exametrika.common.messaging.impl.protocols.trace.TracingProtocol;
@@ -126,6 +127,9 @@ public abstract class AbstractChannelFactory
         LocalSendOptimizationProtocol lowLocal = new LocalSendOptimizationProtocol(channelName, 
             LocalSendOptimizationProtocol.class.getName() + ".Low", messageFactory, liveNodeManager);
         protocols.add(lowLocal);
+        
+        PiggybackProtocol piggybackProtocol = new PiggybackProtocol(channelName, messageFactory);
+        protocols.add(piggybackProtocol);
         
         HeartbeatProtocol heartbeatProtocol = new HeartbeatProtocol(channelName, createNodeTrackingStrategy(), messageFactory, 
             factoryParameters.heartbeatTrackPeriod, factoryParameters.heartbeatStartPeriod, factoryParameters.heartbeatPeriod, 

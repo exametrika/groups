@@ -1,19 +1,30 @@
 h1. План
 
 2-й этап:
+
+* переход на конфигурирование каналов через нормальные Configuration и json схемы
+* поддержка свойств групп , флаги, используемые в мультикасте и др. протоколах
+* свойства, параметры производительности и метрики узлов кластера
+* сделать стек протоколов деревом с маршрутизацией, чтобы не было таких глубоких стеков
+* поддержка мультикастов
+  - Out-group node reliability + failure atomicity + FIFO ordering (durable and non-durable)
+  - Group-group reliability + failure atomicity + FIFO ordering (durable)
+  - Group-node pool unicast (durable)
+  - Node pool-group unicast (durable)
+  - Request-response anycast
+  - Request-response multicast
+  - Read-your-write unicast
+  - Оптимизация для больших групп
+
+3-й этап  
+* discovery - multicast, azure/aws discovery
+* node provisioning (запуск, останов узлов) и интеграция с IAAS провайдерами
+* поддержка внешних хранилищ состояния (sql, iaas провайдеры)
 * worker node state transfer
   - инкрементальный перенос состояния
   - перенос состояние при миграции шардов
-* failure atomic multicast
-  - out group node-group failure atomic/safe multicast
-  - group-group failure atomic/safe multicast
-  - node pool-group/group-node pool unicast
-  - request-response anycast  
-  - request-response multicast
-  - read-your-write unicast
-* внешнее соединение с кластером
+* внешнее соединение с кластером (remote, local ipc см. изоляцию данных)
 
-3-й этап:
+4-й этап:
 * прикладные сервисы
 * поддержка нескольких датацентров
-
