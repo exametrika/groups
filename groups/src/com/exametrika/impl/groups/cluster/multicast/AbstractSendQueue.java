@@ -5,48 +5,49 @@ package com.exametrika.impl.groups.cluster.multicast;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 
 import com.exametrika.api.groups.cluster.INode;
 import com.exametrika.common.compartment.ICompartment;
+import com.exametrika.common.log.ILogger;
+import com.exametrika.common.log.IMarker;
+import com.exametrika.common.log.LogLevel;
 import com.exametrika.common.messaging.IAddress;
 import com.exametrika.common.messaging.IDeliveryHandler;
 import com.exametrika.common.messaging.IFeed;
 import com.exametrika.common.messaging.IMessage;
 import com.exametrika.common.messaging.IMessageFactory;
+import com.exametrika.common.messaging.ISender;
 import com.exametrika.common.messaging.ISink;
 import com.exametrika.common.messaging.impl.message.IWrapperMessagePart;
 import com.exametrika.common.tasks.IFlowController;
+import com.exametrika.common.tasks.ThreadInterruptedException;
 import com.exametrika.common.time.ITimeService;
 import com.exametrika.common.utils.Assert;
+import com.exametrika.common.utils.Exceptions;
 import com.exametrika.common.utils.SimpleDeque;
-import com.exametrika.impl.groups.cluster.failuredetection.IGroupFailureDetector;
-import com.exametrika.impl.groups.cluster.flush.IFlush;
 import com.exametrika.impl.groups.cluster.membership.GroupAddress;
 
 
 /**
- * The {@link SendQueue} is a send queue of durable failure atomic protocol.
+ * The {@link AbstractSendQueue} is a send queue of durable failure atomic protocol.
  * 
  * @threadsafety This class and its methods are not thread safe.
  * @author Medvedev-A
  */
-public final class SendQueue
+public abstract class AbstractSendQueue
 {
-    private final FailureAtomicMulticastProtocol parent;
-    private final IGroupFailureDetector failureDetector;
+    private final ISender sender;
     private final ITimeService timeService;
     private final IDeliveryHandler deliveryHandler;
     private final boolean durable;
     private final SimpleDeque<IMessage> deque = new SimpleDeque<IMessage>();
-    private final Map<IAddress, Long> acknowledgedMessageIds = new HashMap<IAddress, Long>();
+    protected final Map<IAddress, Long> acknowledgedMessageIds = new HashMap<IAddress, Long>();
     private boolean completionRequired;
     private long startMessageId = 1;
-    private long lastCompletedMessageId;
+    protected long lastCompletedMessageId;
     private long lastCompletionSendTime;
     private long nextSendMessageId = 1;
     private long bundleCreationTime;
@@ -57,24 +58,26 @@ public final class SendQueue
     private final UUID groupId;
     private IFlowController<RemoteFlowId> flowController;
     private final IMessageFactory messageFactory;
+    private final ILogger logger;
+    private final IMarker marker;
     private ICompartment compartment;
     private long lockCount;
-    private boolean groupFormed;
     private volatile ArrayList<MulticastSink> sinks = new ArrayList<MulticastSink>();
     private volatile boolean canWrite = true;
     
-    public SendQueue(FailureAtomicMulticastProtocol parent, IGroupFailureDetector failureDetector, ITimeService timeService, 
+    public AbstractSendQueue(ISender sender, ITimeService timeService, 
         IDeliveryHandler deliveryHandler, boolean durable, int maxUnlockQueueCapacity, int minLockQueueCapacity, 
-        IMessageFactory messageFactory, GroupAddress groupAddress, UUID groupId)
+        IMessageFactory messageFactory, GroupAddress groupAddress, UUID groupId,
+        ILogger logger, IMarker marker)
     {
-        Assert.notNull(parent);
-        Assert.notNull(failureDetector);
+        Assert.notNull(sender);
         Assert.notNull(timeService);
         Assert.isTrue(!durable || deliveryHandler != null);
         Assert.notNull(messageFactory);
+        Assert.notNull(logger);
+        Assert.notNull(marker);
         
-        this.parent = parent;
-        this.failureDetector = failureDetector;
+        this.sender = sender;
         this.timeService = timeService;
         this.deliveryHandler = deliveryHandler;
         this.messageFactory = messageFactory;
@@ -83,6 +86,8 @@ public final class SendQueue
             groupAddress, groupId);
         this.groupAddress = groupAddress;
         this.groupId = groupId;
+        this.logger = logger;
+        this.marker = marker;
     }
     
     public void setFlowController(IFlowController<RemoteFlowId> flowController)
@@ -138,22 +143,6 @@ public final class SendQueue
             setCompletionRequired();
     }
 
-    public void beforeProcessFlush(IFlush flush)
-    {
-        Set<INode> nodes = new HashSet<INode>(flush.getNewMembership().getGroup().getMembers());
-        nodes.removeAll(failureDetector.getFailedMembers());
-        nodes.removeAll(failureDetector.getLeftMembers());
-        
-        acknowledgedMessageIds.clear();
-        for (INode node : nodes)
-            acknowledgedMessageIds.put(node.getAddress(), lastCompletedMessageId);
-    }
-    
-    public void endFlush()
-    {
-        groupFormed = true;
-    }
-    
     public long acquireMessageId()
     {
         return nextSendMessageId++;
@@ -306,7 +295,7 @@ public final class SendQueue
     
     public boolean send(IMessage message)
     {
-        parent.send(message);
+        sender.send(message);
         return canWrite();
     }
     
@@ -328,9 +317,9 @@ public final class SendQueue
         sinks = new ArrayList<MulticastSink>();
     }
     
-    private boolean canWrite()
+    protected boolean canWrite()
     {
-        return groupFormed && lockCount == 0 && !capacityController.isLocked() && canWrite;
+        return lockCount == 0 && !capacityController.isLocked() && canWrite;
     }
     
     private void setCompletionRequired()
@@ -356,7 +345,22 @@ public final class SendQueue
             Assert.notNull(message);
         }
         
-        deliveryHandler.onDelivered(message);
+        try
+        {
+            deliveryHandler.onDelivered(message);
+        }
+        catch (ThreadInterruptedException e)
+        {
+            throw e;
+        }
+        catch (Exception e)
+        {
+            Exceptions.checkInterrupted(e);
+            
+            // Isolate exception from other listeners
+            if (logger.isLogEnabled(LogLevel.ERROR))
+                logger.log(LogLevel.ERROR, marker, e);
+        }
     }
 }
 

@@ -294,6 +294,7 @@ public class MulticastProtocolTests
                 continue;
             
             IGroupMembership nodeMembership = channels[i].getMembershipService().getMembership();
+            Assert.notNull(nodeMembership);
             if (membership == null)
                 membership = nodeMembership;
             
@@ -404,7 +405,7 @@ public class MulticastProtocolTests
         factoryParameters.maxUnacknowledgedMessageCount = 100;
         factoryParameters.maxIdleReceiveQueuePeriod = 600000;
         factoryParameters.maxUnlockQueueCapacity = 100000;
-        factoryParameters.checkStatePeriod = 300000;
+        factoryParameters.checkStatePeriod = 1000;
     }
     
     private void createParameters()
@@ -704,9 +705,12 @@ public class MulticastProtocolTests
         @Override
         public void onDelivered(IMessage message)
         {
-            TestBufferMessagePart part = message.getPart();
-            assertThat(part.value, is((long)deliveredMessages.size()));
-            deliveredMessages.add(message);
+            if (message.getPart() instanceof TestBufferMessagePart)
+            {
+                TestBufferMessagePart part = message.getPart();
+                assertThat(part.value, is((long)deliveredMessages.size()));
+                deliveredMessages.add(message);
+            }
         }
     }
     

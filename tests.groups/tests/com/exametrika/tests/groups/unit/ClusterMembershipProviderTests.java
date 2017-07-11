@@ -190,19 +190,19 @@ public class ClusterMembershipProviderTests
         Node node1 = new Node(new UnicastAddress(UUID.randomUUID(), "node1"), Collections.<String, Object>emptyMap(), "domain1");
         Node node2 = new Node(new UnicastAddress(UUID.randomUUID(), "node2"), Collections.<String, Object>emptyMap(), "domain1");
         Node node3 = new Node(new UnicastAddress(UUID.randomUUID(), "node3"), Collections.<String, Object>emptyMap(), "domain1");
-        Group group1 = new Group(new GroupAddress(UUID.randomUUID(), "group1"), true, Arrays.<INode>asList(node1, node2), Enums.of(GroupOption.DURABLE));
-        Group group2 = new Group(new GroupAddress(UUID.randomUUID(), "group2"), true, Arrays.<INode>asList(node1, node2), Enums.of(GroupOption.DURABLE));
-        Group group3 = new Group(new GroupAddress(UUID.randomUUID(), "group3"), true, Arrays.<INode>asList(node1), Enums.of(GroupOption.DURABLE));
-        Group group4 = new Group(new GroupAddress(UUID.randomUUID(), "group4"), true, Arrays.<INode>asList(node1), Enums.of(GroupOption.DURABLE));
+        Group group1 = new Group(new GroupAddress(UUID.randomUUID(), "group1"), true, Arrays.<INode>asList(node1, node2), Enums.of(GroupOption.DURABLE), 1);
+        Group group2 = new Group(new GroupAddress(UUID.randomUUID(), "group2"), true, Arrays.<INode>asList(node1, node2), Enums.of(GroupOption.DURABLE), 1);
+        Group group3 = new Group(new GroupAddress(UUID.randomUUID(), "group3"), true, Arrays.<INode>asList(node1), Enums.of(GroupOption.DURABLE), 1);
+        Group group4 = new Group(new GroupAddress(UUID.randomUUID(), "group4"), true, Arrays.<INode>asList(node1), Enums.of(GroupOption.DURABLE), 1);
         
-        GroupDelta delta1 = new GroupDelta(group1.getId(), true, Arrays.<INode>asList(node1, node2), Collections.<UUID>emptySet(), Collections.<UUID>emptySet());
-        GroupDelta delta2 = new GroupDelta(group2.getId(), true, Arrays.<INode>asList(node1, node2), Collections.<UUID>emptySet(), Collections.<UUID>emptySet());
-        GroupDelta delta3 = new GroupDelta(group3.getId(), true, Arrays.<INode>asList(node1), Collections.<UUID>emptySet(), Collections.<UUID>emptySet());
-        GroupDelta delta4 = new GroupDelta(group4.getId(), true, Arrays.<INode>asList(node1), Collections.<UUID>emptySet(), Collections.<UUID>emptySet());
+        GroupDelta delta1 = new GroupDelta(group1.getId(), true, Arrays.<INode>asList(node1, node2), Collections.<UUID>emptySet(), Collections.<UUID>emptySet(), 1);
+        GroupDelta delta2 = new GroupDelta(group2.getId(), true, Arrays.<INode>asList(node1, node2), Collections.<UUID>emptySet(), Collections.<UUID>emptySet(), 1);
+        GroupDelta delta3 = new GroupDelta(group3.getId(), true, Arrays.<INode>asList(node1), Collections.<UUID>emptySet(), Collections.<UUID>emptySet(), 1);
+        GroupDelta delta4 = new GroupDelta(group4.getId(), true, Arrays.<INode>asList(node1), Collections.<UUID>emptySet(), Collections.<UUID>emptySet(), 1);
         
-        Group group21 = new Group(new GroupAddress(group2.getId(), group2.getName()), true, Arrays.<INode>asList(node1, node3), Enums.of(GroupOption.DURABLE));
+        Group group21 = new Group(new GroupAddress(group2.getId(), group2.getName()), true, Arrays.<INode>asList(node1, node3), Enums.of(GroupOption.DURABLE), 1);
         IGroupDelta delta21 = new GroupDelta(group2.getId(), true, Collections.<INode>singletonList(node3),
-            Collections.<UUID>emptySet(), Collections.<UUID>singleton(node2.getId()));
+            Collections.<UUID>emptySet(), Collections.<UUID>singleton(node2.getId()), 1);
         
         TestGroupMappingStrategy mappingStrategy = new TestGroupMappingStrategy();
         GroupsMembershipProvider provider = new GroupsMembershipProvider(mappingStrategy);
@@ -275,7 +275,7 @@ public class ClusterMembershipProviderTests
         assertThat(newMembership.getGroups(), is(delta.getNewGroups()));
         
         IGroupDelta changedGroup = new GroupDelta(group2.getId(), true, Collections.<INode>singletonList(node3),
-            Collections.<UUID>emptySet(), Collections.<UUID>singleton(node2.getId()));
+            Collections.<UUID>emptySet(), Collections.<UUID>singleton(node2.getId()), 1);
         GroupsMembershipDelta newDelta = new GroupsMembershipDelta(Arrays.<IGroup>asList(group4), 
             com.exametrika.common.utils.Collections.asSet(changedGroup), 
             com.exametrika.common.utils.Collections.asSet(group3.getId()));
@@ -324,7 +324,7 @@ public class ClusterMembershipProviderTests
             workerNodes.add(new Node(new UnicastAddress(UUID.randomUUID(), "worker" + i), Collections.<String, Object>emptyMap(), "domain1"));
         
         GroupMembership coreMembership = new GroupMembership(1, new Group(GroupMemberships.CORE_GROUP_ADDRESS, true, coreNodes, 
-            Enums.of(GroupOption.DURABLE)));
+            Enums.of(GroupOption.DURABLE), 1));
         membershipManager.prepareInstallMembership(coreMembership);
         membershipManager.commitMembership();
         
@@ -365,7 +365,7 @@ public class ClusterMembershipProviderTests
         workerNodes.add(new Node(new UnicastAddress(UUID.randomUUID(), "worker11"), Collections.<String, Object>emptyMap(), "domain1"));
    
         GroupMembership newCoreMembership = new GroupMembership(2, new Group(GroupMemberships.CORE_GROUP_ADDRESS, true, coreNodes, 
-            Enums.of(GroupOption.DURABLE)));
+            Enums.of(GroupOption.DURABLE), 1));
         GroupMembershipChange membershipChange = new GroupMembershipChange(new GroupChange(
             newCoreMembership.getGroup(), coreMembership.getGroup(), Arrays.<INode>asList(coreNodes.get(coreNodes.size() - 1)), 
             Collections.<INode>emptySet(), Collections.<INode>singleton(removedCore)));

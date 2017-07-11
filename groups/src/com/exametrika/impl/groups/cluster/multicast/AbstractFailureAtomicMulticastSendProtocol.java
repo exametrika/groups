@@ -3,11 +3,10 @@
  */
 package com.exametrika.impl.groups.cluster.multicast;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-import com.exametrika.api.groups.cluster.IGroupMembership;
+import com.exametrika.api.groups.cluster.IGroup;
 import com.exametrika.api.groups.cluster.INode;
 import com.exametrika.common.compartment.ICompartment;
 import com.exametrika.common.compartment.ICompartmentProcessor;
@@ -33,40 +32,29 @@ import com.exametrika.common.utils.Assert;
 import com.exametrika.common.utils.ByteArray;
 import com.exametrika.common.utils.Serializers;
 import com.exametrika.impl.groups.MessageFlags;
-import com.exametrika.impl.groups.cluster.failuredetection.IFailureDetectionListener;
-import com.exametrika.impl.groups.cluster.failuredetection.IGroupFailureDetector;
-import com.exametrika.impl.groups.cluster.flush.IFlush;
-import com.exametrika.impl.groups.cluster.flush.IFlushParticipant;
 import com.exametrika.impl.groups.cluster.membership.GroupAddress;
-import com.exametrika.impl.groups.cluster.membership.IGroupMembershipManager;
 
 /**
- * The {@link FailureAtomicMulticastSendProtocol} represents a failure atomic reliable multicast send protocol. Protocol requires
+ * The {@link AbstractFailureAtomicMulticastSendProtocol} represents a failure atomic reliable multicast send protocol. Protocol requires
  * unicast reliable FIFO transport (like TCP).
  * 
  * @threadsafety This class and its methods are not thread safe.
  * @author Medvedev-A
  */
-public final class FailureAtomicMulticastSendProtocol extends AbstractProtocol implements IFailureDetectionListener, 
-    IFlushParticipant, ITimeService, ICompartmentProcessor, IFlowController<RemoteFlowId>
+public abstract class AbstractFailureAtomicMulticastSendProtocol extends AbstractProtocol implements ITimeService, 
+    ICompartmentProcessor, IFlowController<RemoteFlowId>
 {
-    private final IGroupMembershipManager membershipManager;
-    private final IGroupFailureDetector failureDetector;
     private final int maxBundlingMessageSize;
     private final long maxBundlingPeriod;
     private final int maxBundleSize;
     private final long maxUnacknowledgedPeriod;
     private final boolean durable;
     private final ISerializationRegistry serializationRegistry;
-    private /*TODO:final*/ SendQueue sendQueue;
-    private final List<IMessage> pendingSentNewMessages = new ArrayList<IMessage>();
-    private final GroupAddress groupAddress;
-    private IFlush flush;
-    private boolean flushGranted;
-    private boolean groupFormed;
-    
-    public FailureAtomicMulticastSendProtocol(String channelName, IMessageFactory messageFactory, 
-        IGroupMembershipManager membershipManager, IGroupFailureDetector failureDetector, 
+    protected AbstractSendQueue sendQueue;
+    protected final GroupAddress groupAddress;
+    protected final UUID groupId;
+
+    public AbstractFailureAtomicMulticastSendProtocol(String channelName, IMessageFactory messageFactory, 
         int maxBundlingMessageSize, long maxBundlingPeriod, int maxBundleSize, 
         long maxUnacknowledgedPeriod, IDeliveryHandler senderDeliveryHandler, boolean durable, 
         int maxUnlockQueueCapacity, int minLockQueueCapacity, ISerializationRegistry serializationRegistry,
@@ -74,12 +62,10 @@ public final class FailureAtomicMulticastSendProtocol extends AbstractProtocol i
     {
         super(channelName, messageFactory);
         
-        Assert.notNull(membershipManager);
-        Assert.notNull(failureDetector);
         Assert.notNull(serializationRegistry);
+        Assert.notNull(groupAddress);
+        Assert.notNull(groupId);
 
-        this.membershipManager = membershipManager;
-        this.failureDetector = failureDetector;
         this.maxBundlingMessageSize = maxBundlingMessageSize;
         this.maxBundlingPeriod = maxBundlingPeriod;
         this.maxBundleSize = maxBundleSize;
@@ -87,9 +73,7 @@ public final class FailureAtomicMulticastSendProtocol extends AbstractProtocol i
         this.durable = durable;
         this.serializationRegistry = serializationRegistry;
         this.groupAddress = groupAddress;
-//TODO:        
-//        this.sendQueue = new SendQueue(this, failureDetector, this, senderDeliveryHandler, durable, maxUnlockQueueCapacity, 
-//            minLockQueueCapacity, messageFactory, groupAddress, groupId);
+        this.groupId = groupId;
     }
 
     public void setLocalFlowController(IFlowController<RemoteFlowId> flowController)
@@ -102,87 +86,6 @@ public final class FailureAtomicMulticastSendProtocol extends AbstractProtocol i
     public void setCompartment(ICompartment compartment)
     {
         sendQueue.setCompartment(compartment);
-    }
-    
-    public void tryGrantFlush()
-    {
-        if (!flushGranted && sendQueue.isLastOldMembershipMessageCompleted())
-        {
-            flush.grantFlush(this);
-            flushGranted = true;
-        }
-    }
-    
-    @Override
-    public boolean isFlushProcessingRequired()
-    {
-        return true;
-    }
-
-    @Override
-    public void setCoordinator()
-    {
-    }
-    
-    @Override
-    public void startFlush(IFlush flush)
-    {
-        boolean started = false;
-        if (this.flush == null)
-        {
-            sendBundle(true, 0);
-            sendQueue.setLastOldMembershipMessageId();
-            started = true;
-        }
-        
-        this.flush = flush;
-        flushGranted = false;
-        
-        if (started)
-        {
-            if (sendQueue.isCompletionRequired())
-                sendCompletion();
-        }
-        
-        tryGrantFlush();
-    }
-
-    @Override
-    public void beforeProcessFlush()
-    {
-        sendQueue.beforeProcessFlush(flush);
-    }
-
-    @Override
-    public void processFlush()
-    {
-        flush.grantFlush(this);
-    }
-    
-    @Override
-    public void endFlush()
-    {
-        sendQueue.endFlush();
-        groupFormed = true;
-        
-        flush = null;
-        
-        for (IMessage message : pendingSentNewMessages)
-            send(message);
-        
-        pendingSentNewMessages.clear();
-    }
-
-    @Override
-    public void onMemberFailed(INode member)
-    {
-        sendQueue.onMemberFailed(member);
-    }
-
-    @Override
-    public void onMemberLeft(INode member)
-    {
-        onMemberFailed(member);
     }
     
     @Override
@@ -249,12 +152,6 @@ public final class FailureAtomicMulticastSendProtocol extends AbstractProtocol i
     @Override
     protected void doSend(ISender sender, IMessage message)
     {
-        if (!groupFormed && message.getDestination() instanceof GroupAddress)
-        {
-            pendingSentNewMessages.add(message);
-            return;
-        }
-        
         message = doSend(message);
         if (message != null)
             sender.send(message);
@@ -315,9 +212,7 @@ public final class FailureAtomicMulticastSendProtocol extends AbstractProtocol i
             
             long messageId = sendQueue.acquireMessageId();
             
-            long order = 0;
-// TODO:           if (totalOrderProtocol != null && totalOrderProtocol.isCoordinator() && !message.hasFlags(MessageFlags.UNORDERED))
-//                order = totalOrderProtocol.acquireOrder(1);
+            long order = acquireTotalOrder(message);
             
             FailureAtomicMessagePart part = new FailureAtomicMessagePart(messageId, order);
             message = message.addPart(part, true);
@@ -331,28 +226,16 @@ public final class FailureAtomicMulticastSendProtocol extends AbstractProtocol i
             
             return null;
         }
-//TODO:        else if (!(message.getPart() instanceof AcknowledgeSendMessagePart) && 
-//            !message.hasOneOfFlags(MessageFlags.HIGH_PRIORITY | MessageFlags.PARALLEL | MessageFlags.LOW_PRIORITY))
-//        {
-//            ReceiveQueue receiveQueue = receiveQueues.get(message.getDestination());
-//            if (receiveQueue != null && receiveQueue.isAcknowledgementRequired())
-//            {
-//                message = message.addPart(new AcknowledgeSendMessagePart(receiveQueue.getLastReceivedMessageId(), false));
-//                receiveQueue.acknowledge();
-//            }
-//        }
+        else 
+            message = acknowledgePiggyback(message);
         
         return message;
     }
     
-    private void sendBundle(boolean onStartFlush, int flags)
+    protected void sendBundle(boolean onStartFlush, int flags)
     {
-        IGroupMembership membership;
-        if (onStartFlush)
-            membership = membershipManager.getMembership();
-        else
-            membership = membershipManager.getPreparedMembership();
-        if (membership == null)
+        IGroup group = getGroup(onStartFlush);
+        if (group == null)
             return;
         
         List<IMessage> bundledMessages = sendQueue.createBundle();
@@ -360,7 +243,7 @@ public final class FailureAtomicMulticastSendProtocol extends AbstractProtocol i
             return;
         
         long minCompletedMessageId = 0;
-        if (flush == null)
+        if (!isFlush())
             minCompletedMessageId = sendQueue.complete();
         
         ByteOutputStream stream = new ByteOutputStream(0x1000);
@@ -370,38 +253,42 @@ public final class FailureAtomicMulticastSendProtocol extends AbstractProtocol i
         for (IMessage bundledMessage : bundledMessages)
             MessageSerializers.serialize(serialization, (Message)bundledMessage);
         
-        BundleMessagePart bundlePart = new BundleMessagePart(membership.getId(), minCompletedMessageId, 
+        BundleMessagePart bundlePart = new BundleMessagePart(group.getChangeId(), minCompletedMessageId, 
             new ByteArray(stream.getBuffer(), 0, stream.getLength()));
         
-        for (INode node : membership.getGroup().getMembers())
+        for (INode node : group.getMembers())
         {
-            if (failureDetector.getFailedMembers().contains(node) || failureDetector.getLeftMembers().contains(node))
+            if (isFailedOrLeftNode(node))
                 continue;
             
             send(messageFactory.create(node.getAddress(), bundlePart, flags));
         }
     }
     
-    private void sendCompletion()
+    protected void sendCompletion()
     {
         long minCompletedMessageId = sendQueue.complete();
         
         if (minCompletedMessageId != 0)
         {
-            IGroupMembership membership = membershipManager.getMembership();
-            Assert.checkState(membership != null);
+            IGroup group = getGroup(true);
+            Assert.checkState(group != null);
             
             CompleteMessagePart part = new CompleteMessagePart(minCompletedMessageId);
-            for (INode node : membership.getGroup().getMembers())
+            for (INode node : group.getMembers())
             {
-                if (!failureDetector.isHealthyMember(node.getId()))
+                if (!isHealthyNode(node))
                     continue;
                 
                 send(messageFactory.create(node.getAddress(), part));
             }
         }
-        
-        if (flush != null)
-            tryGrantFlush();
     }
+    
+    protected abstract long acquireTotalOrder(IMessage message);
+    protected abstract IMessage acknowledgePiggyback(IMessage message);
+    protected abstract boolean isFlush();
+    protected abstract IGroup getGroup(boolean onStartFlush);
+    protected abstract boolean isFailedOrLeftNode(INode node);
+    protected abstract boolean isHealthyNode(INode node);
 }

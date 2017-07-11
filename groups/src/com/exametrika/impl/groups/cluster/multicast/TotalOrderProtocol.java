@@ -29,7 +29,7 @@ import com.exametrika.impl.groups.cluster.multicast.TotalOrderMessagePart.OrderI
  */
 public final class TotalOrderProtocol
 {
-    private final FailureAtomicMulticastProtocol parent;
+    private final IFailureAtomicMulticast parent;
     private final IGroupMembershipService membershipService;
     private final IMessageFactory messageFactory;
     private final ISender sender;
@@ -42,7 +42,7 @@ public final class TotalOrderProtocol
     private long lastOrderSendTime;
     private boolean flushStarted;
     
-    public TotalOrderProtocol(FailureAtomicMulticastProtocol parent, IGroupMembershipService membershipService, IMessageFactory messageFactory,
+    public TotalOrderProtocol(IFailureAtomicMulticast parent, IGroupMembershipService membershipService, IMessageFactory messageFactory,
         ISender sender, ITimeService timeService, long maxBundlingPeriod, int maxBundlingMessageCount)
     {
         Assert.notNull(parent);

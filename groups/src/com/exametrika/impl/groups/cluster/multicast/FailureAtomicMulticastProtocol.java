@@ -55,7 +55,7 @@ import com.exametrika.impl.groups.cluster.membership.IGroupMembershipManager;
  * @author Medvedev-A
  */
 public final class FailureAtomicMulticastProtocol extends AbstractProtocol implements IFailureDetectionListener, 
-    IExchangeableFlushParticipant, ITimeService, ICompartmentProcessor, IFlowController<RemoteFlowId>
+    IExchangeableFlushParticipant, ITimeService, ICompartmentProcessor, IFlowController<RemoteFlowId>, IFailureAtomicMulticast
 {
     private final IGroupMembershipManager membershipManager;
     private final IGroupFailureDetector failureDetector;
@@ -71,7 +71,7 @@ public final class FailureAtomicMulticastProtocol extends AbstractProtocol imple
     private IFlowController<RemoteFlowId> remoteFlowController;
     private final ISerializationRegistry serializationRegistry;
     private final Map<IAddress, ReceiveQueue> receiveQueues = new LinkedHashMap<IAddress, ReceiveQueue>();
-    private final SendQueue sendQueue;
+    private final InGroupSendQueue sendQueue;
     private final MessageRetransmitProtocol retransmitProtocol;
     private final List<IMessage> pendingSentNewMessages = new ArrayList<IMessage>();
     private final List<IMessage> pendingReceivedNewMessages = new ArrayList<IMessage>();
@@ -118,8 +118,8 @@ public final class FailureAtomicMulticastProtocol extends AbstractProtocol imple
         if (durable)
             ordered = true;
         
-        this.sendQueue = new SendQueue(this, failureDetector, this, senderDeliveryHandler, durable, maxUnlockQueueCapacity, 
-            minLockQueueCapacity, messageFactory, groupAddress, groupId);
+        this.sendQueue = new InGroupSendQueue(this, failureDetector, this, senderDeliveryHandler, durable, maxUnlockQueueCapacity, 
+            minLockQueueCapacity, messageFactory, groupAddress, groupId, logger, marker);
         
         if (ordered)
         {
@@ -160,6 +160,7 @@ public final class FailureAtomicMulticastProtocol extends AbstractProtocol imple
         sendQueue.setCompartment(compartment);
     }
     
+    @Override
     public void tryGrantFlush()
     {
         if (!flushGranted && !retransmitProtocol.isStabilizationPhase() && sendQueue.isLastOldMembershipMessageCompleted())
@@ -348,6 +349,7 @@ public final class FailureAtomicMulticastProtocol extends AbstractProtocol imple
         super.stop();
     }
     
+    @Override
     public ReceiveQueue ensureReceiveQueue(IAddress sender, long startMessageId)
     {
         ReceiveQueue receiveQueue = receiveQueues.get(sender);

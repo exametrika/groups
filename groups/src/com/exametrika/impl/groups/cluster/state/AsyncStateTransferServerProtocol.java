@@ -226,7 +226,14 @@ public final class AsyncStateTransferServerProtocol extends AbstractProtocol imp
     public void computeStateHash(ICompletionHandler<String> completionHandler)
     {
         ComputeStateHashTask task = new ComputeStateHashTask(server, completionHandler);
-        compartment.execute(task);
+        try
+        {
+            task.onSucceeded(task.execute());
+        }
+        catch (Throwable e)
+        {
+            task.onFailed(e);
+        }
     }
     
     @Override

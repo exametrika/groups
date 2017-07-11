@@ -94,7 +94,7 @@ public final class CoreGroupMembershipTracker implements ICompartmentTimerProces
         }
         else
         {
-            MembershipDeltaInfo info = GroupMemberships.createMembership(oldMembership, failureDetector.getFailedMembers(), failureDetector.getLeftMembers(), 
+            MembershipDeltaInfo info = GroupMemberships.createCoreMembership(oldMembership, failureDetector.getFailedMembers(), failureDetector.getLeftMembers(), 
                 nodeDiscoverer.getDiscoveredNodes(), flushCondition);
             
             if (info != null)

@@ -301,7 +301,7 @@ public class MulticastProtocolUnitTests
             nodes.add(info.localNodeProvider.getLocalNode());
         }
         
-        return new GroupMembership(membershipId, new Group(GroupMemberships.CORE_GROUP_ADDRESS, true, nodes, Enums.of(GroupOption.DURABLE)));
+        return new GroupMembership(membershipId, new Group(GroupMemberships.CORE_GROUP_ADDRESS, true, nodes, Enums.of(GroupOption.DURABLE), 1));
     }
     
     private void updateFailureDetectors()

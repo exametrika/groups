@@ -121,7 +121,7 @@ public class ClusterFeedbackTests extends AbstractClusterTests
         manager.start();
         
         Group group1 = new Group(new GroupAddress(UUID.randomUUID(), "test"), true, Arrays.<INode>asList(),
-            Enums.noneOf(GroupOption.class));
+            Enums.noneOf(GroupOption.class), 1);
         GroupsMembership groupsMembership = new GroupsMembership(Arrays.<IGroup>asList(group1));
         DomainMembership domainMembership1 = new DomainMembership("domain1", Arrays.<IClusterMembershipElement>asList(
             groupsMembership));

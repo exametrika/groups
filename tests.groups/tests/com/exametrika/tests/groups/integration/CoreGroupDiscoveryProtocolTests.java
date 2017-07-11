@@ -217,7 +217,7 @@ public class CoreGroupDiscoveryProtocolTests
         
         IGroupMembership membership = new GroupMembership(1, new Group(new GroupAddress(UUID.randomUUID(), "test"), true, Arrays.asList(
             channelFactory.membershipServices.get(0).getLocalNode(), channelFactory.membershipServices.get(1).getLocalNode()),
-            Enums.noneOf(GroupOption.class)));
+            Enums.noneOf(GroupOption.class), 1));
         channelFactory.failureDetectors.get(0).currentCoordinator = membership.getGroup().getCoordinator();
         channelFactory.failureDetectors.get(0).healthyMembers = membership.getGroup().getMembers();
         channelFactory.failureDetectors.get(1).currentCoordinator = membership.getGroup().getCoordinator();
@@ -273,7 +273,7 @@ public class CoreGroupDiscoveryProtocolTests
         
         IGroupMembership membership = new GroupMembership(1, new Group(new GroupAddress(UUID.randomUUID(), "test"), true, Arrays.asList(
             channelFactory.membershipServices.get(0).getLocalNode(), channelFactory.membershipServices.get(1).getLocalNode()),
-            Enums.noneOf(GroupOption.class)));
+            Enums.noneOf(GroupOption.class), 1));
         channelFactory.failureDetectors.get(0).currentCoordinator = membership.getGroup().getCoordinator();
         channelFactory.failureDetectors.get(0).healthyMembers = membership.getGroup().getMembers();
         channelFactory.failureDetectors.get(1).currentCoordinator = membership.getGroup().getCoordinator();
@@ -332,7 +332,7 @@ public class CoreGroupDiscoveryProtocolTests
 
         IGroupMembership membership = new GroupMembership(1, new Group(new GroupAddress(UUID.randomUUID(), "test"), true, Arrays.asList(
             channelFactory.membershipServices.get(0).getLocalNode(), channelFactory.membershipServices.get(1).getLocalNode()),
-            Enums.noneOf(GroupOption.class)));
+            Enums.noneOf(GroupOption.class), 1));
         channelFactory.failureDetectors.get(0).currentCoordinator = membership.getGroup().getCoordinator();
         channelFactory.failureDetectors.get(0).healthyMembers = membership.getGroup().getMembers();
         channelFactory.failureDetectors.get(1).currentCoordinator = membership.getGroup().getCoordinator();
@@ -400,7 +400,7 @@ public class CoreGroupDiscoveryProtocolTests
         
         IGroupMembership membership = new GroupMembership(1, new Group(new GroupAddress(UUID.randomUUID(), "test"), true, Arrays.asList(
             channelFactory.membershipServices.get(0).getLocalNode(), channelFactory.membershipServices.get(1).getLocalNode()),
-            Enums.noneOf(GroupOption.class)));
+            Enums.noneOf(GroupOption.class), 1));
         channelFactory.failureDetectors.get(0).currentCoordinator = membership.getGroup().getCoordinator();
         channelFactory.failureDetectors.get(0).healthyMembers = membership.getGroup().getMembers();
         channelFactory.failureDetectors.get(1).currentCoordinator = membership.getGroup().getCoordinator();

@@ -41,7 +41,7 @@ public final class MessageRetransmitProtocol
     private final ISender sender;
     private final ITimeService timeService;
     private final Map<IAddress, ReceiveQueue> receiveQueues;
-    private final FailureAtomicMulticastProtocol parent;
+    private final IFailureAtomicMulticast parent;
     private final IGroupFailureDetector failureDetector;
     private IFlush flush;
     private boolean stabilizationPhase;
@@ -52,7 +52,7 @@ public final class MessageRetransmitProtocol
     
     public MessageRetransmitProtocol(IFlushParticipant flushParticipant, IGroupMembershipManager membershipManager,  
         IMessageFactory messageFactory, ISender sender, ITimeService timeService,
-        Map<IAddress, ReceiveQueue> receiveQueues, FailureAtomicMulticastProtocol parent, IGroupFailureDetector failureDetector)
+        Map<IAddress, ReceiveQueue> receiveQueues, IFailureAtomicMulticast parent, IGroupFailureDetector failureDetector)
     {
         Assert.notNull(flushParticipant);
         Assert.notNull(membershipManager);

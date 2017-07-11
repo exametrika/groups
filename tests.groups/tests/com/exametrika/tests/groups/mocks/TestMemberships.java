@@ -46,7 +46,7 @@ public class TestMemberships
         List<INode> nodes = new ArrayList<INode>();
         for (int i = 0; i < nodeCount; i++)
             nodes.add(createNode("test" + i, domain));
-        return new Group(new GroupAddress(UUID.randomUUID(), name), true, nodes, Enums.noneOf(GroupOption.class));
+        return new Group(new GroupAddress(UUID.randomUUID(), name), true, nodes, Enums.noneOf(GroupOption.class), 1);
     }
     
     public static IGroup createCoreGroup(int nodeCount)
@@ -54,7 +54,7 @@ public class TestMemberships
         List<INode> nodes = new ArrayList<INode>();
         for (int i = 0; i < nodeCount; i++)
             nodes.add(createCoreNode("test" + i));
-        return new Group(GroupMemberships.CORE_GROUP_ADDRESS, true, nodes, Enums.noneOf(GroupOption.class));
+        return new Group(GroupMemberships.CORE_GROUP_ADDRESS, true, nodes, Enums.noneOf(GroupOption.class), 1);
     }
     
     public static IGroupMembership createGroupMembership(String name, String domain, int nodeCount)
@@ -75,7 +75,7 @@ public class TestMemberships
         members.add(newNode);
         
         IGroup newGroup = new Group((GroupAddress)membership.getGroup().getAddress(), true, members, 
-            membership.getGroup().getOptions());
+            membership.getGroup().getOptions(), 1);
         GroupMembershipChange change = new GroupMembershipChange(new GroupChange(newGroup, membership.getGroup(), 
             Arrays.asList(newNode), Collections.<INode>emptySet(), Collections.<INode>singleton(removedNode)));
         GroupMembership newMembership = new GroupMembership(membership.getId() + 1, newGroup);

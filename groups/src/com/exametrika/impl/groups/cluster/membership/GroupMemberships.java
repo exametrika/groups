@@ -81,15 +81,16 @@ public final class GroupMemberships
         members.addAll(discoveredNodes);
 
         IGroup group = new Group(CORE_GROUP_ADDRESS, true, members, Enums.of(GroupOption.DURABLE, GroupOption.ORDERED, 
-            GroupOption.SIMPLE_STATE_TRANSFER));
+            GroupOption.SIMPLE_STATE_TRANSFER), 1);
         
         return new GroupMembership(1, group);
     }
     
-    public static MembershipDeltaInfo createMembership(IGroupMembership oldMembership, Set<INode> failedMembers, Set<INode> leftMembers,
+    public static MembershipDeltaInfo createCoreMembership(IGroupMembership oldMembership, Set<INode> failedMembers, Set<INode> leftMembers,
         Set<INode> discoveredNodes, IFlushCondition flushCondition)
     {
         Assert.notNull(oldMembership);
+        Assert.isTrue(oldMembership.getGroup().getId().equals(CORE_GROUP_ID));
         Assert.notNull(failedMembers);
         Assert.notNull(leftMembers);
         Assert.notNull(discoveredNodes);
@@ -137,12 +138,13 @@ public final class GroupMemberships
         if (flushCondition != null && !flushCondition.canStartFlush(members, joinedMembers, failedMemberIds, leftMemberIds))
             return null;
         
+        long changeId = oldMembership.getGroup().getChangeId() + 1;
         IGroup group = new Group((GroupAddress)oldMembership.getGroup().getAddress(), primaryGroup, members, 
-            oldMembership.getGroup().getOptions());
+            oldMembership.getGroup().getOptions(), changeId);
         
         IGroupMembership newMembership = new GroupMembership(oldMembership.getId() + 1, group);
         IGroupMembershipDelta membershipDelta = new GroupMembershipDelta(newMembership.getId(), 
-            new GroupDelta(group.getId(), group.isPrimary(), joinedMembers, leftMemberIds, failedMemberIds));
+            new GroupDelta(group.getId(), group.isPrimary(), joinedMembers, leftMemberIds, failedMemberIds, changeId));
 
         return new MembershipDeltaInfo(oldMembership, newMembership, membershipDelta);
     }
@@ -176,7 +178,7 @@ public final class GroupMemberships
             primaryGroup = false;
 
         IGroup group = new Group((GroupAddress)oldMembership.getGroup().getAddress(), primaryGroup, members,
-            oldMembership.getGroup().getOptions());
+            oldMembership.getGroup().getOptions(), membershipDelta.getGroup().getChangeId());
         
         IGroupMembership newMembership = new GroupMembership(oldMembership.getId() + 1, group);
         IGroupMembershipChange membershipChange = new GroupMembershipChange(new GroupChange(group, oldMembership.getGroup(), 

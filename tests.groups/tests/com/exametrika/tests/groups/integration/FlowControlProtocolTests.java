@@ -98,7 +98,7 @@ public class FlowControlProtocolTests
         }
         
         GroupMembership membership = new GroupMembership(1, new Group(new GroupAddress(UUID.randomUUID(), "test"), true, nodes,
-            Enums.noneOf(GroupOption.class)));
+            Enums.noneOf(GroupOption.class), 1));
         for (int i = 0; i < COUNT; i++)
         {
             channelFactory.protocols.get(i).onPreparedMembershipChanged(null, membership, null);
@@ -194,7 +194,7 @@ public class FlowControlProtocolTests
         }
         
         GroupMembership membership = new GroupMembership(1, new Group(new GroupAddress(UUID.randomUUID(), "test"), true, nodes,
-            Enums.noneOf(GroupOption.class)));
+            Enums.noneOf(GroupOption.class), 1));
         for (int i = 0; i < COUNT; i++)
         {
             channelFactory.protocols.get(i).onPreparedMembershipChanged(null, membership, null);

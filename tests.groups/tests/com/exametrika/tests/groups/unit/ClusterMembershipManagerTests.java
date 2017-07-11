@@ -108,10 +108,10 @@ public class ClusterMembershipManagerTests
         UUID leftNodeId = UUID.randomUUID();
         UUID failedNodeId = UUID.randomUUID();
         Group group1 = new Group(new GroupAddress(UUID.randomUUID(), "test"), true, Arrays.<INode>asList(node1),
-            Enums.noneOf(GroupOption.class));
+            Enums.noneOf(GroupOption.class), 1);
         UUID removedGroupId = UUID.randomUUID();
         IGroupDelta changedGroup = new GroupDelta(UUID.randomUUID(), true, Arrays.<INode>asList(node1), 
-            com.exametrika.common.utils.Collections.asSet(leftNodeId), com.exametrika.common.utils.Collections.asSet(failedNodeId));
+            com.exametrika.common.utils.Collections.asSet(leftNodeId), com.exametrika.common.utils.Collections.asSet(failedNodeId), 1);
         NodesMembershipDelta nodesMembershipDelta = new NodesMembershipDelta(Arrays.<INode>asList(node1), 
             com.exametrika.common.utils.Collections.asSet(leftNodeId), com.exametrika.common.utils.Collections.asSet(failedNodeId));
         GroupsMembershipDelta groupsMembershipDelta = new GroupsMembershipDelta(Arrays.<IGroup>asList(group1), 
@@ -202,9 +202,9 @@ public class ClusterMembershipManagerTests
         assertThat(nodesMembership.findNode(node1.getAddress()), is(node1));
         
         Group group1 = new Group(new GroupAddress(UUID.randomUUID(), "test"), true, Arrays.<INode>asList(node1, node2),
-            Enums.noneOf(GroupOption.class));
+            Enums.noneOf(GroupOption.class), 1);
         Group group2 = new Group(new GroupAddress(UUID.randomUUID(), "test"), true, Arrays.<INode>asList(node1, node2),
-            Enums.noneOf(GroupOption.class));
+            Enums.noneOf(GroupOption.class), 1);
         
         GroupsMembership groupsMembership = new GroupsMembership(Arrays.<IGroup>asList(group1, group2));
         assertThat(groupsMembership.getGroups(), is(Arrays.<IGroup>asList(group1, group2)));
@@ -319,9 +319,9 @@ public class ClusterMembershipManagerTests
         assertThat(nodesMembership.findNode(node1.getAddress()), is((INode)node1));
         
         Group group1 = new Group(new GroupAddress(UUID.randomUUID(), "test"), true, Arrays.<INode>asList(node1, node2),
-            Enums.noneOf(GroupOption.class));
+            Enums.noneOf(GroupOption.class), 1);
         Group group2 = new Group(new GroupAddress(UUID.randomUUID(), "test"), true, Arrays.<INode>asList(node1, node2),
-            Enums.noneOf(GroupOption.class));
+            Enums.noneOf(GroupOption.class), 1);
         
         GroupsMembership groupsMembership = new GroupsMembership(Arrays.<IGroup>asList(group1, group2));
         assertThat(groupsMembership.getGroups(), is(Arrays.<IGroup>asList(group1, group2)));

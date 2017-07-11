@@ -51,6 +51,8 @@ public final class FlushParticipantProtocol extends AbstractProtocol implements 
     private Set<IFlushParticipant> notGrantedParticipants;
     private Phase phase = Phase.READY;
     private boolean flushProcessingRequired;
+    private boolean coordinator;
+    private boolean coordinatorSet;
     
     public enum Phase
     {
@@ -74,6 +76,11 @@ public final class FlushParticipantProtocol extends AbstractProtocol implements 
     public List<IFlushParticipant> getParticipants()
     {
         return participants;
+    }
+    
+    public void setCoordinator()
+    {
+        coordinator = true;
     }
     
     @Override
@@ -144,6 +151,14 @@ public final class FlushParticipantProtocol extends AbstractProtocol implements 
                     membershipManager.prepareChangeMembership(preparedMembership, flush.getMembershipChange());
             }
 
+            if (coordinator && !coordinatorSet)
+            {
+                coordinatorSet = true;
+                
+                for (IFlushParticipant participant : participants)
+                    participant.setCoordinator();
+            }
+            
             for (IFlushParticipant participant : participants)
                 participant.startFlush(flush);
             

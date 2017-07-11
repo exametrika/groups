@@ -36,6 +36,7 @@ public final class GroupDeltaSerializer extends AbstractSerializer
     {
         UUID groupId = Serializers.readUUID(deserialization);
         boolean primary = deserialization.readBoolean();
+        long changeId = deserialization.readLong();
         int count = deserialization.readInt();
         List<INode> joinedMembers = new ArrayList<INode>(count);
         for (int i = 0; i < count; i++)
@@ -51,7 +52,7 @@ public final class GroupDeltaSerializer extends AbstractSerializer
         for (int i = 0; i < count; i++)
             failedMembers.add(Serializers.readUUID(deserialization));
         
-        return new GroupDelta(groupId, primary, joinedMembers, leftMembers, failedMembers);
+        return new GroupDelta(groupId, primary, joinedMembers, leftMembers, failedMembers, changeId);
     }
 
     @Override
@@ -61,6 +62,7 @@ public final class GroupDeltaSerializer extends AbstractSerializer
 
         Serializers.writeUUID(serialization, delta.getId());
         serialization.writeBoolean(delta.isPrimary());
+        serialization.writeLong(delta.getChangeId());
         serialization.writeInt(delta.getJoinedMembers().size());
         for (INode member : delta.getJoinedMembers())
             serialization.writeTypedObject(member);

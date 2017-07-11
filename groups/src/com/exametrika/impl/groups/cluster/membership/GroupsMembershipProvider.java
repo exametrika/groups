@@ -155,20 +155,20 @@ public final class GroupsMembershipProvider implements IClusterMembershipProvide
     {
         Assert.notNull(delta);
         
-        GroupsMembershipDelta groupDelta = (GroupsMembershipDelta)delta;
-        GroupsMembership oldGroupMembership = (GroupsMembership)oldMembership;
+        GroupsMembershipDelta groupsDelta = (GroupsMembershipDelta)delta;
+        GroupsMembership oldGroupsMembership = (GroupsMembership)oldMembership;
         if (oldMembership == null)
-            return new GroupsMembership(groupDelta.getNewGroups());
+            return new GroupsMembership(groupsDelta.getNewGroups());
         else
         {
             List<IGroup> groups = new ArrayList<IGroup>();
             Map<UUID, IGroupDelta> changedGroups = new LinkedHashMap<UUID, IGroupDelta>();
-            for (IGroupDelta changedGroup : groupDelta.getChangedGroups())
+            for (IGroupDelta changedGroup : groupsDelta.getChangedGroups())
                 changedGroups.put(changedGroup.getId(), changedGroup);
             
-            for (IGroup group : oldGroupMembership.getGroups())
+            for (IGroup group : oldGroupsMembership.getGroups())
             {
-                if (groupDelta.getRemovedGroups().contains(group.getId()))
+                if (groupsDelta.getRemovedGroups().contains(group.getId()))
                     continue;
                
                 IGroupDelta changedGroup = changedGroups.get(group.getId());
@@ -182,13 +182,14 @@ public final class GroupsMembershipProvider implements IClusterMembershipProvide
                     }
                     
                     members.addAll(changedGroup.getJoinedMembers());
-                    group = new Group((GroupAddress)group.getAddress(), changedGroup.isPrimary(), members, group.getOptions());
+                    group = new Group((GroupAddress)group.getAddress(), changedGroup.isPrimary(), members, group.getOptions(),
+                        changedGroup.getChangeId());
                 }
                 
                 groups.add(group); 
             }
             
-            groups.addAll(groupDelta.getNewGroups());
+            groups.addAll(groupsDelta.getNewGroups());
             
             return new GroupsMembership(groups);
         }

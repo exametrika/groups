@@ -38,7 +38,7 @@ public final class TestLoadMessageSender implements IReceiver, IDeliveryHandler,
     private IChannel channel;
     
     private TestLoadStateTransferFactory stateTransferFactory;
-    private long lastDeliveredCount;
+    private long lastDeliveredCount = -1;
     private Map<IAddress, Long> receivedMessagesMap = new HashMap<IAddress, Long>();
     private long startTime = Times.getCurrentTime();
     private long sendCount;
@@ -90,7 +90,7 @@ public final class TestLoadMessageSender implements IReceiver, IDeliveryHandler,
             TestLoadMessagePart part = message.getPart();
             Long lastReceivedCount = receivedMessagesMap.get(message.getSource());
             if (lastReceivedCount == null)
-                lastReceivedCount = 0l;
+                lastReceivedCount = -1l;
             
             Assert.isTrue(part.getCount() == lastReceivedCount + 1);
             receivedMessagesMap.put(message.getSource(), lastReceivedCount + 1);
@@ -137,9 +137,12 @@ public final class TestLoadMessageSender implements IReceiver, IDeliveryHandler,
     @Override
     public void onDelivered(IMessage message)
     {
-        TestLoadMessagePart part = message.getPart();
-        Assert.isTrue(part.getCount() == lastDeliveredCount + 1);
-        lastDeliveredCount++;
+        if (message.getPart() instanceof TestLoadMessagePart)
+        {
+            TestLoadMessagePart part = message.getPart();
+            Assert.isTrue(part.getCount() == lastDeliveredCount + 1);
+            lastDeliveredCount++;
+        }
     }
 
     public boolean allowSend(SendType sendType)

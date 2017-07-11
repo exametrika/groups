@@ -27,6 +27,13 @@ public interface IGroupDelta
     UUID getId();
     
     /**
+     * Returns identifier, monotonically increasing on each group change.
+     *
+     * @return group change identifier
+     */
+    long getChangeId();
+    
+    /**
      * Is group primary?
      *
      * @return true if group is primary

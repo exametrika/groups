@@ -211,7 +211,7 @@ public final class GroupProtocolSubStack extends ProtocolSubStack implements IPr
         
         IGroupMembership newMembership = new GroupMembership(oldMembership.getId() + 1, group);
         IGroupDelta groupDelta = new GroupDelta(group.getId(), group.isPrimary(),
-            joinedNodes, leftNodes, failedNodes);
+            joinedNodes, leftNodes, failedNodes, group.getChangeId());
         IGroupMembershipDelta membershipDelta = new GroupMembershipDelta(newMembership.getId(), groupDelta);
         
         MembershipInfo info = new MembershipInfo();

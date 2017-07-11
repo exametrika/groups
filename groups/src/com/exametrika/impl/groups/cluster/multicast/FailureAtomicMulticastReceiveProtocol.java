@@ -13,24 +13,13 @@ import java.util.UUID;
 
 import com.exametrika.api.groups.cluster.IGroupMembership;
 import com.exametrika.api.groups.cluster.INode;
-import com.exametrika.common.compartment.ICompartment;
-import com.exametrika.common.compartment.ICompartmentProcessor;
-import com.exametrika.common.io.ISerialization;
 import com.exametrika.common.io.ISerializationRegistry;
 import com.exametrika.common.io.impl.ByteInputStream;
-import com.exametrika.common.io.impl.ByteOutputStream;
 import com.exametrika.common.io.impl.Deserialization;
-import com.exametrika.common.io.impl.Serialization;
 import com.exametrika.common.messaging.IAddress;
-import com.exametrika.common.messaging.IDeliveryHandler;
-import com.exametrika.common.messaging.IFeed;
 import com.exametrika.common.messaging.IMessage;
 import com.exametrika.common.messaging.IMessageFactory;
-import com.exametrika.common.messaging.IPullableSender;
 import com.exametrika.common.messaging.IReceiver;
-import com.exametrika.common.messaging.ISender;
-import com.exametrika.common.messaging.ISink;
-import com.exametrika.common.messaging.impl.message.Message;
 import com.exametrika.common.messaging.impl.message.MessageSerializers;
 import com.exametrika.common.messaging.impl.protocols.AbstractProtocol;
 import com.exametrika.common.tasks.IFlowController;
@@ -55,7 +44,7 @@ import com.exametrika.impl.groups.cluster.membership.IGroupMembershipManager;
  * @author Medvedev-A
  */
 public final class FailureAtomicMulticastReceiveProtocol extends AbstractProtocol implements IFailureDetectionListener, 
-    IExchangeableFlushParticipant, ITimeService
+    IExchangeableFlushParticipant, ITimeService, IFailureAtomicMulticast
     
 {
     private final IGroupMembershipManager membershipManager;
@@ -136,6 +125,7 @@ public final class FailureAtomicMulticastReceiveProtocol extends AbstractProtoco
             orderedQueue.setFlowController(flowController);
     }
     
+    @Override
     public void tryGrantFlush()
     {
         if (!flushGranted && !retransmitProtocol.isStabilizationPhase())
@@ -273,6 +263,7 @@ public final class FailureAtomicMulticastReceiveProtocol extends AbstractProtoco
         return timeService.getCurrentTime();
     }
     
+    @Override
     public ReceiveQueue ensureReceiveQueue(IAddress sender, long startMessageId)
     {
         ReceiveQueue receiveQueue = receiveQueues.get(sender);

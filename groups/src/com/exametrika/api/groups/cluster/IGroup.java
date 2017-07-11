@@ -25,6 +25,13 @@ public interface IGroup extends Comparable<IGroup>
     UUID getId();
     
     /**
+     * Returns identifier, monotonically increasing on each group change.
+     *
+     * @return group change identifier
+     */
+    long getChangeId();
+    
+    /**
      * Returns unique group name.
      * 
      * @return group name

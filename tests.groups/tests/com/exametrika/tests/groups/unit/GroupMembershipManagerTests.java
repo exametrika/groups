@@ -77,9 +77,9 @@ public class GroupMembershipManagerTests
         Node node2 = new Node(address2, Collections.<String, Object>singletonMap("key", "value"), "core");
         
         Group group = new Group(new GroupAddress(new UUID(1, 1), "test"), true, Arrays.<INode>asList(node1, node2),
-            Enums.noneOf(GroupOption.class));
+            Enums.noneOf(GroupOption.class), 1);
         Group group2 = new Group(new GroupAddress(new UUID(0, 0), "test"), true, Arrays.<INode>asList(node1, node2),
-            Enums.noneOf(GroupOption.class));
+            Enums.noneOf(GroupOption.class), 1);
         assertThat(group.getCoordinator(), is((INode)node1));
         assertThat(group.getMembers(), is(Arrays.<INode>asList(node1, node2)));
         assertThat(group.findMember(address2), is((INode)node2));
@@ -99,7 +99,7 @@ public class GroupMembershipManagerTests
         Node node2 = new Node(address2, Collections.<String, Object>singletonMap("key", "value"), "core");
         
         Group group = new Group(new GroupAddress(UUID.randomUUID(), "test"), true, Arrays.<INode>asList(node1, node2),
-            Enums.noneOf(GroupOption.class));
+            Enums.noneOf(GroupOption.class), 1);
         
         GroupMembership membership = new GroupMembership(1, group);
         GroupMembership membership2 = new GroupMembership(2, group);
@@ -133,7 +133,7 @@ public class GroupMembershipManagerTests
         
         MembershipChangeInfo changeInfo = GroupMemberships.createMembership(membership, new GroupMembershipDelta(2,
             new GroupDelta(membership.getGroup().getId(), false, Arrays.<INode>asList(node4, node5), 
-            com.exametrika.common.utils.Collections.<UUID>asSet(node1.getId()), com.exametrika.common.utils.Collections.<UUID>asSet(node2.getId()))));
+            com.exametrika.common.utils.Collections.<UUID>asSet(node1.getId()), com.exametrika.common.utils.Collections.<UUID>asSet(node2.getId()), 1)));
         assertTrue(changeInfo.oldMembership == membership);
         assertTrue(changeInfo.newMembership.getId() == 2);
         assertThat(changeInfo.newMembership.getGroup().getCoordinator(), is((INode)node3));
@@ -145,7 +145,7 @@ public class GroupMembershipManagerTests
         assertThat(changeInfo.membershipChange.getGroup().getLeftMembers(), is(com.exametrika.common.utils.Collections.<INode>asSet(node1)));
         assertThat(changeInfo.membershipChange.getGroup().getFailedMembers(), is(com.exametrika.common.utils.Collections.<INode>asSet(node2)));
         
-        MembershipDeltaInfo deltaInfo = GroupMemberships.createMembership(membership, com.exametrika.common.utils.Collections.<INode>asSet(node1), 
+        MembershipDeltaInfo deltaInfo = GroupMemberships.createCoreMembership(membership, com.exametrika.common.utils.Collections.<INode>asSet(node1), 
             com.exametrika.common.utils.Collections.<INode>asSet(node2), com.exametrika.common.utils.Collections.<INode>asSet(node4, node5), null);
         assertTrue(deltaInfo.oldMembership == membership);
         assertTrue(deltaInfo.newMembership.getId() == 2);
@@ -165,10 +165,10 @@ public class GroupMembershipManagerTests
         
         changeInfo = GroupMemberships.createMembership(membership, new GroupMembershipDelta(2,
             new GroupDelta(membership.getGroup().getId(), false, Arrays.<INode>asList(), 
-            com.exametrika.common.utils.Collections.<UUID>asSet(node1.getId()), com.exametrika.common.utils.Collections.<UUID>asSet(node2.getId()))));
+            com.exametrika.common.utils.Collections.<UUID>asSet(node1.getId()), com.exametrika.common.utils.Collections.<UUID>asSet(node2.getId()), 1)));
         assertThat(changeInfo.newMembership.getGroup().isPrimary(), is(false));
         
-        deltaInfo = GroupMemberships.createMembership(membership, com.exametrika.common.utils.Collections.<INode>asSet(node1), 
+        deltaInfo = GroupMemberships.createCoreMembership(membership, com.exametrika.common.utils.Collections.<INode>asSet(node1), 
             com.exametrika.common.utils.Collections.<INode>asSet(node2), com.exametrika.common.utils.Collections.<INode>asSet(), null);
         assertThat(deltaInfo.newMembership.getGroup().isPrimary(), is(false));
     }
@@ -249,7 +249,7 @@ public class GroupMembershipManagerTests
         IAddress address2 = new UnicastAddress(UUID.randomUUID(), "test2");
         Node node2 = new Node(address2, Collections.<String, Object>singletonMap("key", "value"), "core");
         Group group = new Group(new GroupAddress(UUID.randomUUID(), "test"), true, Arrays.<INode>asList(manager.getLocalNode(), node1),
-            Enums.noneOf(GroupOption.class));
+            Enums.noneOf(GroupOption.class), 1);
         GroupMembership membership = new GroupMembership(1, group);
         
         manager.prepareInstallMembership(membership);
@@ -264,7 +264,7 @@ public class GroupMembershipManagerTests
         assertTrue(listener.onJoined);
         
         Group group2 = new Group(new GroupAddress(UUID.randomUUID(), "test"), true, Arrays.<INode>asList(manager.getLocalNode(), node1, node2),
-            Enums.noneOf(GroupOption.class));
+            Enums.noneOf(GroupOption.class), 1);
         GroupMembership membership2 = new GroupMembership(2, group2);
         GroupMembershipChange membershipChange = new GroupMembershipChange(new GroupChange(group2, group, Collections.<INode>singletonList(node2), 
             Collections.<INode>emptySet(), Collections.<INode>emptySet()));

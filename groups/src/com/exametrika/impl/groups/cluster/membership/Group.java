@@ -26,6 +26,7 @@ import com.exametrika.common.utils.Immutables;
 public final class Group implements IGroup
 {
     private final UUID id;
+    private final long changeId;
     private final String name;
     private final boolean primary;
     private final INode coordinator;
@@ -35,12 +36,13 @@ public final class Group implements IGroup
     private final GroupAddress address;
     private final Set<GroupOption> options;
 
-    public Group(GroupAddress address, boolean primary, List<INode> members, Set<GroupOption> options)
+    public Group(GroupAddress address, boolean primary, List<INode> members, Set<GroupOption> options, long changeId)
     {
         Assert.notNull(address);
         Assert.notNull(members);
         Assert.isTrue(!members.isEmpty());
         Assert.notNull(options);
+        Assert.isTrue(changeId > 0);
 
         this.id = address.getId();
         this.name = address.getName();
@@ -60,6 +62,7 @@ public final class Group implements IGroup
         this.membersByIdMap = membersByIdMap;
         this.membersByAddressMap = membersByAddressMap;
         this.address = address;
+        this.changeId = changeId;
     }
 
     @Override
@@ -68,6 +71,12 @@ public final class Group implements IGroup
         return id;
     }
 
+    @Override
+    public long getChangeId()
+    {
+        return changeId;
+    }
+    
     @Override
     public String getName()
     {

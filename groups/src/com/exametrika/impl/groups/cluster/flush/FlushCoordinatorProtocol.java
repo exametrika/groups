@@ -124,8 +124,7 @@ public final class FlushCoordinatorProtocol extends AbstractProtocol implements 
         flushProcessingRequired = false;
         processingMembers.clear();
 
-        for (IFlushParticipant participant : participantProtocol.getParticipants())
-            participant.setCoordinator();
+        participantProtocol.setCoordinator();
         
         if (logger.isLogEnabled(LogLevel.DEBUG))
             logger.log(LogLevel.DEBUG, marker, messages.membershipInstalling(Strings.wrap(membership.toString(), 4, 120)));
@@ -320,8 +319,7 @@ public final class FlushCoordinatorProtocol extends AbstractProtocol implements 
             if (installingMembership == null)
                 installingMembership = membershipManager.getMembership();
             
-            for (IFlushParticipant participant : participantProtocol.getParticipants())
-                participant.setCoordinator();
+            participantProtocol.setCoordinator();
             
             if (logger.isLogEnabled(LogLevel.DEBUG))
                 logger.log(LogLevel.DEBUG, marker, messages.flushCoordinatorChanged());

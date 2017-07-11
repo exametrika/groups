@@ -38,13 +38,14 @@ public final class GroupSerializer extends AbstractSerializer
         String name = deserialization.readString();
         Set<GroupOption> options = Serializers.readEnumSet(deserialization, GroupOption.class);
         boolean primary = deserialization.readBoolean();
+        long changeId = deserialization.readLong();
         
         int count = deserialization.readInt();
         List<INode> members = new ArrayList<INode>(count);
         for (int i = 0; i < count; i++)
             members.add(deserialization.readTypedObject(Node.class));
         
-        return new Group(new GroupAddress(groupId, name), primary, members, options);
+        return new Group(new GroupAddress(groupId, name), primary, members, options, changeId);
     }
 
     @Override
@@ -55,6 +56,7 @@ public final class GroupSerializer extends AbstractSerializer
         serialization.writeString(group.getName());
         Serializers.writeEnumSet(serialization, group.getOptions());
         serialization.writeBoolean(group.isPrimary());
+        serialization.writeLong(group.getChangeId());
         
         serialization.writeInt(group.getMembers().size());
         for (INode member : group.getMembers())

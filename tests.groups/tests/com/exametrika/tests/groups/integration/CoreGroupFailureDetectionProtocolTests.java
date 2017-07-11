@@ -94,7 +94,7 @@ public class CoreGroupFailureDetectionProtocolTests
         }
         
         GroupMembership membership = new GroupMembership(1, new Group(new GroupAddress(UUID.randomUUID(), "test"), true, nodes,
-            Enums.noneOf(GroupOption.class)));
+            Enums.noneOf(GroupOption.class), 1));
         for (int i = 0; i < COUNT; i++)
         {
             channelFactory.protocols.get(i).onPreparedMembershipChanged(null, membership, null);
@@ -146,7 +146,7 @@ public class CoreGroupFailureDetectionProtocolTests
         healthy.remove(nodes.get(4));
         
         GroupMembership membership2 = new GroupMembership(2, new Group(new GroupAddress(UUID.randomUUID(), "test"), true, newNodes,
-            Enums.noneOf(GroupOption.class)));
+            Enums.noneOf(GroupOption.class), 1));
         for (int i = 0; i < COUNT; i++)
         {
             if (i == 0 || i == 3 || i == 4)
@@ -192,7 +192,7 @@ public class CoreGroupFailureDetectionProtocolTests
         }
         
         GroupMembership membership = new GroupMembership(1, new Group(new GroupAddress(UUID.randomUUID(), "test"), true, nodes,
-            Enums.noneOf(GroupOption.class)));
+            Enums.noneOf(GroupOption.class), 1));
         for (int i = 0; i < COUNT; i++)
         {
             channelFactory.protocols.get(i).onPreparedMembershipChanged(null, membership, null);
@@ -263,7 +263,7 @@ public class CoreGroupFailureDetectionProtocolTests
         }
         
         GroupMembership membership = new GroupMembership(1, new Group(new GroupAddress(UUID.randomUUID(), "test"), true, nodes,
-            Enums.noneOf(GroupOption.class)));
+            Enums.noneOf(GroupOption.class), 1));
         for (int i = 0; i < COUNT; i++)
         {
             channelFactory.protocols.get(i).onPreparedMembershipChanged(null, membership, null);
@@ -309,7 +309,7 @@ public class CoreGroupFailureDetectionProtocolTests
         newHealthy.remove(nodes.get(4));
         
         GroupMembership membership2 = new GroupMembership(2, new Group(new GroupAddress(UUID.randomUUID(), "test"), true, newNodes,
-            Enums.noneOf(GroupOption.class)));
+            Enums.noneOf(GroupOption.class), 1));
         for (int i = 0; i < COUNT; i++)
         {
             if (i == 0 || i == 3 || i == 4)

@@ -24,12 +24,14 @@ public final class GroupDelta implements IGroupDelta
 {
     private static final IMessages messages = Messages.get(IMessages.class);
     private final UUID id;
+    private final long changeId;
     private final boolean primary;
     private final List<INode> joinedMembers;
     private final Set<UUID> leftMembers;
     private final Set<UUID> failedMembers;
 
-    public GroupDelta(UUID id, boolean primary, List<INode> joinedMembers, Set<UUID> leftMembers, Set<UUID> failedMembers)
+    public GroupDelta(UUID id, boolean primary, List<INode> joinedMembers, Set<UUID> leftMembers, Set<UUID> failedMembers,
+        long changeId)
     {
         Assert.notNull(id);
         Assert.notNull(joinedMembers);
@@ -41,12 +43,19 @@ public final class GroupDelta implements IGroupDelta
         this.joinedMembers = Immutables.wrap(joinedMembers);
         this.leftMembers = Immutables.wrap(leftMembers);
         this.failedMembers = Immutables.wrap(failedMembers);
+        this.changeId = changeId;
     }
 
     @Override
     public UUID getId()
     {
         return id;
+    }
+    
+    @Override
+    public long getChangeId()
+    {
+        return changeId;
     }
     
     @Override

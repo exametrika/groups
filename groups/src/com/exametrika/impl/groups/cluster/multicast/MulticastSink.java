@@ -18,14 +18,14 @@ import com.exametrika.impl.groups.cluster.membership.GroupAddress;
  */
 public final class MulticastSink implements ISink
 {
-    private final SendQueue sendQueue;
+    private final AbstractSendQueue sendQueue;
     private final GroupAddress destination;
     private final IFeed feed;
     private final IMessageFactory messageFactory;
     private volatile boolean valid = true;
     private volatile boolean ready = true;
 
-    public MulticastSink(SendQueue sendQueue, GroupAddress destination, IFeed feed, IMessageFactory messageFactory)
+    public MulticastSink(AbstractSendQueue sendQueue, GroupAddress destination, IFeed feed, IMessageFactory messageFactory)
     {
         Assert.notNull(sendQueue);
         Assert.notNull(destination);
