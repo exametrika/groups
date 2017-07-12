@@ -11,6 +11,12 @@ import com.exametrika.common.io.impl.ByteInputStream;
 import com.exametrika.common.io.impl.ByteOutputStream;
 import com.exametrika.common.io.impl.DataDeserialization;
 import com.exametrika.common.io.impl.DataSerialization;
+import com.exametrika.common.l10n.DefaultMessage;
+import com.exametrika.common.l10n.ILocalizedMessage;
+import com.exametrika.common.l10n.Messages;
+import com.exametrika.common.log.ILogger;
+import com.exametrika.common.log.LogLevel;
+import com.exametrika.common.log.Loggers;
 import com.exametrika.common.messaging.IAddress;
 import com.exametrika.common.messaging.IChannel;
 import com.exametrika.common.messaging.IDeliveryHandler;
@@ -30,13 +36,14 @@ import com.exametrika.tests.groups.load.TestLoadSpec.SendType;
 public final class TestLoadMessageSender implements IReceiver, IDeliveryHandler, IFlowController<RemoteFlowId>, 
     ICompartmentTimerProcessor, ILifecycle
 {
+    private static final IMessages messages = Messages.get(IMessages.class);
+    private static final ILogger logger = Loggers.get(TestLoadMessageSender.class);
     private final TestLoadSpec loadSpec;
     private final int index;
     private final GroupAddress groupAddress;
     private long count;
     private boolean flowLocked;
     private IChannel channel;
-    
     private TestLoadStateTransferFactory stateTransferFactory;
     private long lastDeliveredCount = -1;
     private Map<IAddress, Long> receivedMessagesMap = new HashMap<IAddress, Long>();
@@ -142,6 +149,12 @@ public final class TestLoadMessageSender implements IReceiver, IDeliveryHandler,
             TestLoadMessagePart part = message.getPart();
             Assert.isTrue(part.getCount() == lastDeliveredCount + 1);
             lastDeliveredCount++;
+            
+            if ((lastDeliveredCount % 1000) == 0)
+            {
+                if (logger.isLogEnabled(LogLevel.DEBUG))
+                    logger.log(LogLevel.DEBUG, messages.messagesDelivered(channel, lastDeliveredCount));
+            }
         }
     }
 
@@ -200,6 +213,9 @@ public final class TestLoadMessageSender implements IReceiver, IDeliveryHandler,
     {
         if (sink != null)
             channel.unregister(sink);
+        
+        if (logger.isLogEnabled(LogLevel.DEBUG))
+            logger.log(LogLevel.DEBUG, messages.messagesDelivered(channel, lastDeliveredCount));
     }
     
     private int getBufferLength()
@@ -234,5 +250,11 @@ public final class TestLoadMessageSender implements IReceiver, IDeliveryHandler,
         
         for (int i = 0; i < length; i++)
             target.getBuffer()[target.getOffset() + i] ^= buffer.getBuffer()[buffer.getOffset() + i];
+    }
+    
+    private interface IMessages
+    {
+        @DefaultMessage("Messages have been delivered, channel: {0}, count: {1}.")
+        ILocalizedMessage messagesDelivered(IChannel channel, long deliveryCount);
     }
 }

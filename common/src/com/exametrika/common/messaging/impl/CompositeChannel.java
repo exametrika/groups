@@ -37,6 +37,7 @@ public class CompositeChannel implements ICompositeChannel
 {
     private static final IMessages messages = Messages.get(IMessages.class);
     private static final long TIMEOUT = 10000;
+    protected final String channelName;
     protected final ILogger logger = Loggers.get(CompositeChannel.class);
     protected final IMarker marker;
     protected final LiveNodeManager liveNodeManager;
@@ -57,7 +58,8 @@ public class CompositeChannel implements ICompositeChannel
         Assert.notNull(mainSubChannel);
         Assert.notNull(compartment);
         
-        marker = Loggers.getMarker(channelName);
+        this.channelName = channelName;
+        this.marker = Loggers.getMarker(channelName);
         this.liveNodeManager = liveNodeManager;
         this.channelObserver = channelObserver;
         this.subChannels = Immutables.wrap(subChannels);
@@ -234,6 +236,12 @@ public class CompositeChannel implements ICompositeChannel
             logger.log(LogLevel.DEBUG, marker, messages.channelStopped());
     }
 
+    @Override
+    public String toString()
+    {
+        return channelName;
+    }
+    
     protected void doStart()
     {
     }

@@ -40,6 +40,7 @@ import com.exametrika.common.utils.Assert;
 public class SubChannel implements IChannel
 {
     private static final IMessages messages = Messages.get(IMessages.class);
+    protected final String channelName;
     protected final ILogger logger = Loggers.get(SubChannel.class);
     protected final IMarker marker;
     protected final LiveNodeManager liveNodeManager;
@@ -66,7 +67,8 @@ public class SubChannel implements IChannel
         Assert.notNull(connectionProvider);
         Assert.notNull(compartment);
         
-        marker = Loggers.getMarker(channelName);
+        this.channelName = channelName;
+        this.marker = Loggers.getMarker(channelName);
         this.liveNodeManager = liveNodeManager;
         this.channelObserver = channelObserver;
         this.protocolStack = protocolStack;
@@ -204,6 +206,12 @@ public class SubChannel implements IChannel
         return transport;
     }
 
+    @Override
+    public String toString()
+    {
+        return channelName;
+    }
+    
     protected void doStart()
     {
     }
