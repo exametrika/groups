@@ -98,7 +98,7 @@ public final class TestLoadMessageSender implements IReceiver, IDeliveryHandler,
             ByteArray buffer = stateTransferFactory.getState();
             ByteInputStream in = new ByteInputStream(buffer.getBuffer(), buffer.getOffset(), buffer.getLength());
             DataDeserialization deserialization = new DataDeserialization(in);
-            long receiveCounter = 0;
+            long receiveCounter = 1;
             long totalValue = 1;
             ByteArray data = buffer;
             if (deserialization.readBoolean())
@@ -106,19 +106,19 @@ public final class TestLoadMessageSender implements IReceiver, IDeliveryHandler,
                 receiveCounter = deserialization.readLong();
                 totalValue = deserialization.readLong();
                 data = deserialization.readByteArray();
+                xor(data, buffer);
             }
             receiveCounter++;
             totalValue *= receiveCounter * (part.getIndex() + 1) * (part.getCount() + 1);
-            xor(data, buffer);
             
             ByteOutputStream out = new ByteOutputStream();
             DataSerialization serialization = new DataSerialization(out);
             serialization.writeBoolean(true);
             serialization.writeLong(receiveCounter);
             serialization.writeLong(totalValue);
-            serialization.writeByteArray(data);
+            serialization.writeByteArray(data.subArray(0, buffer.getLength() - 21));
             
-            stateTransferFactory.setState(buffer);
+            stateTransferFactory.setState(new ByteArray(out.getBuffer(), 0, out.getLength()));
         }
     }
 
@@ -222,7 +222,7 @@ public final class TestLoadMessageSender implements IReceiver, IDeliveryHandler,
     public static ByteArray createBuffer(int base, int length)
     {
         byte[] buffer = new byte[length];
-        for (int i = 0; i < length; i++)
+        for (int i = 1; i < length; i++)
             buffer[i] = (byte)(base + i);
         
         return new ByteArray(buffer);
@@ -230,9 +230,9 @@ public final class TestLoadMessageSender implements IReceiver, IDeliveryHandler,
     
     private void xor(ByteArray target, ByteArray buffer)
     {
-        Assert.isTrue(target.getLength() >= buffer.getLength());
+        int length = Math.min(target.getLength(), buffer.getLength());
         
-        for (int i = 0; i < target.getLength(); i++)
+        for (int i = 0; i < length; i++)
             target.getBuffer()[target.getOffset() + i] ^= buffer.getBuffer()[buffer.getOffset() + i];
     }
 }

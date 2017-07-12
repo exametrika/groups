@@ -256,7 +256,7 @@ public final class CoreClusterMembershipProtocol extends AbstractClusterMembersh
         ILocalizedMessage startInstallMembershipOnWorkers(long roundId, Set<INode> workerNodes);
         @DefaultMessage("Node ''{1}'' has responded, round-id: {0}.")
         ILocalizedMessage nodeResponded(long roundId, IAddress node);
-        @DefaultMessage("Completion of cluster membership installation on worker nodes has been sent to coordinator ''{1}', round-id: {0}.")
+        @DefaultMessage("Completion of cluster membership installation on worker nodes has been sent to coordinator ''{1}'', round-id: {0}.")
         ILocalizedMessage respondToCoordinator(long roundId, INode coordinator);
     }
 }

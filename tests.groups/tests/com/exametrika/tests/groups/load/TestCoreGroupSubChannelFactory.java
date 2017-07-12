@@ -17,7 +17,6 @@ import com.exametrika.common.messaging.impl.transports.tcp.TcpTransport;
 import com.exametrika.impl.groups.cluster.channel.CoreGroupSubChannelFactory;
 import com.exametrika.impl.groups.cluster.failuredetection.CoreGroupFailureDetectionProtocol;
 import com.exametrika.impl.groups.cluster.flush.FlushParticipantProtocol;
-import com.exametrika.tests.groups.channel.TestGroupFactoryParameters;
 
 public class TestCoreGroupSubChannelFactory extends CoreGroupSubChannelFactory
 {
@@ -35,7 +34,7 @@ public class TestCoreGroupSubChannelFactory extends CoreGroupSubChannelFactory
             failureObservers, protocols);
         
         TestGroupFailureGenerationProtocol failureGenerationProtocol = new TestGroupFailureGenerationProtocol(channelName, messageFactory,
-            ((TestCoreNodeParameters)parameters).failureSpecs, ((TestGroupFactoryParameters)factoryParameters).failureGenerationProcessPeriod, true);
+            ((TestCoreNodeParameters)parameters).failureSpecs, ((TestCoreNodeFactoryParameters)factoryParameters).failureGenerationProcessPeriod, true);
         protocols.add(failureGenerationProtocol);
     }
     
