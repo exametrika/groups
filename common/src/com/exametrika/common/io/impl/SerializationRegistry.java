@@ -105,12 +105,21 @@ public final class SerializationRegistry implements ISerializationRegistry
         Assert.notNull(serializableClass);
         Assert.notNull(serializer);
         
-        if (infosById.containsKey(id))
-            throw new InvalidArgumentException(messages.infoIdNotUnique(id, serializableClass));
-        if (infosByClass.containsKey(serializableClass))
-            throw new InvalidArgumentException(messages.infoClassNotUnique(id, serializableClass));
+        SerializationInfo info = infosById.get(id);
+        if (info != null)
+        {
+            if (!info.serializableClass.equals(serializableClass))
+                throw new InvalidArgumentException(messages.infoDifferentClass(id, serializableClass, info.serializableClass));
+            
+            Assert.isTrue(infosByClass.get(serializableClass) == info);
+            
+            info.refCount++;
+            return;
+        }
+        else
+            Assert.isTrue(!infosByClass.containsKey(serializableClass));
         
-        SerializationInfo info = new SerializationInfo(id, serializableClass, serializer);
+        info = new SerializationInfo(id, serializableClass, serializer);
         infosByClass.put(serializableClass, info);
         infosById.put(id, info);
         
@@ -134,11 +143,15 @@ public final class SerializationRegistry implements ISerializationRegistry
         SerializationInfo info = infosById.get(id);
         if (info != null)
         {
-            infosById.remove(id);
-            infosByClass.remove(info.getSerializableClass());
-            
-            if (logger.isLogEnabled(LogLevel.DEBUG))
-                logger.log(LogLevel.DEBUG, messages.infoUnregistered(info.getId(), info.getSerializableClass()));
+            info.refCount--;
+            if (info.refCount == 0)
+            {
+                infosById.remove(id);
+                infosByClass.remove(info.getSerializableClass());
+                
+                if (logger.isLogEnabled(LogLevel.DEBUG))
+                    logger.log(LogLevel.DEBUG, messages.infoUnregistered(info.getId(), info.getSerializableClass()));
+            }
         }
     }
     
@@ -147,6 +160,7 @@ public final class SerializationRegistry implements ISerializationRegistry
         private final UUID id;
         private final Class<?> serializableClass;
         private final ISerializer serializer;
+        private int refCount = 1;
 
         public SerializationInfo(UUID id, Class<?> serializableClass, ISerializer serializer)
         {
@@ -179,10 +193,8 @@ public final class SerializationRegistry implements ISerializationRegistry
         ILocalizedMessage infoNotFound(UUID id);
         @DefaultMessage("Serialization info is not found for class ''{0}''.")
         ILocalizedMessage infoNotFound(Class serializableClass);
-        @DefaultMessage("Could not register serialization info with id ''{0}'' and class ''{1}''. Serialization info with specified identifier already exists in registry.")
-        ILocalizedMessage infoIdNotUnique(UUID id, Class serializableClass);
-        @DefaultMessage("Could not register serialization info with id ''{0}'' and class ''{1}''. Serialization info with specified serializable class already exists in registry.")
-        ILocalizedMessage infoClassNotUnique(UUID id, Class serializableClass);
+        @DefaultMessage("Could not register serialization info with id ''{0}'' and class ''{1}''. Serialization info for specified identifier has different class ''{2}''.")
+        ILocalizedMessage infoDifferentClass(UUID id, Class serializableClass, Class existingClass);
         @DefaultMessage("Serialization info with id ''{0}'' and class ''{1}'' is registered.")
         ILocalizedMessage infoRegistered(UUID id, Class serializableClass);
         @DefaultMessage("Serialization info with id ''{0}'' and class ''{1}'' is unregistered.")

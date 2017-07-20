@@ -221,6 +221,8 @@ public final class WorkerGroupMembershipProtocol extends MessageRouter implement
                 
                 if (list.size() < maxPendingMessageCount)
                     list.add(message);
+                else if (logger.isLogEnabled(LogLevel.ERROR))
+                    logger.log(LogLevel.ERROR, marker, messages.messageLost(message));
             }
             
             return true;
@@ -290,5 +292,7 @@ public final class WorkerGroupMembershipProtocol extends MessageRouter implement
         ILocalizedMessage groupSubStackCreated();
         @DefaultMessage("Group sub-stack has been removed.")
         ILocalizedMessage groupSubStackRemoved();
+        @DefaultMessage("Message has been lost due to queue overflow:\n{0}")
+        ILocalizedMessage messageLost(IMessage message);
     }
 }

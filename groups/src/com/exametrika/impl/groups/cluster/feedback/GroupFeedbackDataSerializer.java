@@ -22,7 +22,7 @@ import com.exametrika.impl.groups.cluster.feedback.IGroupState.State;
 
 public final class GroupFeedbackDataSerializer extends AbstractSerializer
 {
-    public static final UUID ID = UUID.fromString("78678240-bdf5-4f05-86a4-e76889c07a7f");
+    public static final UUID ID = UUID.fromString("17d55c52-86d9-42a5-9b70-7c7fdc278580");
     
     public GroupFeedbackDataSerializer()
     {

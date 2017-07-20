@@ -58,15 +58,9 @@ public class SerializationRegistryTests
         assertThat(info1.getSerializer() == serializer, is(true));
         assertThat(info1.getId() == serializer.getId(), is(true));
         
-        new Expected(InvalidArgumentException.class, new Runnable()
-        {
-            @Override
-            public void run()
-            {
-                registry.register(serializer);
-            }
-        });
-        
+        registry.register(serializer);
+        registry.unregister(serializer);
+
         registry.unregister(serializer.getId());
         
         registry.register(serializer.getId(), serializer.getSerializableClass(), serializer);
@@ -83,15 +77,6 @@ public class SerializationRegistryTests
             public void run()
             {
                 registry.register(serializer.getId(), Object.class, serializer);
-            }
-        });
-        
-        new Expected(InvalidArgumentException.class, new Runnable()
-        {
-            @Override
-            public void run()
-            {
-                registry.register(UUID.randomUUID(), List.class, serializer);
             }
         });
         

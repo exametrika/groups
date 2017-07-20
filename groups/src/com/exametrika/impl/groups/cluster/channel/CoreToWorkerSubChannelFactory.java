@@ -122,7 +122,7 @@ public class CoreToWorkerSubChannelFactory extends AbstractChannelFactory
         
         failureDetectionListeners = new HashSet<IFailureDetectionListener>();
         clusterFailureDetectionProtocol = new CoreClusterFailureDetectionProtocol(
-            channelName, messageFactory, clusterMembershipManager, failureDetector, failureDetectionListeners, nodeFactoryParameters.failureUpdatePeriod);
+            channelName, messageFactory, clusterMembershipManager, failureDetectionListeners, nodeFactoryParameters.failureUpdatePeriod);
         protocols.add(clusterFailureDetectionProtocol);
         clusterMembershipListeners.add(clusterFailureDetectionProtocol);
         failureObservers.add(clusterFailureDetectionProtocol);
@@ -144,6 +144,7 @@ public class CoreToWorkerSubChannelFactory extends AbstractChannelFactory
         clusterDiscoveryProtocol.setBridgeSender(bridgeSender);
         
         clusterFailureDetectionProtocol.setBridgeSender(bridgeSender);
+        clusterFailureDetectionProtocol.setFailureDetector(failureDetector);
     }
     
     @Override

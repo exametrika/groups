@@ -41,7 +41,7 @@ public final class CoreClusterFailureDetectionProtocol extends AbstractProtocol 
 {
     private static final IMessages messages = Messages.get(IMessages.class);
     private final IClusterMembershipService membershipService;
-    private final IGroupFailureDetector failureDetector;
+    private IGroupFailureDetector failureDetector;
     private final Set<IFailureDetectionListener> failureDetectionListeners;
     private final long failureUpdatePeriod;
     private ISender bridgeSender;
@@ -54,20 +54,26 @@ public final class CoreClusterFailureDetectionProtocol extends AbstractProtocol 
     private boolean modified;
 
     public CoreClusterFailureDetectionProtocol(String channelName, IMessageFactory messageFactory, IClusterMembershipService membershipService,
-        IGroupFailureDetector failureDetector, Set<IFailureDetectionListener> failureDetectionListeners, long failureUpdatePeriod)
+        Set<IFailureDetectionListener> failureDetectionListeners, long failureUpdatePeriod)
     {
         super(channelName, messageFactory);
         
         Assert.notNull(membershipService);
-        Assert.notNull(failureDetector);
         Assert.notNull(failureDetectionListeners);
         
         this.membershipService = membershipService;
-        this.failureDetector = failureDetector;
         this.failureDetectionListeners = failureDetectionListeners;
         this.failureUpdatePeriod = failureUpdatePeriod;
     }
 
+    public void setFailureDetector(IGroupFailureDetector failureDetector)
+    {
+        Assert.notNull(failureDetector);
+        Assert.isNull(this.failureDetector);
+        
+        this.failureDetector = failureDetector;
+    }
+    
     public void setBridgeSender(ISender bridgeSender)
     {
         Assert.notNull(bridgeSender);
