@@ -52,6 +52,7 @@ import com.exametrika.impl.groups.cluster.membership.WorkerClusterMembershipProt
  */
 public class WorkerToCoreSubChannelFactory extends AbstractChannelFactory
 {
+    protected WorkerNodeParameters nodeParameters;
     private Set<IClusterMembershipListener> clusterMembershipListeners;
     private ClusterMembershipManager clusterMembershipManager;
     private WorkerClusterFailureDetectionProtocol failureDetectionProtocol;
@@ -63,6 +64,11 @@ public class WorkerToCoreSubChannelFactory extends AbstractChannelFactory
     public WorkerToCoreSubChannelFactory(WorkerNodeFactoryParameters factoryParameters)
     {
         super(factoryParameters);
+    }
+    
+    public void setNodeParameters(WorkerNodeParameters nodeParameters)
+    {
+        this.nodeParameters = nodeParameters;
     }
     
     public void setClusterMembershipListeners(Set<IClusterMembershipListener> clusterMembershipListeners)
@@ -111,7 +117,6 @@ public class WorkerToCoreSubChannelFactory extends AbstractChannelFactory
         ISerializationRegistry serializationRegistry, ILiveNodeProvider liveNodeProvider, List<IFailureObserver> failureObservers, 
         List<AbstractProtocol> protocols)
     {
-        WorkerNodeParameters nodeParameters = (WorkerNodeParameters)parameters;
         Assert.notNull(nodeParameters.propertyProvider);
         Assert.notNull(nodeParameters.discoveryStrategy);
         Assert.notNull(nodeParameters.deliveryHandler);

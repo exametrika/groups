@@ -100,7 +100,6 @@ public class CoreGroupSubChannelFactory extends AbstractChannelFactory
     private List<IGracefulExitStrategy> gracefulExitStrategies = new ArrayList<IGracefulExitStrategy>();
     private List<IFeedbackProvider> feedbackProviders;
     private List<IFeedbackListener> feedbackListeners;
-    private IGroupFailureDetector failureDetector;
     private IWorkerNodeDiscoverer workerNodeDiscoverer;
     private NodesMembershipProvider nodesMembershipProvider;
     private ISender bridgeSender;
@@ -180,7 +179,7 @@ public class CoreGroupSubChannelFactory extends AbstractChannelFactory
 
     public IGroupFailureDetector getFailureDetector()
     {
-        return failureDetector;
+        return failureDetectionProtocol;
     }
 
     public ISender getBridgeSender()

@@ -58,7 +58,7 @@ public class CoreNodeChannelFactory extends CompositeChannelFactory
         Assert.notNull(parameters);
         
         nodeParameters = parameters;
-        return createChannel(parameters.channelName, Arrays.asList(parameters, parameters));
+        return createChannel(parameters.channelName, Arrays.asList(parameters, parameters.coreToWorkerChannelParameters));
     }
     
     @Override
@@ -99,8 +99,8 @@ public class CoreNodeChannelFactory extends CompositeChannelFactory
     @Override
     protected void wireSubChannels(ICompositeChannel channel, List<IChannel> subChannels)
     {
-        CoreGroupSubChannelFactory coreGroupSubChannelFactory = (CoreGroupSubChannelFactory)subChannels.get(0);
-        CoreToWorkerSubChannelFactory coreToWorkerSubChannelFactory = (CoreToWorkerSubChannelFactory)subChannels.get(1);
+        CoreGroupSubChannelFactory coreGroupSubChannelFactory = (CoreGroupSubChannelFactory)subChannelFactories.get(0);
+        CoreToWorkerSubChannelFactory coreToWorkerSubChannelFactory = (CoreToWorkerSubChannelFactory)subChannelFactories.get(1);
         coreToWorkerSubChannelFactory.setFailureDetector(coreGroupSubChannelFactory.getFailureDetector());
         coreToWorkerSubChannelFactory.setBridgeSender(coreGroupSubChannelFactory.getBridgeSender());
         

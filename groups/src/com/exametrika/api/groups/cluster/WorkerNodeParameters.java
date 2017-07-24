@@ -4,6 +4,7 @@
 package com.exametrika.api.groups.cluster;
 
 import com.exametrika.common.messaging.IDeliveryHandler;
+import com.exametrika.common.messaging.impl.ChannelParameters;
 import com.exametrika.common.messaging.impl.NoDeliveryHandler;
 import com.exametrika.spi.groups.cluster.state.IStateTransferFactory;
 
@@ -17,4 +18,5 @@ public class WorkerNodeParameters extends NodeParameters
 {
     public IStateTransferFactory stateTransferFactory;
     public IDeliveryHandler deliveryHandler = new NoDeliveryHandler();
+    public ChannelParameters workerToCoreChannelParameters = new ChannelParameters();
 }

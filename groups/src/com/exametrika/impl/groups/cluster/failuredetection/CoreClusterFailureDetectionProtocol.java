@@ -4,6 +4,7 @@
 package com.exametrika.impl.groups.cluster.failuredetection;
 
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
@@ -45,8 +46,8 @@ public final class CoreClusterFailureDetectionProtocol extends AbstractProtocol 
     private final Set<IFailureDetectionListener> failureDetectionListeners;
     private final long failureUpdatePeriod;
     private ISender bridgeSender;
-    private Set<IAddress> workerNodes;
-    private Map<UUID, INode> workerNodesMap;
+    private Set<IAddress> workerNodes = new LinkedHashSet<IAddress>();
+    private Map<UUID, INode> workerNodesMap = new LinkedHashMap<UUID, INode>();
     private Set<INode> failedNodes = new LinkedHashSet<INode>();
     private Set<INode> leftNodes = new LinkedHashSet<INode>();
     private INode currentCoordinator;
@@ -84,10 +85,7 @@ public final class CoreClusterFailureDetectionProtocol extends AbstractProtocol 
     
     public Set<IAddress> getWorkerNodes()
     {
-        if (workerNodes != null)
-            return workerNodes;
-        else
-            return java.util.Collections.emptySet();
+        return workerNodes;
     }
     
     @Override
@@ -115,7 +113,7 @@ public final class CoreClusterFailureDetectionProtocol extends AbstractProtocol 
     @Override
     public void onNodesFailed(Set<IAddress> nodes)
     {
-        if (workerNodesMap == null)
+        if (workerNodesMap.isEmpty())
             return;
         
         for (IAddress address : nodes)
@@ -133,7 +131,7 @@ public final class CoreClusterFailureDetectionProtocol extends AbstractProtocol 
     @Override
     public void onNodesLeft(Set<IAddress> nodes)
     {
-        if (workerNodesMap == null)
+        if (workerNodesMap.isEmpty())
             return;
         
         for (IAddress address : nodes)

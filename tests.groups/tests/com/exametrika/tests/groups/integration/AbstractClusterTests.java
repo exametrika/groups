@@ -63,9 +63,12 @@ import com.exametrika.tests.groups.load.TestLoadStateTransferFactory;
 
 public abstract class AbstractClusterTests
 {
+    protected static final int CORE_PORT_RANGE_START = 17000;
+    protected static final int WORKER_PORT_RANGE_START = 18000;
     protected List<CoreNodeChannel> coreChannels;
     protected List<WorkerNodeChannel> workerChannels;
     protected Set<Integer> reconnections = new HashSet<Integer>();
+    protected Set<String> wellKnownAddresses;
     protected Set<Integer> wellKnownAddressesIndexes;
     protected TestLoadSpec loadSpec = new TestLoadSpec(SizeType.SMALL, 0, SizeType.SMALL, 0, SendFrequencyType.MAXIMUM, 0d, 
         SendType.DIRECT, SendSourceType.SINGLE_NODE);;
@@ -356,9 +359,8 @@ public abstract class AbstractClusterTests
     
     protected CoreNodeParameters createCoreNodeParameters(int index, int count)
     {
-        int portRangeStart = 17000;
         CoreNodeParameters parameters = createCoreNodeParameters();
-        setNodeParameters(parameters, portRangeStart, index, count);
+        setNodeParameters(parameters, CORE_PORT_RANGE_START, index, count);
         parameters.stateStore = new EmptySimpleStateStore();
         return parameters;
     }
@@ -377,9 +379,8 @@ public abstract class AbstractClusterTests
         TestLoadStateTransferFactory stateTransferFactory = new TestLoadStateTransferFactory(stateStore);
         sender.setStateTransferFactory(stateTransferFactory);
         
-        int portRangeStart = 17000;
         WorkerNodeParameters parameters = createWorkerNodeParameters();
-        setNodeParameters(parameters, portRangeStart, index, count);
+        setNodeParameters(parameters, WORKER_PORT_RANGE_START, index, count);
         parameters.stateTransferFactory = stateTransferFactory;
         parameters.receiver = sender;
         parameters.stateTransferFactory = stateTransferFactory;
@@ -409,22 +410,29 @@ public abstract class AbstractClusterTests
         }
         
         Set<String> wellKnownAddresses = new HashSet<String>();
-        if (wellKnownAddressesIndexes == null || parameters instanceof CoreNodeParameters)
+        if (parameters instanceof CoreNodeParameters)
         {
             for (int i = 0; i < count; i++)
-                wellKnownAddresses.add("tcp://" + hostName + ":" + (portRangeStart + i));
+                wellKnownAddresses.add("tcp://" + hostName + ":" + (CORE_PORT_RANGE_START + i));
+            
+            this.wellKnownAddresses = wellKnownAddresses;
+        }
+        else if (wellKnownAddressesIndexes != null)
+        {
+            for (int i : wellKnownAddressesIndexes)
+                wellKnownAddresses.add("tcp://" + hostName + ":" + (CORE_PORT_RANGE_START + i));
         }
         else
         {
-            for (int i : wellKnownAddressesIndexes)
-                wellKnownAddresses.add("tcp://" + hostName + ":" + (portRangeStart + i));
+            Assert.notNull(this.wellKnownAddresses);
+            wellKnownAddresses = this.wellKnownAddresses;
         }
        
         parameters.channelName = "test" + index;
         parameters.clientPart = true;
         parameters.serverPart = true;
         parameters.portRangeStart = portRangeStart + index;
-        parameters.portRangeStart = parameters.portRangeEnd;
+        parameters.portRangeEnd = parameters.portRangeStart;
         parameters.receiver = new ReceiverMock();
         parameters.discoveryStrategy = new WellKnownAddressesDiscoveryStrategy(wellKnownAddresses);
     }

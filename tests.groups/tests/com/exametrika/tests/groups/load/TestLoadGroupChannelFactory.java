@@ -68,7 +68,7 @@ public class TestLoadGroupChannelFactory extends TestGroupChannelFactory
         parameters.clientPart = true;
         parameters.serverPart = true;
         parameters.portRangeStart = portRangeStart + index;
-        parameters.portRangeStart = parameters.portRangeEnd;
+        parameters.portRangeEnd = parameters.portRangeStart;
         parameters.receiver = sender;
         parameters.discoveryStrategy = new WellKnownAddressesDiscoveryStrategy(wellKnownAddresses);
         parameters.stateTransferFactory = stateTransferFactory;
