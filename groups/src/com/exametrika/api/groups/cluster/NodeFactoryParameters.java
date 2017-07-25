@@ -14,7 +14,7 @@ import com.exametrika.common.messaging.impl.ChannelFactoryParameters;
 public class NodeFactoryParameters extends ChannelFactoryParameters
 {
     public long discoveryPeriod = 500;
-    public long groupFormationPeriod = 10000;
+    public long groupFormationPeriod = 30000;//TODO:10000;
     public long failureUpdatePeriod = 500;
     public long failureHistoryPeriod = 600000;
     public int maxShunCount = 3;

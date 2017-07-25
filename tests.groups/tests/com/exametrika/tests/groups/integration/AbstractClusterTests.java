@@ -31,7 +31,9 @@ import com.exametrika.api.groups.cluster.NodeParameters;
 import com.exametrika.api.groups.cluster.WorkerNodeParameters;
 import com.exametrika.common.l10n.SystemException;
 import com.exametrika.common.messaging.ICompositeChannel;
+import com.exametrika.common.messaging.impl.ChannelParameters;
 import com.exametrika.common.messaging.impl.SubChannel;
+import com.exametrika.common.messaging.impl.protocols.error.UnhandledMessageReceiver;
 import com.exametrika.common.tests.Tests;
 import com.exametrika.common.utils.Assert;
 import com.exametrika.impl.groups.cluster.channel.CoreGroupSubChannel;
@@ -360,7 +362,8 @@ public abstract class AbstractClusterTests
     protected CoreNodeParameters createCoreNodeParameters(int index, int count)
     {
         CoreNodeParameters parameters = createCoreNodeParameters();
-        setNodeParameters(parameters, CORE_PORT_RANGE_START, index, count);
+        setNodeParameters(true, parameters, CORE_PORT_RANGE_START, index, count);
+        setCoreWorkerChannelParameters(true, parameters.coreToWorkerChannelParameters, CORE_PORT_RANGE_START + 500, index);
         parameters.stateStore = new EmptySimpleStateStore();
         return parameters;
     }
@@ -380,7 +383,8 @@ public abstract class AbstractClusterTests
         sender.setStateTransferFactory(stateTransferFactory);
         
         WorkerNodeParameters parameters = createWorkerNodeParameters();
-        setNodeParameters(parameters, WORKER_PORT_RANGE_START, index, count);
+        setNodeParameters(false, parameters, WORKER_PORT_RANGE_START, index, count);
+        setCoreWorkerChannelParameters(false, parameters.workerToCoreChannelParameters, WORKER_PORT_RANGE_START + 500, index);
         parameters.stateTransferFactory = stateTransferFactory;
         parameters.receiver = sender;
         parameters.stateTransferFactory = stateTransferFactory;
@@ -397,7 +401,7 @@ public abstract class AbstractClusterTests
         return parameters;
     }
     
-    protected void setNodeParameters(NodeParameters parameters, int portRangeStart, int index, int count)
+    protected void setNodeParameters(boolean core, NodeParameters parameters, int portRangeStart, int index, int count)
     {
         String hostName;
         try
@@ -410,7 +414,7 @@ public abstract class AbstractClusterTests
         }
         
         Set<String> wellKnownAddresses = new HashSet<String>();
-        if (parameters instanceof CoreNodeParameters)
+        if (core)
         {
             for (int i = 0; i < count; i++)
                 wellKnownAddresses.add("tcp://" + hostName + ":" + (CORE_PORT_RANGE_START + i));
@@ -428,13 +432,25 @@ public abstract class AbstractClusterTests
             wellKnownAddresses = this.wellKnownAddresses;
         }
        
-        parameters.channelName = "test" + index;
+        String prefix = core ? "core" : "worker";
+        parameters.channelName = prefix + index;
         parameters.clientPart = true;
         parameters.serverPart = true;
         parameters.portRangeStart = portRangeStart + index;
         parameters.portRangeEnd = parameters.portRangeStart;
         parameters.receiver = new ReceiverMock();
         parameters.discoveryStrategy = new WellKnownAddressesDiscoveryStrategy(wellKnownAddresses);
+    }
+    
+    protected void setCoreWorkerChannelParameters(boolean core, ChannelParameters parameters, int portRangeStart, int index)
+    {
+        String prefix = core ? "core" : "worker";
+        parameters.channelName = prefix + index;
+        parameters.clientPart = true;
+        parameters.serverPart = true;
+        parameters.portRangeStart = portRangeStart + index;
+        parameters.portRangeEnd = parameters.portRangeStart;
+        parameters.receiver = new UnhandledMessageReceiver(parameters.channelName);
     }
     
     protected void disableCoreNodeProtocols(ICompositeChannel coreChannel)

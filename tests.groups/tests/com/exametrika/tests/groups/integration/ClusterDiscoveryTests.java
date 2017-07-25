@@ -12,8 +12,8 @@ import com.exametrika.impl.groups.cluster.channel.CoreNodeChannel;
 
 public class ClusterDiscoveryTests extends AbstractClusterTests
 {
-    private static final int CORE_NODE_COUNT = 5;
-    private static final int WORKER_NODE_COUNT = 10;
+    private static final int CORE_NODE_COUNT = 2;//TODO:5;
+    private static final int WORKER_NODE_COUNT = 1;//TODO:10;
     
     @Before
     public void setUp()
@@ -31,10 +31,10 @@ public class ClusterDiscoveryTests extends AbstractClusterTests
     public void testWorkerDiscovery()
     {
         startCoreNodes(null);
-        Threads.sleep(2000);
+        Threads.sleep(50000);//TODO:5000
         
         startWorkerNodes(null);
-        Threads.sleep(2000);
+        Threads.sleep(2000000);//TODO:2000
         
         checkClusterWorkerNodesMembership(null);
     }
